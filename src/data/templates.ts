@@ -42,6 +42,66 @@ export const styleTemplates: StyleTemplate[] = [
         description: '适合美妆、头像、人像特写和妆容参考。'
     },
     {
+        id: 'kpop-studio-concept',
+        title: 'K-pop 棚拍概念照',
+        category: 'K-pop 物料',
+        mode: 'both',
+        tags: ['棚拍', '概念照', '回归'],
+        prompt: '生成一张 K-pop 回归棚拍概念照。人物造型、妆发、服装和背景需要围绕同一个视觉主题展开，像官方 teaser image 或 concept photo。使用专业棚拍布光，脸部、发丝、服装材质和配饰清楚，姿态有记忆点但不过度摆拍。画面保留适当留白，不添加文字、水印或真实 logo。',
+        image: '',
+        description: '适合回归预告、概念视觉和官方社媒物料。'
+    },
+    {
+        id: 'mv-concept-still',
+        title: '概念 MV 剧照',
+        category: 'K-pop 物料',
+        mode: 'both',
+        tags: ['MV', '概念', '剧照'],
+        prompt: '生成一张概念 MV 剧照感图片。画面像音乐视频中的关键静帧，有明确场景、主题色彩和叙事氛围。人物处于自然动作或凝视瞬间，妆发和服装完整，光影有戏剧性但主体脸部清楚。整体应有 K-pop MV 视觉质感，不要生成字幕、歌词、电视台台标或水印。',
+        image: '',
+        description: '适合 MV 截帧、概念故事和视觉叙事。'
+    },
+    {
+        id: 'album-photobook',
+        title: '专辑内页写真',
+        category: 'K-pop 物料',
+        mode: 'both',
+        tags: ['专辑', '内页', '写真'],
+        prompt: '生成一张 K-pop 专辑 photobook 内页写真。人物造型完整，妆容、发型、服装和配饰有统一企划感。构图像专辑写真内页，画面干净、有编辑摄影质感，可以保留环境或道具但不要杂乱。皮肤真实精致，身体比例自然，不添加任何文字或条形码。',
+        image: '',
+        description: '适合专辑写真、内页视觉和主题组图。'
+    },
+    {
+        id: 'photocard-portrait',
+        title: '小卡收藏照',
+        category: 'K-pop 物料',
+        mode: 'both',
+        tags: ['小卡', '自拍', '收藏'],
+        prompt: '生成一张 K-pop photocard 小卡收藏照。构图以近距离大头或半身为主，表情自然有亲近感，妆发精致，脸部清晰，背景简单但有氛围。可以像后台自拍、签售自拍或官方小卡拍摄，不要添加文字、签名、边框或随机图案。画面适合裁切成竖版小卡。',
+        image: '',
+        description: '适合小卡、头像、近景自拍和收藏感人像。'
+    },
+    {
+        id: 'artist-profile-photo',
+        title: '艺人公式照',
+        category: 'K-pop 物料',
+        mode: 'both',
+        tags: ['公式照', '资料照', '头像'],
+        prompt: '生成一张艺人官方 profile photo。背景简洁干净，人物正面或微侧身，脸部、发型、妆容和上半身造型清楚。光线柔和均匀，整体像经纪公司资料页、宣传资料或官方头像，不要过度美颜，不要生成文字、姓名牌、logo 或水印。',
+        image: '',
+        description: '适合资料页头像、官方介绍和干净人像。'
+    },
+    {
+        id: 'comeback-teaser-poster',
+        title: '回归预告海报',
+        category: 'K-pop 物料',
+        mode: 'both',
+        tags: ['预告', '海报', 'teaser'],
+        prompt: '生成一张 K-pop comeback teaser poster 主视觉。人物和场景有强主题感，构图适合后期添加标题、日期和专辑信息，但画面中不要直接生成文字。妆发、服装、道具和光线要服务同一个概念，整体像官方预告海报或社媒 teaser image，精致、清晰、有悬念。',
+        image: '',
+        description: '适合回归预告、活动视觉和概念海报。'
+    },
+    {
         id: 'luxury-product-still',
         title: '奢侈品静物',
         category: '商业视觉',

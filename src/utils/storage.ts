@@ -9,6 +9,7 @@ export class LocalStorage {
     private static readonly PROMPT_ASSISTANT_API_KEY = 'vistack-prompt-assistant-api-key'
     private static readonly PROMPT_ASSISTANT_ENDPOINT = 'vistack-prompt-assistant-endpoint'
     private static readonly PROMPT_ASSISTANT_MODEL_ID = 'vistack-prompt-assistant-model-id'
+    private static readonly ASSET_COLLECTIONS = 'vistack-asset-collections'
     private static readonly LEGACY_KEYS = {
         API_KEY: 'nano-banana-api-key',
         API_ENDPOINT: 'nano-banana-api-endpoint',
@@ -172,6 +173,28 @@ export class LocalStorage {
             localStorage.removeItem(this.PROMPT_ASSISTANT_MODEL_ID)
         } catch (error) {
             console.warn('无法清除提示词助手模型:', error)
+        }
+    }
+
+    static saveAssetCollections(collections: string[]): void {
+        try {
+            localStorage.setItem(this.ASSET_COLLECTIONS, JSON.stringify(collections))
+        } catch (error) {
+            console.warn('无法保存资产收藏夹:', error)
+        }
+    }
+
+    static getAssetCollections(): string[] {
+        try {
+            const raw = localStorage.getItem(this.ASSET_COLLECTIONS)
+            if (!raw) return []
+            const parsed = JSON.parse(raw)
+            return Array.isArray(parsed)
+                ? parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+                : []
+        } catch (error) {
+            console.warn('无法读取资产收藏夹:', error)
+            return []
         }
     }
 

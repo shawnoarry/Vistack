@@ -6,7 +6,7 @@
                     <p class="wb-label text-brand-accent">Multi-model visual studio</p>
                     <div class="mt-1 flex flex-wrap items-end gap-3">
                         <h1 class="text-2xl font-semibold leading-tight text-brand-ink sm:text-3xl">Vistack</h1>
-                        <span class="rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">
+                        <span class="rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent" title="当前生图模型，会随 API 配置中的模型选择变化">
                             {{ selectedModel || DEFAULT_MODEL_ID }}
                         </span>
                     </div>
@@ -462,7 +462,7 @@
         </div>
 
         <main v-if="currentView === 'assets'" class="wb-shell py-4 pb-10">
-            <section class="rounded-lg border border-brand-line bg-brand-surface p-4 shadow-sm shadow-black/5">
+            <section class="min-h-[calc(100vh-170px)] rounded-lg border border-brand-line bg-brand-surface p-4 shadow-sm shadow-black/5">
                 <div class="mb-4 flex flex-col gap-3 border-b border-brand-line pb-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <p class="wb-label text-brand-accent">Local asset library</p>
@@ -474,13 +474,18 @@
                         <button
                             v-if="generationHistory.length"
                             type="button"
-                            :class="[
-                                'wb-secondary',
-                                clearHistoryArmed ? 'border-brand-accent bg-brand-accent text-brand-surface hover:bg-brand-accent/90' : 'text-brand-accent'
-                            ]"
-                            @click="clearGenerationHistory"
+                            class="wb-secondary"
+                            @click="toggleAssetSelectionMode"
                         >
-                            {{ clearHistoryArmed ? '再次点击确认清空' : '清空历史' }}
+                            {{ assetSelectionMode ? '退出选择' : '批量选择' }}
+                        </button>
+                        <button
+                            v-if="assetSelectionMode && selectedAssetIds.length"
+                            type="button"
+                            class="wb-secondary text-brand-accent"
+                            @click="showBulkDeleteDialog = true"
+                        >
+                            删除所选 {{ selectedAssetIds.length }}
                         </button>
                     </div>
                 </div>
@@ -498,9 +503,29 @@
                             </select>
                         </div>
                         <div class="rounded-lg border border-brand-line bg-white p-3">
-                            <label class="wb-label mb-2 block">新收藏夹</label>
-                            <input v-model="historyNewCategory" class="wb-input w-full min-h-10 py-2 text-xs" placeholder="例如：头像 / 商业主图" />
-                            <p class="mt-2 text-xs leading-5 text-brand-muted">输入名称后，可把任意资产归入这个收藏夹。</p>
+                            <div class="mb-2 flex items-center justify-between gap-2">
+                                <span class="wb-label">收藏夹</span>
+                                <button type="button" class="rounded-md bg-brand-accent px-2.5 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="showCollectionDialog = true">
+                                    新建
+                                </button>
+                            </div>
+                            <div v-if="collectionOptions.length" class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="category in collectionOptions"
+                                    :key="category"
+                                    type="button"
+                                    :class="[
+                                        'rounded-md border px-2.5 py-1.5 text-xs font-semibold transition',
+                                        historyFilter === `category:${category}`
+                                            ? 'border-brand-accent bg-brand-accent text-brand-surface'
+                                            : 'border-brand-line bg-brand-surface text-brand-muted hover:text-brand-ink'
+                                    ]"
+                                    @click="historyFilter = `category:${category}`"
+                                >
+                                    {{ category }}
+                                </button>
+                            </div>
+                            <p v-else class="text-xs leading-5 text-brand-muted">还没有收藏夹。新建后，可在资产卡片中归类。</p>
                         </div>
                         <div class="rounded-lg border border-brand-line bg-white p-3">
                             <div class="wb-label mb-2">概览</div>
@@ -539,9 +564,23 @@
 
                     <section>
                         <div v-if="filteredHistoryAssets.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-                            <article v-for="asset in filteredHistoryAssets" :key="asset.id" class="overflow-hidden rounded-lg border border-brand-line bg-white">
-                                <button type="button" class="block aspect-square w-full bg-brand-surface" @click="openHistoryPreview(asset.item, asset.image)">
+                            <article
+                                v-for="asset in filteredHistoryAssets"
+                                :key="asset.id"
+                                :class="[
+                                    'overflow-hidden rounded-lg border bg-white',
+                                    selectedAssetIds.includes(asset.id) ? 'border-brand-accent ring-2 ring-brand-accent/15' : 'border-brand-line'
+                                ]"
+                            >
+                                <button
+                                    type="button"
+                                    class="relative block aspect-square w-full bg-brand-surface"
+                                    @click="assetSelectionMode ? toggleAssetSelection(asset.id) : openHistoryPreview(asset.item, asset.image)"
+                                >
                                     <img :src="asset.image" :alt="`历史资产 ${asset.index + 1}`" class="h-full w-full object-cover" />
+                                    <span v-if="assetSelectionMode" class="absolute left-2 top-2 rounded-md border border-white/60 bg-brand-ink/75 px-2 py-1 text-xs font-semibold text-brand-surface">
+                                        {{ selectedAssetIds.includes(asset.id) ? '已选' : '选择' }}
+                                    </span>
                                 </button>
                                 <div class="space-y-2 p-3">
                                     <div class="flex items-start justify-between gap-2">
@@ -561,6 +600,14 @@
                                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushImageToUpload(asset.image)">作参考</button>
                                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs text-brand-accent" @click="deleteHistoryImage(asset.item, asset.image)">删除</button>
                                     </div>
+                                    <select
+                                        :value="asset.item.category || ''"
+                                        class="wb-input min-h-9 w-full py-1.5 text-xs"
+                                        @change="setHistoryCategory(asset.item, ($event.target as HTMLSelectElement).value)"
+                                    >
+                                        <option value="">未归类</option>
+                                        <option v-for="category in collectionOptions" :key="category" :value="category">{{ category }}</option>
+                                    </select>
                                 </div>
                             </article>
                         </div>
@@ -627,6 +674,42 @@
                 </div>
             </div>
         </div>
+
+        <div v-if="showCollectionDialog" class="fixed inset-0 z-[90] flex items-center justify-center bg-brand-ink/70 p-4" @click.self="showCollectionDialog = false">
+            <form class="w-full max-w-sm rounded-lg border border-brand-line bg-white p-4 shadow-2xl" @submit.prevent="createCollection">
+                <div class="mb-4">
+                    <p class="wb-label text-brand-accent">Collection</p>
+                    <h2 class="mt-1 text-base font-semibold text-brand-ink">新建收藏夹</h2>
+                    <p class="mt-1 text-xs leading-5 text-brand-muted">命名后会出现在资产库侧栏，之后可把单张资产归入这个收藏夹。</p>
+                </div>
+                <label class="block">
+                    <span class="mb-1 block wb-label">收藏夹名称</span>
+                    <input v-model="newCollectionName" class="wb-input w-full" placeholder="例如：自拍 / 商业主图 / K-pop 路透" autofocus />
+                </label>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button type="button" class="wb-secondary" @click="showCollectionDialog = false">取消</button>
+                    <button type="submit" class="wb-primary" :disabled="!newCollectionName.trim()">创建</button>
+                </div>
+            </form>
+        </div>
+
+        <div v-if="showBulkDeleteDialog" class="fixed inset-0 z-[95] flex items-center justify-center bg-brand-ink/75 p-4" @click.self="showBulkDeleteDialog = false">
+            <form class="w-full max-w-md rounded-lg border border-brand-line bg-white p-4 shadow-2xl" @submit.prevent="confirmBulkDeleteAssets">
+                <div class="mb-4">
+                    <p class="wb-label text-brand-accent">Danger zone</p>
+                    <h2 class="mt-1 text-base font-semibold text-brand-ink">确认批量删除</h2>
+                    <p class="mt-2 text-sm leading-6 text-brand-muted">
+                        将删除当前选中的 {{ selectedAssetIds.length }} 张资产。这个操作只影响选中图片；同组未选中的图片会保留。
+                    </p>
+                    <p class="mt-2 text-xs leading-5 text-brand-accent">请输入“删除”以确认。</p>
+                </div>
+                <input v-model="bulkDeleteConfirmText" class="wb-input w-full" placeholder="删除" />
+                <div class="mt-4 flex justify-end gap-2">
+                    <button type="button" class="wb-secondary" @click="showBulkDeleteDialog = false">取消</button>
+                    <button type="submit" class="wb-primary" :disabled="bulkDeleteConfirmText.trim() !== '删除'">确认删除</button>
+                </div>
+            </form>
+        </div>
     </div>
 </template>
 
@@ -643,7 +726,6 @@ import { styleTemplates } from './data/templates'
 import { promptPhraseGroups } from './data/promptPhrases'
 import { LocalStorage } from './utils/storage'
 import {
-    clearGenerationHistoryItems,
     deleteGenerationHistoryItem,
     getGenerationHistoryItems,
     putGenerationHistoryItem,
@@ -724,10 +806,15 @@ const gemini3EnableGoogleSearch = ref(false)
 const generationHistory = ref<GenerationHistoryItem[]>([])
 const historyLoading = ref(false)
 const historyFilter = ref('all')
-const historyNewCategory = ref('')
+const assetCollections = ref<string[]>([])
+const newCollectionName = ref('')
+const showCollectionDialog = ref(false)
 const historyPreviewItem = ref<GenerationHistoryItem | null>(null)
 const historyPreviewImage = ref('')
-const clearHistoryArmed = ref(false)
+const assetSelectionMode = ref(false)
+const selectedAssetIds = ref<string[]>([])
+const showBulkDeleteDialog = ref(false)
+const bulkDeleteConfirmText = ref('')
 
 // 组件挂载时从本地存储读取API密钥
 onMounted(() => {
@@ -739,6 +826,7 @@ onMounted(() => {
     const savedPromptAssistantApiKey = LocalStorage.getPromptAssistantApiKey()
     const savedPromptAssistantEndpoint = LocalStorage.getPromptAssistantEndpoint()
     const savedPromptAssistantModel = LocalStorage.getPromptAssistantModelId()
+    assetCollections.value = LocalStorage.getAssetCollections()
 
     if (savedApiKey) {
         apiKey.value = savedApiKey
@@ -1429,6 +1517,10 @@ const historyCategories = computed(() =>
     Array.from(new Set(generationHistory.value.map(item => item.category).filter(Boolean) as string[]))
 )
 
+const collectionOptions = computed(() =>
+    Array.from(new Set([...assetCollections.value, ...historyCategories.value])).filter(Boolean)
+)
+
 const favoriteHistory = computed(() => generationHistory.value.filter(item => item.favorite))
 const recentGenerationHistory = computed(() => generationHistory.value.slice(0, 3))
 
@@ -1456,6 +1548,10 @@ const filteredHistoryAssets = computed(() =>
     )
 )
 
+const selectedHistoryAssets = computed(() =>
+    filteredHistoryAssets.value.filter(asset => selectedAssetIds.value.includes(asset.id))
+)
+
 const updateHistoryItem = async (nextItem: GenerationHistoryItem) => {
     generationHistory.value = generationHistory.value.map(item => (item.id === nextItem.id ? nextItem : item))
     try {
@@ -1470,7 +1566,20 @@ const toggleHistoryFavorite = (item: GenerationHistoryItem) => {
 }
 
 const setHistoryCategory = (item: GenerationHistoryItem, category: string) => {
-    updateHistoryItem({ ...item, category })
+    updateHistoryItem({ ...item, category: category || undefined })
+}
+
+const createCollection = () => {
+    const category = newCollectionName.value.trim()
+    if (!category) return
+
+    if (!assetCollections.value.includes(category)) {
+        assetCollections.value = [...assetCollections.value, category]
+        LocalStorage.saveAssetCollections(assetCollections.value)
+    }
+    historyFilter.value = `category:${category}`
+    newCollectionName.value = ''
+    showCollectionDialog.value = false
 }
 
 const reuseHistoryPrompt = (item: GenerationHistoryItem) => {
@@ -1565,29 +1674,34 @@ const openOriginalImage = (image: string) => {
     window.open(image, '_blank', 'noopener')
 }
 
+const toggleAssetSelectionMode = () => {
+    assetSelectionMode.value = !assetSelectionMode.value
+    selectedAssetIds.value = []
+}
+
+const toggleAssetSelection = (assetId: string) => {
+    selectedAssetIds.value = selectedAssetIds.value.includes(assetId)
+        ? selectedAssetIds.value.filter(id => id !== assetId)
+        : [...selectedAssetIds.value, assetId]
+}
+
+const confirmBulkDeleteAssets = async () => {
+    if (bulkDeleteConfirmText.value.trim() !== '删除') return
+
+    const assetsToDelete = [...selectedHistoryAssets.value]
+    for (const asset of assetsToDelete) {
+        await deleteHistoryImage(asset.item, asset.image)
+    }
+
+    selectedAssetIds.value = []
+    assetSelectionMode.value = false
+    showBulkDeleteDialog.value = false
+    bulkDeleteConfirmText.value = ''
+}
+
 const pushHistoryImages = (item: GenerationHistoryItem) => {
     for (const image of [...item.images].reverse()) {
         pushImageToUpload(image)
-    }
-}
-
-const clearGenerationHistory = async () => {
-    if (!clearHistoryArmed.value) {
-        clearHistoryArmed.value = true
-        window.setTimeout(() => {
-            clearHistoryArmed.value = false
-        }, 3500)
-        return
-    }
-
-    generationHistory.value = []
-    historyPreviewItem.value = null
-    historyPreviewImage.value = ''
-    clearHistoryArmed.value = false
-    try {
-        await clearGenerationHistoryItems()
-    } catch (historyError) {
-        console.warn('无法清空生成历史:', historyError)
     }
 }
 
