@@ -117,18 +117,29 @@ const GRS_AI_FALLBACK_MODELS: ApiModel[] = [
 ]
 
 export async function generateImage(request: GenerateRequest, maxRetries: number = 5): Promise<GenerateResponse> {
+    const targetCount = normalizeImageCount(request.count)
+    const collectedUrls: string[] = []
     let lastError: Error | null = null
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    for (let attempt = 1; attempt <= maxRetries && collectedUrls.length < targetCount; attempt++) {
         try {
             console.log(`Attempting image generation (${attempt}/${maxRetries})...`)
 
             const profile = getApiProfile(request.endpoint)
-            const response = await generateWithProfile(profile, request)
+            const response = await generateWithProfile(profile, { ...request, count: targetCount - collectedUrls.length })
 
             if (response.imageUrls.length > 0) {
-                console.log(`Generated ${response.imageUrls.length} image(s) on attempt ${attempt}`)
-                return response
+                for (const imageUrl of response.imageUrls) {
+                    if (!collectedUrls.includes(imageUrl)) {
+                        collectedUrls.push(imageUrl)
+                    }
+                    if (collectedUrls.length >= targetCount) break
+                }
+                console.log(`Generated ${collectedUrls.length}/${targetCount} image(s) on attempt ${attempt}`)
+                if (collectedUrls.length >= targetCount) {
+                    return { imageUrls: collectedUrls }
+                }
+                continue
             }
 
             lastError = new Error('The model did not return a valid image')
@@ -148,6 +159,10 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
 
             console.log(`Preparing retry ${attempt + 1}...`)
         }
+    }
+
+    if (collectedUrls.length > 0) {
+        return { imageUrls: collectedUrls }
     }
 
     throw new Error(`Unable to generate an image after ${maxRetries} attempts. Last error: ${lastError?.message || 'unknown error'}`)
@@ -246,6 +261,10 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
         modalities: ['image', 'text']
     }
 
+    if (request.count && request.count > 1) {
+        payload.n = request.count
+    }
+
     const imageConfig: Record<string, unknown> = {}
 
     if (request.aspectRatio) {
@@ -291,7 +310,8 @@ async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateReq
         model: request.model?.trim() || 'gpt-image-2',
         prompt: request.prompt,
         size: aspectRatioToSize(request.aspectRatio || '1:1'),
-        response_format: 'url'
+        response_format: 'url',
+        n: normalizeImageCount(request.count)
     }
 
     if (includeInputImages && request.images.length > 0) {
@@ -314,7 +334,8 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest):
         model: modelId,
         prompt: request.prompt,
         images: request.images,
-        replyType: 'json'
+        replyType: 'json',
+        count: normalizeImageCount(request.count)
     }
 
     if (request.aspectRatio) {
@@ -349,7 +370,8 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
         model: modelId,
         prompt: request.prompt,
         webHook: '-1',
-        shutProgress: false
+        shutProgress: false,
+        count: normalizeImageCount(request.count)
     }
 
     if (request.images.length > 0) {
@@ -852,6 +874,11 @@ function delay(ms: number): Promise<void> {
 
 function normalizePath(pathname: string): string {
     return pathname.replace(/\/+$/, '').toLowerCase()
+}
+
+function normalizeImageCount(count?: number): number {
+    if (!Number.isFinite(count)) return 1
+    return Math.min(Math.max(Math.floor(count || 1), 1), 4)
 }
 
 function getArray(value: unknown): unknown[] | null {

@@ -12,6 +12,66 @@ export interface PromptPhraseGroup {
 
 export const promptPhraseGroups: PromptPhraseGroup[] = [
     {
+        id: 'universal-subject',
+        title: '通用主体',
+        description: '快速补充主体、动作和环境，不绑定任何特定题材。',
+        phrases: [
+            { label: '明确主体', value: '主体清晰明确，画面第一眼能识别主要对象' },
+            { label: '自然动作', value: '自然可信的动作和姿态，避免僵硬摆拍' },
+            { label: '环境交代', value: '环境信息清楚，主体与场景有真实关系' },
+            { label: '细节丰富', value: '主体细节丰富，材质、边缘和纹理清楚' },
+            { label: '干净画面', value: '画面干净，没有多余杂物和干扰元素' },
+            { label: '真实尺度', value: '主体比例和空间尺度真实可信' },
+            { label: '情绪明确', value: '画面情绪明确但不过度夸张' },
+            { label: '叙事瞬间', value: '像故事中的一个瞬间，有自然的前后文' }
+        ]
+    },
+    {
+        id: 'camera-general',
+        title: '通用镜头',
+        description: '常用摄影镜头和视角，可用于商业、人像、产品和场景图。',
+        phrases: [
+            { label: '35mm 纪实', value: '35mm 纪实摄影视角，自然空间感' },
+            { label: '50mm 标准', value: '50mm 标准镜头，接近人眼观察' },
+            { label: '85mm 人像', value: '85mm 人像镜头，浅景深，主体突出' },
+            { label: '广角环境', value: '广角镜头，保留更多环境信息' },
+            { label: '长焦压缩', value: '长焦压缩感，背景柔和虚化' },
+            { label: '俯拍', value: '轻微俯拍视角，画面结构清楚' },
+            { label: '低角度', value: '低角度拍摄，主体更有力量感' },
+            { label: '微距细节', value: '微距镜头，突出材质纹理和细节' }
+        ]
+    },
+    {
+        id: 'commercial',
+        title: '商业视觉',
+        description: '电商主图、品牌海报、杂志封面和广告大片常用表达。',
+        phrases: [
+            { label: '商业大片', value: '高级商业大片质感，布光精准，主体有品牌感' },
+            { label: '品牌海报', value: '品牌宣传海报构图，主体突出，留出版式空间' },
+            { label: '杂志封面', value: '杂志封面摄影，强视觉中心，适合标题排版' },
+            { label: '电商主图', value: '干净电商主图，白底或浅色背景，产品边缘清楚' },
+            { label: '广告场景', value: '广告级生活方式场景，产品自然融入使用环境' },
+            { label: '高级棚拍', value: '高级棚拍布光，柔和阴影，材质反射真实' },
+            { label: '留白版式', value: '保留干净留白，方便后期添加文字和 logo' },
+            { label: '奢侈品质感', value: '克制奢侈品质感，精致材质，低调高级' }
+        ]
+    },
+    {
+        id: 'art-style',
+        title: '通用风格',
+        description: '不偏题材的视觉风格词，适合快速改变整体审美。',
+        phrases: [
+            { label: '写实摄影', value: '写实摄影风格，真实光线和真实材质' },
+            { label: '电影剧照', value: '电影剧照感，光影有层次，色彩克制' },
+            { label: '编辑大片', value: '时尚编辑大片风格，构图利落，姿态高级' },
+            { label: '极简高级', value: '极简高级风格，干净背景，少量重点元素' },
+            { label: '复古胶片', value: '复古胶片质感，柔和颗粒，低对比色彩' },
+            { label: '未来科技', value: '未来科技感，冷静光线，精密材质' },
+            { label: '梦幻柔焦', value: '梦幻柔焦氛围，柔和光晕但主体清楚' },
+            { label: '概念艺术', value: '概念艺术风格，清晰设计语言和完整世界观' }
+        ]
+    },
+    {
         id: 'phone-camera',
         title: '手机镜头',
         description: '让画面更像真实手机拍摄，而不是棚拍或广告大片。',

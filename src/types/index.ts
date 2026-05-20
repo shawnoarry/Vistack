@@ -6,6 +6,7 @@ export interface GenerateRequest {
     model: string
     aspectRatio?: string
     imageSize?: string
+    count?: number
     enableGoogleSearch?: boolean
 }
 
@@ -76,4 +77,5 @@ export interface GenerationRecipe {
     referenceImages: string[]
     referenceImageLabels: string[]
     referenceImageMetadata: ReferenceImageMeta[]
+    count: number
 }

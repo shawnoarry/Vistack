@@ -2,6 +2,66 @@ import type { StyleTemplate } from '../types'
 
 export const styleTemplates: StyleTemplate[] = [
     {
+        id: 'commercial-campaign',
+        title: '商业广告大片',
+        category: '商业视觉',
+        mode: 'both',
+        tags: ['广告', '大片', '品牌'],
+        prompt: '生成一张高级商业广告大片。主体有明确品牌感，构图干净有冲击力，布光精准，材质细节和轮廓清晰。背景应服务主体，可保留适当留白用于后期添加标题或 logo。整体像现代消费品牌的正式 campaign visual，不要杂乱，不要随机文字。',
+        image: '',
+        description: '适合品牌宣传、活动视觉和高级广告图。'
+    },
+    {
+        id: 'magazine-cover',
+        title: '杂志封面大片',
+        category: '商业视觉',
+        mode: 'both',
+        tags: ['杂志', '封面', '编辑'],
+        prompt: '生成一张杂志封面风格大片。主体位于强视觉中心，姿态和眼神有记忆点，背景干净但有质感，画面上方或侧边保留标题排版空间。使用编辑摄影风格、精致造型、自然但高级的修图，不添加任何真实文字或水印。',
+        image: '',
+        description: '适合人物封面、时尚大片和社媒封面。'
+    },
+    {
+        id: 'poster-key-visual',
+        title: '海报主视觉',
+        category: '商业视觉',
+        mode: 'both',
+        tags: ['海报', '主视觉', '活动'],
+        prompt: '生成一张活动海报主视觉。主体清楚、有强识别度，画面层次分明，光影和色彩能制造视觉冲击。构图需要适合后期排版，保留标题区和信息区，但不要直接生成文字。整体应像专业设计团队产出的 key visual。',
+        image: '',
+        description: '适合活动 KV、宣传海报和封面主图。'
+    },
+    {
+        id: 'beauty-editorial',
+        title: '美妆编辑大片',
+        category: '人像时尚',
+        mode: 'both',
+        tags: ['美妆', '人像', '棚拍'],
+        prompt: '生成一张美妆编辑大片。脸部和妆容细节清晰，皮肤真实但精致，光线柔和可控，背景干净。重点表现眼妆、唇妆、发丝和面部轮廓，避免塑料皮肤和过度磨皮。整体像高端美妆杂志或品牌视觉。',
+        image: '',
+        description: '适合美妆、头像、人像特写和妆容参考。'
+    },
+    {
+        id: 'luxury-product-still',
+        title: '奢侈品静物',
+        category: '商业视觉',
+        mode: 'both',
+        tags: ['产品', '静物', '高级'],
+        prompt: '生成一张奢侈品静物摄影。主体放置在精致台面或极简布景中，材质反射、阴影、边缘和纹理都要真实。光线克制，色彩低饱和，画面有高级留白。适合香水、首饰、包袋、电子产品或包装盒。',
+        image: '',
+        description: '适合产品质感、包装展示和电商高级主图。'
+    },
+    {
+        id: 'editorial-fashion-fullbody',
+        title: '时尚编辑全身',
+        category: '人像时尚',
+        mode: 'both',
+        tags: ['时尚', '全身', '杂志'],
+        prompt: '生成一张时尚编辑全身大片。人物全身比例自然，服装轮廓、面料和搭配层次清楚。姿态自信但不僵硬，背景简洁有设计感，光线像专业摄影棚或编辑外景。整体适合 lookbook、杂志内页或品牌造型图。',
+        image: '',
+        description: '适合全身穿搭、lookbook 和品牌服装图。'
+    },
+    {
         id: 'phone-selfie-natural',
         title: '手机镜头自拍',
         category: '手机人像',

@@ -10,6 +10,7 @@ export interface GenerationHistoryItem {
     endpoint: string
     aspectRatio: string
     imageSize: string
+    count?: number
     createdAt: number
     images: string[]
     category?: string
@@ -75,6 +76,10 @@ export async function getGenerationHistoryItems(): Promise<GenerationHistoryItem
 
 export function putGenerationHistoryItem(item: GenerationHistoryItem): Promise<IDBValidKey> {
     return historyTransaction<IDBValidKey>('readwrite', store => store.put(item))
+}
+
+export function deleteGenerationHistoryItem(id: string): Promise<undefined> {
+    return historyTransaction<undefined>('readwrite', store => store.delete(id))
 }
 
 export function clearGenerationHistoryItems(): Promise<undefined> {

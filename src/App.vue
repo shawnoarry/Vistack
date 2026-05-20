@@ -76,7 +76,7 @@
             </div>
         </section>
 
-        <main v-if="currentView === 'studio'" class="wb-shell grid gap-4 py-4 pb-[420px] lg:grid-cols-[380px_minmax(0,1fr)_340px] lg:pb-[320px]">
+        <main v-if="currentView === 'studio'" class="wb-shell grid gap-4 py-4 lg:pb-[260px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
             <aside class="space-y-4">
                 <section class="wb-panel bg-white">
                     <div class="mb-3 flex items-center justify-between gap-3">
@@ -309,11 +309,20 @@
 
         <section
             v-if="currentView === 'studio'"
-            class="fixed inset-x-0 bottom-0 z-30 border-t border-brand-line bg-brand-surface/95 shadow-2xl shadow-black/25 backdrop-blur"
+            class="border-t border-brand-line bg-brand-surface/95 shadow-2xl shadow-black/25 backdrop-blur lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-30"
         >
-            <div class="wb-shell py-4">
-                <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
-                    <div class="rounded-lg border border-brand-line bg-white p-3">
+            <div class="wb-shell py-3">
+                <div v-if="showPromptTools" class="absolute bottom-[calc(100%+10px)] left-1/2 z-40 w-[min(1040px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20">
+                    <PromptPhraseBuilder
+                        :groups="promptPhraseGroups"
+                        title="提示词词组"
+                        description="点击后追加到主提示词。"
+                        @insert="insertTextPromptPhrase"
+                    />
+                </div>
+
+                <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
+                    <div class="min-w-0 rounded-lg border border-brand-line bg-white p-3">
                         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                             <div>
                                 <span class="wb-label">Prompt box</span>
@@ -346,17 +355,8 @@
                         <textarea
                             v-model="textToImagePrompt"
                             placeholder="描述你想生成或改动的画面。参考图会作为素材参与生成，可以写：让角色1穿着服装参考，在背景参考中拍摄产品级主视觉。"
-                            class="wb-input min-h-[150px] w-full resize-none bg-white py-3 text-base leading-7"
+                            class="wb-input min-h-[116px] max-h-[180px] w-full resize-y bg-white py-3 text-base leading-7"
                         />
-
-                        <div v-if="showPromptTools" class="mt-3 rounded-lg border border-brand-line bg-brand-surface p-3">
-                            <PromptPhraseBuilder
-                                :groups="promptPhraseGroups"
-                                title="提示词词组"
-                                description="点击后追加到主提示词。"
-                                @insert="insertTextPromptPhrase"
-                            />
-                        </div>
 
                         <p v-if="promptAssistantError" class="mt-2 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">
                             {{ promptAssistantError }}
@@ -366,52 +366,49 @@
                         </p>
                     </div>
 
-                    <div class="flex flex-col gap-2 rounded-lg border border-brand-line bg-white p-3">
+                    <div class="flex min-w-0 flex-col gap-2 rounded-lg border border-brand-line bg-white p-3">
                         <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div class="rounded-md bg-brand-surface p-2">
+                            <div class="rounded-md bg-brand-surface px-2 py-1.5">
                                 <div class="text-brand-muted">参考图</div>
-                                <div class="mt-1 font-semibold text-brand-ink">{{ selectedImages.length }}</div>
+                                <div class="font-semibold text-brand-ink">{{ selectedImages.length }}</div>
                             </div>
-                            <div class="rounded-md bg-brand-surface p-2">
+                            <div class="rounded-md bg-brand-surface px-2 py-1.5">
                                 <div class="text-brand-muted">比例</div>
-                                <div class="mt-1 font-semibold text-brand-ink">{{ showAspectRatioSelector ? selectedAspectRatio : '自动' }}</div>
+                                <div class="font-semibold text-brand-ink">{{ showAspectRatioSelector ? selectedAspectRatio : '自动' }}</div>
                             </div>
-                            <div class="rounded-md bg-brand-surface p-2">
+                            <div class="rounded-md bg-brand-surface px-2 py-1.5">
                                 <div class="text-brand-muted">尺寸</div>
-                                <div class="mt-1 font-semibold text-brand-ink">{{ showImageSizeConfig ? gemini3ImageSize : '自动' }}</div>
+                                <div class="font-semibold text-brand-ink">{{ showImageSizeConfig ? gemini3ImageSize : '自动' }}</div>
                             </div>
                         </div>
 
-                        <div v-if="showAspectRatioSelector" class="rounded-lg border border-brand-line bg-brand-surface p-3">
-                            <div class="mb-2 flex items-center justify-between gap-2">
-                                <span class="wb-label">比例</span>
-                                <span class="text-[11px] text-brand-muted">按当前模型映射</span>
-                            </div>
-                            <AspectRatioSelector v-model="selectedAspectRatio" :model-type="selectedImageModelType" :image-size="gemini3ImageSize" />
+                        <div class="grid grid-cols-3 gap-2">
+                            <label class="min-w-0">
+                                <span class="sr-only">生成张数</span>
+                                <select v-model.number="generationCount" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
+                                    <option v-for="count in generationCountOptions" :key="count" :value="count">{{ count }} 张</option>
+                                </select>
+                            </label>
+                            <label v-if="showAspectRatioSelector" class="min-w-0">
+                                <span class="sr-only">图像宽高比</span>
+                                <select v-model="selectedAspectRatio" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
+                                    <option v-for="ratio in availableAspectRatios" :key="ratio.value" :value="ratio.value">{{ ratio.label }}</option>
+                                </select>
+                            </label>
+                            <label v-if="showImageSizeConfig" class="min-w-0">
+                                <span class="sr-only">图像尺寸</span>
+                                <select v-model="gemini3ImageSize" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
+                                    <option value="1K">1K - 标准</option>
+                                    <option value="2K">2K - 高清晰度</option>
+                                    <option value="4K">4K - 超高清</option>
+                                </select>
+                            </label>
                         </div>
 
-                        <div v-if="showImageSizeConfig" class="rounded-lg border border-brand-line bg-brand-surface p-3">
-                            <div class="mb-2 flex items-center justify-between gap-2">
-                                <span class="wb-label">分辨率</span>
-                                <span class="text-[11px] text-brand-muted">生成前参数</span>
-                            </div>
-                            <Gemini3ProConfig
-                                v-model:imageSize="gemini3ImageSize"
-                                v-model:enableGoogleSearch="gemini3EnableGoogleSearch"
-                                :model-type="selectedImageModelType"
-                            />
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div class="rounded-md bg-brand-surface p-2">
-                                <div class="text-brand-muted">模型</div>
-                                <div class="mt-1 truncate font-semibold text-brand-ink">{{ selectedImageModelType || '自动识别' }}</div>
-                            </div>
-                            <div class="rounded-md bg-brand-surface p-2">
-                                <div class="text-brand-muted">模板</div>
-                                <div class="mt-1 truncate font-semibold text-brand-ink">{{ activeSupplementLabel || '未选' }}</div>
-                            </div>
-                        </div>
+                        <label v-if="supportsGoogleSearch" class="flex items-center gap-2 rounded-md bg-brand-surface px-2 py-1.5 text-xs font-semibold text-brand-muted">
+                            <input v-model="gemini3EnableGoogleSearch" type="checkbox" class="h-3.5 w-3.5 rounded border-brand-line text-brand-accent focus:ring-brand-accent" />
+                            Google Search
+                        </label>
                         <button
                             type="button"
                             @click="handleGenerate"
@@ -474,7 +471,17 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" class="wb-secondary" @click="currentView = 'studio'">返回创作台</button>
-                        <button v-if="generationHistory.length" type="button" class="wb-secondary text-brand-accent" @click="clearGenerationHistory">清空历史</button>
+                        <button
+                            v-if="generationHistory.length"
+                            type="button"
+                            :class="[
+                                'wb-secondary',
+                                clearHistoryArmed ? 'border-brand-accent bg-brand-accent text-brand-surface hover:bg-brand-accent/90' : 'text-brand-accent'
+                            ]"
+                            @click="clearGenerationHistory"
+                        >
+                            {{ clearHistoryArmed ? '再次点击确认清空' : '清空历史' }}
+                        </button>
                     </div>
                 </div>
 
@@ -498,58 +505,62 @@
                         <div class="rounded-lg border border-brand-line bg-white p-3">
                             <div class="wb-label mb-2">概览</div>
                             <div class="grid grid-cols-3 gap-2 text-center text-xs lg:grid-cols-1">
-                                <div class="rounded-md bg-brand-surface p-2">
+                                <button type="button" class="rounded-md bg-brand-surface p-2 transition hover:bg-brand-line" @click="historyFilter = 'all'">
                                     <div class="text-brand-muted">全部</div>
                                     <div class="mt-1 font-semibold text-brand-ink">{{ generationHistory.length }}</div>
-                                </div>
-                                <div class="rounded-md bg-brand-surface p-2">
+                                </button>
+                                <button type="button" class="rounded-md bg-brand-surface p-2 transition hover:bg-brand-line" @click="historyFilter = 'favorite'">
                                     <div class="text-brand-muted">收藏</div>
                                     <div class="mt-1 font-semibold text-brand-ink">{{ favoriteHistory.length }}</div>
-                                </div>
-                                <div class="rounded-md bg-brand-surface p-2">
+                                </button>
+                                <button type="button" class="rounded-md bg-brand-surface p-2 transition hover:bg-brand-line" @click="historyFilter = historyCategories[0] ? `category:${historyCategories[0]}` : 'all'">
                                     <div class="text-brand-muted">收藏夹</div>
                                     <div class="mt-1 font-semibold text-brand-ink">{{ historyCategories.length }}</div>
-                                </div>
+                                </button>
+                            </div>
+                            <div v-if="historyCategories.length" class="mt-3 flex flex-wrap gap-2">
+                                <button
+                                    v-for="category in historyCategories"
+                                    :key="category"
+                                    type="button"
+                                    :class="[
+                                        'rounded-md border px-2.5 py-1.5 text-xs font-semibold transition',
+                                        historyFilter === `category:${category}`
+                                            ? 'border-brand-accent bg-brand-accent text-brand-surface'
+                                            : 'border-brand-line bg-brand-surface text-brand-muted hover:text-brand-ink'
+                                    ]"
+                                    @click="historyFilter = `category:${category}`"
+                                >
+                                    {{ category }}
+                                </button>
                             </div>
                         </div>
                     </aside>
 
                     <section>
-                        <div v-if="filteredGenerationHistory.length" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            <article v-for="item in filteredGenerationHistory" :key="item.id" class="rounded-lg border border-brand-line bg-white p-3">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <p class="text-xs font-semibold text-brand-ink">
-                                            {{ item.source === 'text' ? '文生图' : '参考图生成' }}
-                                            <span v-if="item.recipe?.referenceImages?.length" class="text-brand-muted"> · {{ item.recipe.referenceImages.length }} 张参考图</span>
-                                            <span v-if="item.category" class="text-brand-muted"> · {{ item.category }}</span>
-                                        </p>
-                                        <p class="mt-1 line-clamp-2 text-xs leading-5 text-brand-muted">{{ item.recipe?.mainPrompt || item.prompt }}</p>
+                        <div v-if="filteredHistoryAssets.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                            <article v-for="asset in filteredHistoryAssets" :key="asset.id" class="overflow-hidden rounded-lg border border-brand-line bg-white">
+                                <button type="button" class="block aspect-square w-full bg-brand-surface" @click="openHistoryPreview(asset.item, asset.image)">
+                                    <img :src="asset.image" :alt="`历史资产 ${asset.index + 1}`" class="h-full w-full object-cover" />
+                                </button>
+                                <div class="space-y-2 p-3">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-xs font-semibold text-brand-ink">
+                                                {{ asset.item.source === 'text' ? '文生图' : '参考图生成' }}
+                                                <span class="text-brand-muted"> · {{ asset.index + 1 }}/{{ asset.item.images.length }}</span>
+                                            </p>
+                                            <p class="mt-1 line-clamp-2 text-xs leading-5 text-brand-muted">{{ asset.item.recipe?.mainPrompt || asset.item.prompt }}</p>
+                                        </div>
+                                        <button type="button" class="shrink-0 rounded-md bg-brand-line/60 px-2 py-1 text-[11px] text-brand-muted transition hover:text-brand-accent" @click="toggleHistoryFavorite(asset.item)">
+                                            {{ asset.item.favorite ? '已收藏' : asset.item.aspectRatio }}
+                                        </button>
                                     </div>
-                                    <button type="button" class="shrink-0 rounded-md bg-brand-line/60 px-2 py-1 text-[11px] text-brand-muted transition hover:text-brand-accent" @click="toggleHistoryFavorite(item)">
-                                        {{ item.favorite ? '已收藏' : item.aspectRatio }}
-                                    </button>
-                                </div>
-
-                                <div class="mt-3 grid grid-cols-4 gap-2">
-                                    <button
-                                        v-for="(image, index) in item.images.slice(0, 4)"
-                                        :key="`${item.id}-${index}`"
-                                        type="button"
-                                        @click="restoreHistoryItem(item)"
-                                        class="aspect-square overflow-hidden rounded-md border border-brand-line bg-brand-surface"
-                                    >
-                                        <img :src="image" :alt="`历史结果 ${index + 1}`" class="h-full w-full object-cover" />
-                                    </button>
-                                </div>
-
-                                <div class="mt-3 flex flex-wrap gap-2">
-                                    <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="restoreHistoryItem(item)">查看</button>
-                                    <button type="button" class="wb-primary min-h-8 px-2 text-xs" @click="reuseHistoryRecipe(item)">一键复用</button>
-                                    <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushHistoryImages(item)">结果作参考</button>
-                                    <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="reuseHistoryPrompt(item)">仅提示词</button>
-                                    <button v-if="historyNewCategory.trim()" type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="setHistoryCategory(item, historyNewCategory.trim())">归入 {{ historyNewCategory.trim() }}</button>
-                                    <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="toggleHistoryFavorite(item)">{{ item.favorite ? '取消收藏' : '收藏' }}</button>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="openHistoryPreview(asset.item, asset.image)">详情</button>
+                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushImageToUpload(asset.image)">作参考</button>
+                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs text-brand-accent" @click="deleteHistoryImage(asset.item, asset.image)">删除</button>
+                                    </div>
                                 </div>
                             </article>
                         </div>
@@ -564,6 +575,58 @@
         <div class="wb-shell pb-10">
             <Footer />
         </div>
+
+        <div v-if="historyPreviewItem" class="fixed inset-0 z-[80] flex items-center justify-center bg-brand-ink/90 p-4" @click.self="historyPreviewItem = null">
+            <div class="flex max-h-full w-full max-w-6xl flex-col rounded-lg border border-brand-surface/20 bg-brand-ink p-3 shadow-2xl">
+                <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-brand-surface">
+                            {{ historyPreviewItem.source === 'text' ? '文生图' : '参考图生成' }}
+                            <span v-if="historyPreviewItem.category" class="text-brand-muted"> · {{ historyPreviewItem.category }}</span>
+                        </p>
+                        <p class="mt-1 line-clamp-1 text-xs text-brand-muted">{{ historyPreviewItem.recipe?.mainPrompt || historyPreviewItem.prompt }}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="openOriginalImage(historyPreviewImage)">原图查看</button>
+                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="handleDownloadResult(historyPreviewImage)">下载</button>
+                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="pushHistoryImages(historyPreviewItem)">结果作参考</button>
+                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="reuseHistoryRecipe(historyPreviewItem)">一键复用</button>
+                        <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryImage(historyPreviewItem, historyPreviewImage)">删除当前图</button>
+                        <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryItem(historyPreviewItem)">删除整组</button>
+                        <button type="button" class="rounded-md bg-brand-accent px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="historyPreviewItem = null">关闭</button>
+                    </div>
+                </div>
+                <div class="min-h-0 flex-1 overflow-auto rounded-lg bg-black/20">
+                    <img :src="historyPreviewImage" alt="历史结果预览" class="mx-auto max-h-[74vh] w-auto max-w-full object-contain" />
+                </div>
+                <div v-if="historyPreviewItem.images.length > 1" class="mt-3 flex gap-2 overflow-x-auto">
+                    <button
+                        v-for="(image, index) in historyPreviewItem.images"
+                        :key="`${historyPreviewItem.id}-preview-${index}`"
+                        type="button"
+                        :class="[
+                            'h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-brand-surface',
+                            historyPreviewImage === image ? 'border-brand-accent' : 'border-brand-surface/20'
+                        ]"
+                        @click="historyPreviewImage = image"
+                    >
+                        <img :src="image" :alt="`历史结果 ${index + 1}`" class="h-full w-full object-cover" />
+                    </button>
+                </div>
+                <div class="mt-3 grid gap-3 text-xs leading-5 text-brand-muted lg:grid-cols-[minmax(0,1fr)_260px]">
+                    <div class="rounded-lg border border-brand-surface/15 bg-brand-surface/5 p-3">
+                        <div class="mb-1 font-semibold text-brand-surface">生成提示词</div>
+                        <p class="max-h-24 overflow-y-auto whitespace-pre-wrap">{{ historyPreviewItem.prompt }}</p>
+                    </div>
+                    <div class="rounded-lg border border-brand-surface/15 bg-brand-surface/5 p-3">
+                        <div class="mb-1 font-semibold text-brand-surface">批次信息</div>
+                        <p>生成组：{{ historyPreviewItem.images.length }} 张</p>
+                        <p>比例：{{ historyPreviewItem.aspectRatio }} · 尺寸：{{ historyPreviewItem.imageSize }}</p>
+                        <p>模型：{{ historyPreviewItem.model }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -574,8 +637,6 @@ import ImageUpload from './components/ImageUpload.vue'
 import StylePromptSelector from './components/StylePromptSelector.vue'
 import ResultDisplay from './components/ResultDisplay.vue'
 import Footer from './components/Footer.vue'
-import AspectRatioSelector from './components/AspectRatioSelector.vue'
-import Gemini3ProConfig from './components/Gemini3ProConfig.vue'
 import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
 import { fetchModels, generateImage, improvePrompt } from './services/api'
 import { styleTemplates } from './data/templates'
@@ -583,6 +644,7 @@ import { promptPhraseGroups } from './data/promptPhrases'
 import { LocalStorage } from './utils/storage'
 import {
     clearGenerationHistoryItems,
+    deleteGenerationHistoryItem,
     getGenerationHistoryItems,
     putGenerationHistoryItem,
     type GenerationHistoryItem,
@@ -621,6 +683,7 @@ const promptAssistantModel = ref('')
 const isPromptAssistantLoading = ref(false)
 const promptAssistantError = ref<string | null>(null)
 const selectedAspectRatio = ref('1:1')
+const generationCount = ref(1)
 const portraitAssistEnabled = ref(false)
 const portraitPose = ref('standing side by side')
 const portraitRelation = ref('natural friendly group portrait')
@@ -662,6 +725,9 @@ const generationHistory = ref<GenerationHistoryItem[]>([])
 const historyLoading = ref(false)
 const historyFilter = ref('all')
 const historyNewCategory = ref('')
+const historyPreviewItem = ref<GenerationHistoryItem | null>(null)
+const historyPreviewImage = ref('')
+const clearHistoryArmed = ref(false)
 
 // 组件挂载时从本地存储读取API密钥
 onMounted(() => {
@@ -1011,7 +1077,8 @@ const buildGenerationRecipe = (compiledPrompt: string): GenerationRecipe => ({
     customPrompt: customPrompt.value,
     referenceImages: [...selectedImages.value],
     referenceImageLabels: selectedImages.value.map((_, index) => referenceImageLabels.value[index] || `角色${index + 1}`),
-    referenceImageMetadata: selectedImages.value.map((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index))
+    referenceImageMetadata: selectedImages.value.map((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index)),
+    count: generationCount.value
 })
 
 const pushImageToUpload = (image: string | null) => {
@@ -1121,6 +1188,7 @@ const portraitAssistPrompt = computed(() => {
 })
 
 const selectedTemplatePrompt = computed(() => selectedStyle.value ? styleTemplates.find(template => template.id === selectedStyle.value)?.prompt || '' : '')
+const generationCountOptions = [1, 2, 3, 4]
 const activeSupplementLabel = computed(() => {
     if (selectedStyle.value) {
         return styleTemplates.find(template => template.id === selectedStyle.value)?.title || '模板'
@@ -1243,6 +1311,72 @@ const selectedImageModelType = computed(() => {
     return 'default'
 })
 
+const baseAspectRatioOptions = [
+    { value: '1:1', label: '1:1 - 1024x1024' },
+    { value: '2:3', label: '2:3 - 832x1248' },
+    { value: '3:2', label: '3:2 - 1248x832' },
+    { value: '3:4', label: '3:4 - 864x1184' },
+    { value: '4:3', label: '4:3 - 1184x864' },
+    { value: '4:5', label: '4:5 - 896x1152' },
+    { value: '5:4', label: '5:4 - 1152x896' },
+    { value: '9:16', label: '9:16 - 768x1344' },
+    { value: '16:9', label: '16:9 - 1344x768' },
+    { value: '21:9', label: '21:9 - 1536x672' }
+]
+
+const gemini3AspectRatioData: Record<string, Record<string, string>> = {
+    '1K': {
+        '1:1': '1024x1024',
+        '2:3': '848x1264',
+        '3:2': '1264x848',
+        '3:4': '896x1200',
+        '4:3': '1200x896',
+        '4:5': '928x1152',
+        '5:4': '1152x928',
+        '9:16': '768x1376',
+        '16:9': '1376x768',
+        '21:9': '1584x672'
+    },
+    '2K': {
+        '1:1': '2048x2048',
+        '2:3': '1696x2528',
+        '3:2': '2528x1696',
+        '3:4': '1792x2400',
+        '4:3': '2400x1792',
+        '4:5': '1856x2304',
+        '5:4': '2304x1856',
+        '9:16': '1536x2752',
+        '16:9': '2752x1536',
+        '21:9': '3168x1344'
+    },
+    '4K': {
+        '1:1': '4096x4096',
+        '2:3': '3392x5056',
+        '3:2': '5056x3392',
+        '3:4': '3584x4800',
+        '4:3': '4800x3584',
+        '4:5': '3712x4608',
+        '5:4': '4608x3712',
+        '9:16': '3072x5504',
+        '16:9': '5504x3072',
+        '21:9': '6336x2688'
+    }
+}
+
+const availableAspectRatios = computed(() => {
+    if (selectedImageModelType.value !== 'gemini-3-pro-image') {
+        return baseAspectRatioOptions
+    }
+
+    const sizeData = gemini3AspectRatioData[gemini3ImageSize.value]
+    if (!sizeData) return baseAspectRatioOptions
+
+    return Object.entries(sizeData).map(([ratio, resolution]) => ({
+        value: ratio,
+        label: `${ratio} - ${resolution}`
+    }))
+})
+
 const showImageSizeConfig = computed(() => {
     return selectedImageModelType.value === 'nano-banana' ||
            selectedImageModelType.value === 'gemini-3-pro-image'
@@ -1276,6 +1410,7 @@ const addGenerationHistory = async (source: GenerationHistorySource, prompt: str
         endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
         aspectRatio: selectedAspectRatio.value,
         imageSize: gemini3ImageSize.value,
+        count: recipe.count,
         createdAt,
         images,
         recipe
@@ -1310,6 +1445,17 @@ const filteredGenerationHistory = computed(() => {
     return generationHistory.value
 })
 
+const filteredHistoryAssets = computed(() =>
+    filteredGenerationHistory.value.flatMap(item =>
+        item.images.map((image, index) => ({
+            id: `${item.id}-${index}`,
+            item,
+            image,
+            index
+        }))
+    )
+)
+
 const updateHistoryItem = async (nextItem: GenerationHistoryItem) => {
     generationHistory.value = generationHistory.value.map(item => (item.id === nextItem.id ? nextItem : item))
     try {
@@ -1338,6 +1484,7 @@ const applyGenerationRecipe = (recipe: GenerationRecipe | undefined, fallbackPro
     textToImagePrompt.value = recipe?.mainPrompt || fallbackPrompt
     customPrompt.value = recipe?.customPrompt || ''
     selectedStyle.value = recipe?.selectedStyle || ''
+    generationCount.value = recipe?.count || 1
 
     if (recipe?.referenceImages?.length) {
         selectedImages.value = [...recipe.referenceImages]
@@ -1351,6 +1498,7 @@ const reuseHistoryRecipe = (item: GenerationHistoryItem) => {
 
     selectedAspectRatio.value = item.aspectRatio
     gemini3ImageSize.value = item.imageSize
+    generationCount.value = item.count || item.recipe?.count || 1
     currentView.value = 'studio'
 }
 
@@ -1370,7 +1518,51 @@ const restoreHistoryItem = (item: GenerationHistoryItem) => {
     }
     selectedAspectRatio.value = item.aspectRatio
     gemini3ImageSize.value = item.imageSize
+    generationCount.value = item.count || item.recipe?.count || 1
     currentView.value = 'studio'
+}
+
+const openHistoryPreview = (item: GenerationHistoryItem, image = item.images[0] || '') => {
+    historyPreviewItem.value = item
+    historyPreviewImage.value = image
+}
+
+const deleteHistoryItem = async (item: GenerationHistoryItem) => {
+    generationHistory.value = generationHistory.value.filter(historyItem => historyItem.id !== item.id)
+    if (historyPreviewItem.value?.id === item.id) {
+        historyPreviewItem.value = null
+        historyPreviewImage.value = ''
+    }
+
+    try {
+        await deleteGenerationHistoryItem(item.id)
+    } catch (historyError) {
+        console.warn('无法删除生成历史:', historyError)
+    }
+}
+
+const deleteHistoryImage = async (item: GenerationHistoryItem, image: string) => {
+    const nextImages = item.images.filter(existing => existing !== image)
+
+    if (!nextImages.length) {
+        await deleteHistoryItem(item)
+        return
+    }
+
+    const nextItem = { ...item, images: nextImages }
+    await updateHistoryItem(nextItem)
+
+    if (historyPreviewItem.value?.id === item.id) {
+        historyPreviewItem.value = nextItem
+        historyPreviewImage.value = nextImages.includes(historyPreviewImage.value)
+            ? historyPreviewImage.value
+            : nextImages[0]
+    }
+}
+
+const openOriginalImage = (image: string) => {
+    if (!image || typeof window === 'undefined') return
+    window.open(image, '_blank', 'noopener')
 }
 
 const pushHistoryImages = (item: GenerationHistoryItem) => {
@@ -1380,7 +1572,18 @@ const pushHistoryImages = (item: GenerationHistoryItem) => {
 }
 
 const clearGenerationHistory = async () => {
+    if (!clearHistoryArmed.value) {
+        clearHistoryArmed.value = true
+        window.setTimeout(() => {
+            clearHistoryArmed.value = false
+        }, 3500)
+        return
+    }
+
     generationHistory.value = []
+    historyPreviewItem.value = null
+    historyPreviewImage.value = ''
+    clearHistoryArmed.value = false
     try {
         await clearGenerationHistoryItems()
     } catch (historyError) {
@@ -1403,7 +1606,8 @@ const handleTextToImageGenerate = async () => {
             images: [],
             apikey: apiKey.value,
             endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
-            model: selectedModel.value.trim() || DEFAULT_MODEL_ID
+            model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
+            count: generationCount.value
         }
 
         // Attach aspect ratio when the selected model supports it.
@@ -1494,7 +1698,8 @@ const handleGenerate = async () => {
             images: selectedImages.value,
             apikey: apiKey.value,
             endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
-            model: selectedModel.value.trim() || DEFAULT_MODEL_ID
+            model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
+            count: generationCount.value
         }
 
         // Attach aspect ratio when the selected model supports it.
