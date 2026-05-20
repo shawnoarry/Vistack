@@ -7,7 +7,7 @@ export const styleTemplates: StyleTemplate[] = [
         category: '角色商品化',
         mode: 'image',
         tags: ['角色', '手办', '包装'],
-        prompt: 'Using the nano-banana model, create a 1/7 scale commercialized figurine of the character in the reference image, in a realistic product photography style. Place the figurine on a clean computer desk with a transparent round acrylic base, no text on the base. Show a monitor in the background displaying the ZBrush modeling process for this figurine. Add a premium toy packaging box beside the monitor, printed with flat 2D artwork based on the original reference. Preserve the character identity, costume details, colors, proportions, and recognizable accessories.',
+        prompt: 'Create a 1/7 scale commercialized figurine of the character in the reference image, in a realistic product photography style. Place the figurine on a clean computer desk with a transparent round acrylic base, no text on the base. Show a monitor in the background displaying the ZBrush modeling process for this figurine. Add a premium toy packaging box beside the monitor, printed with flat 2D artwork based on the original reference. Preserve the character identity, costume details, colors, proportions, and recognizable accessories.',
         image: '/1.png',
         description: '把上传角色转成收藏级桌面手办，并生成包装与制作过程展示。'
     },

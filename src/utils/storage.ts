@@ -2,10 +2,16 @@ import type { ModelOption } from '../types'
 
 // 本地存储工具类
 export class LocalStorage {
-    private static readonly API_KEY = 'nano-banana-api-key'
-    private static readonly API_ENDPOINT = 'nano-banana-api-endpoint'
-    private static readonly MODEL_ID = 'nano-banana-model-id'
-    private static readonly MODEL_CACHE = 'nano-banana-model-cache'
+    private static readonly API_KEY = 'vistack-api-key'
+    private static readonly API_ENDPOINT = 'vistack-api-endpoint'
+    private static readonly MODEL_ID = 'vistack-model-id'
+    private static readonly MODEL_CACHE = 'vistack-model-cache'
+    private static readonly LEGACY_KEYS = {
+        API_KEY: 'nano-banana-api-key',
+        API_ENDPOINT: 'nano-banana-api-endpoint',
+        MODEL_ID: 'nano-banana-model-id',
+        MODEL_CACHE: 'nano-banana-model-cache'
+    }
 
     // 保存API密钥
     static saveApiKey(apiKey: string): void {
@@ -19,7 +25,7 @@ export class LocalStorage {
     // 获取API密钥
     static getApiKey(): string {
         try {
-            return localStorage.getItem(this.API_KEY) || ''
+            return this.getStoredValue(this.API_KEY, this.LEGACY_KEYS.API_KEY)
         } catch (error) {
             console.warn('无法从本地存储读取API密钥:', error)
             return ''
@@ -47,7 +53,7 @@ export class LocalStorage {
     // 获取自定义端点
     static getApiEndpoint(): string {
         try {
-            return localStorage.getItem(this.API_ENDPOINT) || ''
+            return this.getStoredValue(this.API_ENDPOINT, this.LEGACY_KEYS.API_ENDPOINT)
         } catch (error) {
             console.warn('无法从本地存储读取API端点:', error)
             return ''
@@ -75,7 +81,7 @@ export class LocalStorage {
     // 获取模型ID
     static getModelId(): string {
         try {
-            return localStorage.getItem(this.MODEL_ID) || ''
+            return this.getStoredValue(this.MODEL_ID, this.LEGACY_KEYS.MODEL_ID)
         } catch (error) {
             console.warn('无法从本地存储读取模型ID:', error)
             return ''
@@ -133,7 +139,7 @@ export class LocalStorage {
     }
 
     private static getModelCacheMap(): Record<string, ModelOption[]> {
-        const raw = localStorage.getItem(this.MODEL_CACHE)
+        const raw = this.getStoredValue(this.MODEL_CACHE, this.LEGACY_KEYS.MODEL_CACHE)
         if (!raw) return {}
 
         try {
@@ -150,5 +156,18 @@ export class LocalStorage {
 
     private static normalizeEndpoint(endpoint: string): string {
         return endpoint.trim().replace(/\/$/, '').toLowerCase()
+    }
+
+    private static getStoredValue(currentKey: string, legacyKey: string): string {
+        const current = localStorage.getItem(currentKey)
+        if (current !== null) return current
+
+        const legacy = localStorage.getItem(legacyKey)
+        if (legacy !== null) {
+            localStorage.setItem(currentKey, legacy)
+            return legacy
+        }
+
+        return ''
     }
 }

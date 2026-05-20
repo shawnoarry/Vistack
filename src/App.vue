@@ -3,9 +3,9 @@
         <header class="sticky top-0 z-40 border-b border-brand-line bg-brand-surface/95 backdrop-blur">
             <div class="wb-shell flex flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
-                    <p class="wb-label text-brand-accent">Image generation studio</p>
+                    <p class="wb-label text-brand-accent">Multi-model visual studio</p>
                     <div class="mt-1 flex flex-wrap items-end gap-3">
-                        <h1 class="text-2xl font-semibold leading-tight text-brand-ink sm:text-3xl">Nano Banana Workbench</h1>
+                        <h1 class="text-2xl font-semibold leading-tight text-brand-ink sm:text-3xl">Vistack</h1>
                         <span class="rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">
                             {{ selectedModel || DEFAULT_MODEL_ID }}
                         </span>
@@ -220,7 +220,7 @@
                 <section v-if="showAspectRatioSelector" class="wb-panel">
                     <div class="mb-3">
                         <h2 class="text-sm font-semibold text-brand-ink">比例</h2>
-                        <p class="mt-1 text-xs text-brand-muted">Nano Banana / Gemini / GPT Image 会按模型能力映射到对应请求参数。</p>
+                        <p class="mt-1 text-xs text-brand-muted">Nano Banana、Gemini、GPT Image 等模型会按能力映射到对应请求参数。</p>
                     </div>
                     <AspectRatioSelector v-model="selectedAspectRatio" :model-type="selectedImageModelType" :image-size="gemini3ImageSize" />
                 </section>
@@ -404,7 +404,7 @@ const portraitRelationOptions = [
     { label: '电影剧照', value: 'cinematic two-character still frame' }
 ]
 
-// Gemini / Nano Banana image settings
+// Image model settings
 const gemini3ImageSize = ref('2K')
 const gemini3EnableGoogleSearch = ref(false)
 
@@ -993,7 +993,7 @@ const handleDownloadResult = async (image: string) => {
         const extension = dataMatch ? dataMatch[1] : 'png'
 
         link.href = downloadUrl
-        link.download = `nano-banana-${Date.now()}.${extension}`
+        link.download = `vistack-${Date.now()}.${extension}`
         link.rel = 'noopener'
         document.body.appendChild(link)
         link.click()

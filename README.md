@@ -1,6 +1,6 @@
-# Nanobanana - 基于 OpenRouter 的图片生成 Web UI
+# Vistack - 多模型 AI 视觉生成工作台
 
-这是一个现代化的 Web 应用，使用 Vue3 + TypeScript + TailwindCSS 构建，直接调用 OpenRouter API 进行图片生成和多模态对话。
+Vistack 是一个现代化的 Web 应用，使用 Vue3 + TypeScript + TailwindCSS 构建，可通过自定义 API Endpoint 调用 OpenRouter、OpenAI 兼容接口、GRS AI / CLIProxyAPI 等服务进行图片生成和参考图再创作。
 
 ## 核心功能
 
@@ -8,7 +8,7 @@
 
 -   **多图上传**: 支持拖拽或点击上传多张本地图片，实时预览缩略图
 -   **智能对话**: 输入文本提示词，结合上传的图片与 AI 进行多模态对话
--   **直接集成**: 前端直接调用 OpenRouter API，无需中间服务器
+-   **直接集成**: 前端直接调用图像生成 API，无需中间服务器
 -   **现代化界面**: 使用 TailwindCSS 构建的响应式暗色主题界面
 -   **实时反馈**: 加载状态、错误处理和结果展示
 -   **类型安全**: 完整的 TypeScript 支持
@@ -17,13 +17,13 @@
 
 -   **文生图创作**: 新增独立的文字转图片流程，可直接输入文本描述生成图片，生成结果支持下载或继续二次创作
 -   **自定义端点与模型**: 支持填写自定义 API 端点，自行获取并选择可用模型，并记住你的首选配置
--   **多渠道兼容**: 在保留 OpenRouter API 的同时，也完美适配 CLIProxyAPI，可直接调用通过 CLIProxyAPI 部署的 NanoBanana 模型
+-   **多渠道兼容**: 在保留 OpenRouter API 的同时，也适配 CLIProxyAPI，可直接调用通过 CLIProxyAPI 部署的 Nano Banana、Gemini、GPT Image 等模型
 
 ## 为何使用本项目？
 
 -   **纯前端应用**: 无需部署后端服务器，直接托管静态文件即可
 -   **现代化技术栈**: Vue3 + TypeScript + TailwindCSS，开发体验优秀
--   **直接调用**: 前端直接调用 OpenRouter API，减少中间环节
+-   **直接调用**: 前端直接调用兼容 API，减少中间环节
 -   **易于部署**: 可部署到任何静态托管服务（Vercel、Netlify、GitHub Pages 等）
 
 ## 技术栈
@@ -31,7 +31,7 @@
 -   **前端**: Vue 3 + TypeScript + TailwindCSS + Vite
 -   **构建工具**: Vite (快速开发和构建)
 -   **样式**: TailwindCSS (原子化 CSS 框架)
--   **AI 模型**: 直接调用 OpenRouter API，默认使用 `google/gemini-2.5-flash-image-preview:free`
+-   **AI 模型**: 直接调用 OpenRouter 或兼容 API，默认使用 `google/gemini-2.5-flash-image-preview:free`
 
 ## 本地开发
 
@@ -143,4 +143,7 @@ src/
 
 ## 许可证
 
-MIT License
+MIT License. See [LICENSE](./LICENSE).
+
+This project includes code adapted from upstream open-source projects. See
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for provenance details.
