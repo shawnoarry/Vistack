@@ -51,23 +51,60 @@
             </div>
         </section>
 
-        <main class="wb-shell grid gap-4 py-4 pb-64 lg:grid-cols-[320px_minmax(0,1fr)_360px] xl:grid-cols-[340px_minmax(0,1fr)_380px]">
+        <main class="wb-shell grid gap-4 py-4 pb-10 lg:grid-cols-[420px_minmax(0,1fr)_360px] xl:grid-cols-[460px_minmax(0,1fr)_380px]">
             <aside class="space-y-4">
                 <section class="wb-panel">
+                    <div class="mb-4">
+                        <h2 class="text-sm font-semibold text-brand-ink">输入与参考</h2>
+                        <p class="mt-1 text-xs text-brand-muted">同一段主提示词会用于无参考图生成，也会用于带参考图生成。</p>
+                    </div>
+
+                    <label class="block">
+                        <span class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <span class="wb-label">主提示词</span>
+                            <select v-model="quickTextTemplateId" class="rounded-md border border-brand-line bg-brand-surface px-2 py-1 text-xs text-brand-ink outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10">
+                                <option value="">插入内置提示词</option>
+                                <option v-for="template in textPromptTemplates" :key="template.id" :value="template.id">
+                                    {{ template.title }}
+                                </option>
+                            </select>
+                        </span>
+                        <textarea
+                            v-model="textToImagePrompt"
+                            placeholder="描述你想生成或改动的画面。上传参考图后，这段提示词仍然会参与生成。"
+                            class="wb-input min-h-[120px] w-full resize-none py-3 leading-6"
+                        />
+                    </label>
+
+                    <div class="mt-4">
+                        <PromptPhraseBuilder
+                            :groups="promptPhraseGroups"
+                            title="提示词词组"
+                            description="点击后追加到主提示词。"
+                            @insert="insertTextPromptPhrase"
+                        />
+                    </div>
+
+                    <div class="my-4 border-t border-brand-line" />
+
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <div>
-                            <h2 class="text-sm font-semibold text-brand-ink">参考图</h2>
-                            <p class="mt-1 text-xs text-brand-muted">用于图文生图或把生成结果继续送回工作流。</p>
+                            <h3 class="text-sm font-semibold text-brand-ink">参考图（可选）</h3>
+                            <p class="mt-1 text-xs text-brand-muted">上传后可用同一段主提示词进行参考图生成。</p>
                         </div>
                         <span class="wb-chip">{{ selectedImages.length }} 张</span>
                     </div>
                     <ImageUpload v-model="selectedImages" v-model:labels="referenceImageLabels" />
-                </section>
 
-                <section class="wb-panel">
+                    <p v-if="selectedImages.length" class="mt-3 rounded-lg border border-brand-line bg-brand-surface p-3 text-xs leading-5 text-brand-muted">
+                        语义是告诉模型“这张图代表谁/什么”。同一个人有多张参考图时，都填同一个名字，例如都填“角色1”；不同人物分别填“角色1”“角色2”。非人物图可以写“服装参考”“背景参考”“产品主体”。
+                    </p>
+
+                    <div class="my-4 border-t border-brand-line" />
+
                     <div class="mb-3">
-                        <h2 class="text-sm font-semibold text-brand-ink">合影助手</h2>
-                        <p class="mt-1 text-xs text-brand-muted">给多张参考图加角色语义，再选择合影动作，生成前会拼成一段结构化提示词。</p>
+                        <h3 class="text-sm font-semibold text-brand-ink">合影助手</h3>
+                        <p class="mt-1 text-xs text-brand-muted">多张人物参考图时启用，会把角色映射、合照动作和防混脸约束拼入提示词。</p>
                     </div>
                     <div class="space-y-3">
                         <label class="flex items-center gap-2 text-sm font-semibold text-brand-ink">
@@ -90,12 +127,45 @@
                         </div>
                         <textarea v-model="portraitExtraPrompt" class="wb-input min-h-[76px] w-full resize-none py-2" placeholder="补充：例如看向镜头、保持角色服装、自然互动。" />
                     </div>
+
+                    <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                        <button
+                            type="button"
+                            @click="handleTextToImageGenerate"
+                            :disabled="!canGenerateTextImage"
+                            :class="[
+                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
+                                canGenerateTextImage
+                                    ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90'
+                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
+                            ]"
+                        >
+                            {{ isTextToImageLoading ? '生成中...' : '无参考图生成' }}
+                        </button>
+                        <button
+                            type="button"
+                            @click="handleGenerate"
+                            :disabled="!canGenerate"
+                            :class="[
+                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
+                                canGenerate
+                                    ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90'
+                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
+                            ]"
+                        >
+                            {{ isLoading ? '生成中...' : '使用参考图生成' }}
+                        </button>
+                    </div>
+
+                    <p class="mt-2 text-xs leading-5 text-brand-muted">
+                        无参考图生成只使用主提示词；使用参考图生成会同时读取参考图、参考图语义、合影助手和下方可选模板。
+                    </p>
                 </section>
 
                 <section class="wb-panel">
                     <div class="mb-3">
-                        <h2 class="text-sm font-semibold text-brand-ink">风格与改图提示词</h2>
-                        <p class="mt-1 text-xs text-brand-muted">选择模板或写入自定义提示词后，用底部按钮执行参考图生成。</p>
+                        <h2 class="text-sm font-semibold text-brand-ink">模板与补充提示词</h2>
+                        <p class="mt-1 text-xs text-brand-muted">可选。使用参考图生成时，会和主提示词一起发送。</p>
                     </div>
                     <StylePromptSelector
                         v-model:selectedStyle="selectedStyle"
@@ -145,15 +215,6 @@
                             <dd class="mt-1 text-brand-ink">{{ supportsGoogleSearch ? (gemini3EnableGoogleSearch ? '已启用' : '可启用') : '当前模型不支持' }}</dd>
                         </div>
                     </dl>
-                </section>
-
-                <section class="wb-panel">
-                    <PromptPhraseBuilder
-                        :groups="promptPhraseGroups"
-                        title="文生图词组"
-                        description="点击后追加到底部文生图提示词。"
-                        @insert="insertTextPromptPhrase"
-                    />
                 </section>
 
                 <section v-if="showAspectRatioSelector" class="wb-panel">
@@ -268,65 +329,7 @@
             </aside>
         </main>
 
-        <div class="fixed inset-x-0 bottom-0 z-50 border-t border-brand-line bg-brand-surface/95 px-4 py-3 backdrop-blur">
-            <div class="mx-auto max-w-[1600px] rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20">
-                <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
-                    <label class="min-w-0">
-                        <span class="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <span class="wb-label">文生图提示词</span>
-                            <select v-model="quickTextTemplateId" class="rounded-md border border-brand-line bg-brand-surface px-2 py-1 text-xs text-brand-ink outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10">
-                                <option value="">插入内置提示词</option>
-                                <option v-for="template in textPromptTemplates" :key="template.id" :value="template.id">
-                                    {{ template.title }}
-                                </option>
-                            </select>
-                        </span>
-                        <textarea
-                            v-model="textToImagePrompt"
-                            placeholder="例如：一张干净的产品级工作台截图，展示多模型图像生成流程"
-                            class="wb-input min-h-[84px] w-full resize-none py-3"
-                        />
-                    </label>
-                    <div class="grid gap-2 sm:grid-cols-2 lg:w-64 lg:grid-cols-1">
-                        <button
-                            type="button"
-                            @click="handleTextToImageGenerate"
-                            :disabled="!canGenerateTextImage"
-                            :class="[
-                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
-                                canGenerateTextImage
-                                    ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90'
-                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
-                            ]"
-                        >
-                            {{ isTextToImageLoading ? '文生图生成中...' : '文生图生成' }}
-                        </button>
-                        <button
-                            type="button"
-                            @click="handleGenerate"
-                            :disabled="!canGenerate"
-                            :class="[
-                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
-                                canGenerate
-                                    ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90'
-                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
-                            ]"
-                        >
-                            {{ isLoading ? '参考图生成中...' : '参考图生成' }}
-                        </button>
-                    </div>
-                </div>
-
-                <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-brand-muted">
-                    <span class="rounded-md bg-brand-line/60 px-2 py-1">比例 {{ selectedAspectRatio }}</span>
-                    <span class="rounded-md bg-brand-line/60 px-2 py-1">尺寸 {{ gemini3ImageSize }}</span>
-                    <span class="rounded-md bg-brand-line/60 px-2 py-1">参考图 {{ selectedImages.length }}</span>
-                    <span v-if="displayError" class="rounded-md bg-brand-accent/10 px-2 py-1 text-brand-accent">{{ displayError }}</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="wb-shell pb-64">
+        <div class="wb-shell pb-10">
             <Footer />
         </div>
     </div>
@@ -729,7 +732,7 @@ const canGenerate = computed(
         apiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         selectedImages.value.length > 0 &&
-        (selectedStyle.value || customPrompt.value.trim()) &&
+        (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim()) &&
         !isLoading.value
 )
 
@@ -773,8 +776,8 @@ const insertTextPromptPhrase = (phrase: string) => {
     textToImagePrompt.value = current ? `${current}, ${phrase}` : phrase
 }
 
-const composeImagePrompt = (basePrompt: string) => {
-    return [referenceImageRolePrompt.value, portraitAssistPrompt.value, basePrompt]
+const composeImagePrompt = (supplementPrompt: string) => {
+    return [referenceImageRolePrompt.value, portraitAssistPrompt.value, textToImagePrompt.value.trim(), supplementPrompt]
         .filter(part => part.trim())
         .join('\n\n')
 }
@@ -884,10 +887,9 @@ const setHistoryCategory = (item: GenerationHistoryItem, category: string) => {
 }
 
 const reuseHistoryPrompt = (item: GenerationHistoryItem) => {
-    if (item.source === 'text') {
-        textToImagePrompt.value = item.prompt
-    } else {
-        customPrompt.value = item.prompt
+    textToImagePrompt.value = item.prompt
+    if (item.source === 'image') {
+        customPrompt.value = ''
         selectedStyle.value = ''
     }
 }
@@ -900,7 +902,8 @@ const restoreHistoryItem = (item: GenerationHistoryItem) => {
         textToImageError.value = null
     } else {
         result.value = item.images
-        customPrompt.value = item.prompt
+        textToImagePrompt.value = item.prompt
+        customPrompt.value = ''
         selectedStyle.value = ''
         error.value = null
     }
@@ -1015,8 +1018,8 @@ const handleGenerate = async () => {
 
     try {
         // 使用选中的样式模板或自定义提示词
-        const basePrompt = selectedStyle.value ? styleTemplates.find(t => t.id === selectedStyle.value)?.prompt || customPrompt.value : customPrompt.value
-        const prompt = composeImagePrompt(basePrompt)
+        const supplementPrompt = selectedStyle.value ? styleTemplates.find(t => t.id === selectedStyle.value)?.prompt || customPrompt.value : customPrompt.value
+        const prompt = composeImagePrompt(supplementPrompt)
 
         const request: GenerateRequest = {
             prompt,

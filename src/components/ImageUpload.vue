@@ -25,8 +25,8 @@
                 </svg>
             </div>
 
-            <h3 class="text-sm font-semibold text-brand-ink">拖拽或点击上传</h3>
-            <p class="mt-1 text-xs text-brand-muted">支持多张 JPG、PNG、GIF 图片，单张建议 5MB 以内。</p>
+            <h3 class="text-sm font-semibold text-brand-ink">拖拽或点击上传参考图</h3>
+            <p class="mt-1 text-xs text-brand-muted">可一次上传多张。每张上传后可标注它代表的人物、主体、服装或背景。</p>
         </div>
 
         <div v-if="thumbnails.length > 0" class="space-y-2">
@@ -43,12 +43,12 @@
                         </button>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <label class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">参考图语义</label>
+                        <label class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">这张图代表</label>
                         <input
                             :value="labels[index] || defaultLabel(index)"
                             @input="updateLabel(index, ($event.target as HTMLInputElement).value)"
                             class="mt-1 w-full rounded-md border border-brand-line bg-brand-surface px-2 py-1.5 text-xs text-brand-ink outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10"
-                            :placeholder="defaultLabel(index)"
+                            :placeholder="`${defaultLabel(index)} / 服装参考 / 背景参考`"
                         />
                     </div>
                 </div>
