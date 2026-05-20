@@ -24,7 +24,10 @@
         </div>
 
         <div v-if="activeTab === 'style'" class="flex flex-1 flex-col gap-3">
-            <input v-model="searchQuery" type="search" placeholder="搜索提示词、分类或标签" class="wb-input w-full" />
+            <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <input v-model="searchQuery" type="search" placeholder="搜索提示词、分类或标签" class="wb-input w-full" />
+                <button type="button" class="wb-secondary min-h-10 px-3 text-xs" @click="$emit('new-template')">新建模板</button>
+            </div>
 
             <div class="flex gap-2 overflow-x-auto pb-1">
                 <button
@@ -71,6 +74,26 @@
                                 <span v-for="tag in template.tags" :key="tag" class="rounded bg-brand-surface px-1.5 py-0.5 text-[11px] text-brand-muted">{{ tag }}</span>
                             </div>
 
+                            <div class="mt-2 flex flex-wrap gap-1.5">
+                                <span v-if="template.source === 'custom'" class="rounded bg-brand-accent/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand-accent">自定义</span>
+                                <button
+                                    v-if="template.source === 'custom'"
+                                    type="button"
+                                    class="rounded bg-brand-surface px-1.5 py-0.5 text-[11px] font-semibold text-brand-muted transition hover:text-brand-accent"
+                                    @click.stop="$emit('edit-template', template)"
+                                >
+                                    编辑
+                                </button>
+                                <button
+                                    v-if="template.source === 'custom'"
+                                    type="button"
+                                    class="rounded bg-brand-surface px-1.5 py-0.5 text-[11px] font-semibold text-brand-muted transition hover:text-brand-accent"
+                                    @click.stop="$emit('delete-template', template.id)"
+                                >
+                                    删除
+                                </button>
+                            </div>
+
                             <details class="group mt-2" @click.stop>
                                 <summary class="flex cursor-pointer items-center gap-1 text-xs text-brand-muted hover:text-brand-ink">
                                     <span>查看完整提示词</span>
@@ -109,6 +132,9 @@
                 title="词组积木"
                 description="点击词组追加到自定义补充提示词。"
                 @insert="insertPhrase"
+                @add="groupId => $emit('new-phrase', groupId)"
+                @edit="(groupId, phrase) => $emit('edit-phrase', groupId, phrase)"
+                editable
             />
         </div>
     </div>
@@ -118,7 +144,7 @@
 import { computed, ref, watch } from 'vue'
 import type { StyleTemplate } from '../types'
 import PromptPhraseBuilder from './PromptPhraseBuilder.vue'
-import type { PromptPhraseGroup } from '../data/promptPhrases'
+import type { PromptPhrase, PromptPhraseGroup } from '../data/promptPhrases'
 
 const props = defineProps<{
     selectedStyle: string
@@ -130,6 +156,11 @@ const props = defineProps<{
 const emit = defineEmits<{
     'update:selectedStyle': [value: string]
     'update:customPrompt': [value: string]
+    'new-template': []
+    'edit-template': [template: StyleTemplate]
+    'delete-template': [templateId: string]
+    'new-phrase': [groupId: string]
+    'edit-phrase': [groupId: string, phrase: PromptPhrase]
 }>()
 
 const activeTab = ref<'style' | 'custom'>('style')

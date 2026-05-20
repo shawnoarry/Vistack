@@ -1,4 +1,24 @@
-import type { ModelOption } from '../types'
+import type { ModelOption, StyleTemplate } from '../types'
+
+export interface StoredPromptPhrase {
+    id: string
+    label: string
+    value: string
+}
+
+export interface StoredPromptPhraseGroup {
+    id: string
+    title: string
+    description: string
+    phrases: StoredPromptPhrase[]
+}
+
+export interface StoredPromptPhraseOverride {
+    id: string
+    groupId: string
+    label: string
+    value: string
+}
 
 // 本地存储工具类
 export class LocalStorage {
@@ -10,6 +30,9 @@ export class LocalStorage {
     private static readonly PROMPT_ASSISTANT_ENDPOINT = 'vistack-prompt-assistant-endpoint'
     private static readonly PROMPT_ASSISTANT_MODEL_ID = 'vistack-prompt-assistant-model-id'
     private static readonly ASSET_COLLECTIONS = 'vistack-asset-collections'
+    private static readonly CUSTOM_PROMPT_PHRASE_GROUPS = 'vistack-custom-prompt-phrase-groups'
+    private static readonly PROMPT_PHRASE_OVERRIDES = 'vistack-prompt-phrase-overrides'
+    private static readonly CUSTOM_STYLE_TEMPLATES = 'vistack-custom-style-templates'
     private static readonly LEGACY_KEYS = {
         API_KEY: 'nano-banana-api-key',
         API_ENDPOINT: 'nano-banana-api-endpoint',
@@ -194,6 +217,109 @@ export class LocalStorage {
                 : []
         } catch (error) {
             console.warn('无法读取资产收藏夹:', error)
+            return []
+        }
+    }
+
+    static saveCustomPromptPhraseGroups(groups: StoredPromptPhraseGroup[]): void {
+        try {
+            localStorage.setItem(this.CUSTOM_PROMPT_PHRASE_GROUPS, JSON.stringify(groups))
+        } catch (error) {
+            console.warn('无法保存自定义提示词词组:', error)
+        }
+    }
+
+    static getCustomPromptPhraseGroups(): StoredPromptPhraseGroup[] {
+        try {
+            const raw = localStorage.getItem(this.CUSTOM_PROMPT_PHRASE_GROUPS)
+            if (!raw) return []
+            const parsed = JSON.parse(raw)
+            if (!Array.isArray(parsed)) return []
+
+            return parsed
+                .map(group => ({
+                    id: typeof group?.id === 'string' ? group.id : '',
+                    title: typeof group?.title === 'string' ? group.title : '',
+                    description: typeof group?.description === 'string' ? group.description : '',
+                    phrases: Array.isArray(group?.phrases)
+                        ? group.phrases
+                            .map((phrase: unknown) => {
+                                const item = phrase as Partial<StoredPromptPhrase>
+                                return {
+                                    id: typeof item.id === 'string' ? item.id : '',
+                                    label: typeof item.label === 'string' ? item.label : '',
+                                    value: typeof item.value === 'string' ? item.value : ''
+                                }
+                            })
+                            .filter((phrase: StoredPromptPhrase) => phrase.id && phrase.label.trim() && phrase.value.trim())
+                        : []
+                }))
+                .filter(group => group.id && group.title.trim())
+        } catch (error) {
+            console.warn('无法读取自定义提示词词组:', error)
+            return []
+        }
+    }
+
+    static savePromptPhraseOverrides(overrides: StoredPromptPhraseOverride[]): void {
+        try {
+            localStorage.setItem(this.PROMPT_PHRASE_OVERRIDES, JSON.stringify(overrides))
+        } catch (error) {
+            console.warn('无法保存提示词词组覆盖:', error)
+        }
+    }
+
+    static getPromptPhraseOverrides(): StoredPromptPhraseOverride[] {
+        try {
+            const raw = localStorage.getItem(this.PROMPT_PHRASE_OVERRIDES)
+            if (!raw) return []
+            const parsed = JSON.parse(raw)
+            if (!Array.isArray(parsed)) return []
+
+            return parsed
+                .map(override => ({
+                    id: typeof override?.id === 'string' ? override.id : '',
+                    groupId: typeof override?.groupId === 'string' ? override.groupId : '',
+                    label: typeof override?.label === 'string' ? override.label : '',
+                    value: typeof override?.value === 'string' ? override.value : ''
+                }))
+                .filter(override => override.id && override.groupId && override.label.trim() && override.value.trim())
+        } catch (error) {
+            console.warn('无法读取提示词词组覆盖:', error)
+            return []
+        }
+    }
+
+    static saveCustomStyleTemplates(templates: StyleTemplate[]): void {
+        try {
+            localStorage.setItem(this.CUSTOM_STYLE_TEMPLATES, JSON.stringify(templates))
+        } catch (error) {
+            console.warn('无法保存自定义模板:', error)
+        }
+    }
+
+    static getCustomStyleTemplates(): StyleTemplate[] {
+        try {
+            const raw = localStorage.getItem(this.CUSTOM_STYLE_TEMPLATES)
+            if (!raw) return []
+            const parsed = JSON.parse(raw)
+            if (!Array.isArray(parsed)) return []
+
+            return parsed
+                .map(template => ({
+                    id: typeof template?.id === 'string' ? template.id : '',
+                    title: typeof template?.title === 'string' ? template.title : '',
+                    prompt: typeof template?.prompt === 'string' ? template.prompt : '',
+                    image: typeof template?.image === 'string' ? template.image : '',
+                    description: typeof template?.description === 'string' ? template.description : '',
+                    category: typeof template?.category === 'string' ? template.category : '我的模板',
+                    mode: template?.mode === 'text' || template?.mode === 'image' || template?.mode === 'both' ? template.mode : 'both',
+                    tags: Array.isArray(template?.tags) ? template.tags.filter((tag: unknown): tag is string => typeof tag === 'string' && tag.trim() !== '') : [],
+                    source: 'custom' as const
+                }))
+                .filter(template => template.id && template.title.trim() && template.prompt.trim())
+        } catch (error) {
+            console.warn('无法读取自定义模板:', error)
             return []
         }
     }

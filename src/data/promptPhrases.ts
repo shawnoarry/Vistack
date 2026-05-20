@@ -1,6 +1,9 @@
 export interface PromptPhrase {
+    id?: string
     label: string
     value: string
+    source?: 'builtin' | 'custom'
+    isCustomized?: boolean
 }
 
 export interface PromptPhraseGroup {
@@ -168,18 +171,23 @@ export const promptPhraseGroups: PromptPhraseGroup[] = [
     {
         id: 'beauty-body',
         title: '美颜美体',
-        description: '偏成人时尚人像的肤质、体态和线条修饰，保持自然比例。',
+        description: '肤质、比例、肩颈和曲线词组，可按需要组合。',
         phrases: [
-            { label: '皮肤光洁', value: '皮肤光洁细腻，肤色均匀，同时保留真实纹理' },
-            { label: '白皙透亮', value: '白皙透亮的肤色表现，光线柔和，不要过曝或失去五官层次' },
-            { label: '天鹅颈', value: '优雅天鹅颈线条，肩颈舒展，姿态挺拔自然' },
-            { label: '直角肩', value: '清晰直角肩线条，肩部轮廓利落但比例自然' },
-            { label: '精致锁骨', value: '精致锁骨和肩颈轮廓，光影柔和，不要过度锐化' },
-            { label: '纤细腰线', value: '健康纤细的腰线，服装贴合自然，身体比例不要变形' },
-            { label: '修长腿部', value: '修长自然的腿部线条，镜头轻微拉长但保持真实比例' },
-            { label: '自然曲线', value: '自然流畅的身体曲线，时尚人像表达，避免夸张和低俗化' },
-            { label: '上身丰满', value: '成人时尚人像中自然丰满的上半身线条，服装得体，不要低俗或暴露表达' },
-            { label: '体态挺拔', value: '体态挺拔舒展，肩背打开，站姿自信但不僵硬' }
+            { label: '皮肤光洁', value: '皮肤光洁细腻' },
+            { label: '白皙透亮', value: '白皙透亮肤色' },
+            { label: '小头比例', value: '小头比例' },
+            { label: '九头身', value: '九头身超模比例 (model-like proportions)' },
+            { label: '小头小脸', value: '小头小脸，超模头身比 (small head, tiny face)' },
+            { label: '天鹅颈', value: '纤长天鹅颈' },
+            { label: '直角肩', value: '超模直角肩' },
+            { label: '精致锁骨', value: '精致锁骨' },
+            { label: '沙漏轮廓', value: '夸张沙漏型轮廓 (exaggerated hourglass)' },
+            { label: '蜂腰', value: '极细蜂腰 (snatched waist)' },
+            { label: '宽髋曲线', value: '宽阔饱满的髋部曲线 (wide flared hips)' },
+            { label: '丰满上围', value: '健康丰满的上身曲线 (full upper-body curves)' },
+            { label: '紧身张力', value: '紧身上衣呈现拉伸张力 (fitted fabric tension)' },
+            { label: '纤细四肢', value: '四肢纤长纤细' },
+            { label: '体态挺拔', value: '体态挺拔舒展' }
         ]
     },
     {

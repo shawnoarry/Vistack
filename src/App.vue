@@ -314,10 +314,13 @@
             <div class="wb-shell py-3">
                 <div v-if="showPromptTools" class="absolute bottom-[calc(100%+10px)] left-1/2 z-40 w-[min(1040px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20">
                     <PromptPhraseBuilder
-                        :groups="promptPhraseGroups"
+                        :groups="mergedPromptPhraseGroups"
                         title="提示词词组"
                         description="点击后追加到主提示词。"
                         @insert="insertTextPromptPhrase"
+                        @add="openPhraseEditor"
+                        @edit="openPhraseEditor"
+                        editable
                     />
                 </div>
 
@@ -335,6 +338,14 @@
                                 <button type="button" class="wb-secondary min-h-9 px-3 text-xs" @click="showTemplatePanel = true">
                                     模板
                                     <span v-if="activeSupplementLabel" class="ml-1 text-brand-accent">已选</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    :disabled="!textToImagePrompt.trim() && !supplementPrompt"
+                                    class="wb-secondary min-h-9 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                                    @click="openTemplateEditorFromCurrentPrompt"
+                                >
+                                    存模板
                                 </button>
                                 <button
                                     type="button"
@@ -455,10 +466,108 @@
                         v-model:selectedStyle="selectedStyle"
                         v-model:customPrompt="customPrompt"
                         :templates="availableStyleTemplates"
-                        :phrase-groups="promptPhraseGroups"
+                        :phrase-groups="mergedPromptPhraseGroups"
+                        @new-template="openBlankTemplateEditor"
+                        @edit-template="openTemplateEditor"
+                        @delete-template="deleteCustomTemplate"
+                        @new-phrase="openPhraseEditor"
+                        @edit-phrase="openPhraseEditor"
                     />
                 </div>
             </section>
+        </div>
+
+        <div v-if="showPhraseEditor" class="fixed inset-0 z-[95] flex items-center justify-center bg-brand-ink/70 p-4" @click.self="closePhraseEditor">
+            <form class="w-full max-w-md rounded-lg border border-brand-line bg-white p-4 shadow-2xl" @submit.prevent="savePhraseEdit">
+                <div class="mb-4">
+                    <p class="wb-label text-brand-accent">Prompt phrase</p>
+                    <h2 class="mt-1 text-base font-semibold text-brand-ink">{{ editingPhraseOriginalId ? '编辑词组' : '新增词组' }}</h2>
+                    <p class="mt-1 text-xs leading-5 text-brand-muted">词组会保存在当前浏览器。内置词组被改写后，可在这里重置回内置版本。</p>
+                </div>
+                <div class="space-y-3">
+                    <label class="block">
+                        <span class="mb-1 block wb-label">分类</span>
+                        <select v-model="editingPhraseGroupId" class="wb-input w-full" :disabled="Boolean(editingPhraseOriginalId)">
+                            <option v-for="group in mergedPromptPhraseGroups" :key="group.id" :value="group.id">{{ group.title }}</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block wb-label">短标签</span>
+                        <input v-model="phraseFormLabel" class="wb-input w-full" placeholder="例如：蜂腰 / 直角肩 / 概念棚拍" />
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block wb-label">实际注入提示词</span>
+                        <textarea v-model="phraseFormValue" class="wb-input min-h-[96px] w-full resize-y py-2" placeholder="点击词组时会追加到提示词框里的内容。" />
+                    </label>
+                </div>
+                <div class="mt-4 flex flex-wrap justify-between gap-2">
+                    <button
+                        v-if="editingPhraseOriginalId"
+                        type="button"
+                        class="wb-secondary text-brand-accent"
+                        @click="deletePhraseEdit"
+                    >
+                        {{ editingPhraseIsCustom ? '删除词组' : '重置内置' }}
+                    </button>
+                    <span v-else />
+                    <div class="flex gap-2">
+                        <button type="button" class="wb-secondary" @click="closePhraseEditor">取消</button>
+                        <button type="submit" class="wb-primary" :disabled="!phraseFormLabel.trim() || !phraseFormValue.trim()">保存</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div v-if="showTemplateEditor" class="fixed inset-0 z-[100] flex items-center justify-center bg-brand-ink/75 p-4" @click.self="closeTemplateEditor">
+            <form class="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-lg border border-brand-line bg-white shadow-2xl" @submit.prevent="saveCustomTemplate">
+                <div class="border-b border-brand-line p-4">
+                    <p class="wb-label text-brand-accent">Custom template</p>
+                    <h2 class="mt-1 text-base font-semibold text-brand-ink">{{ editingTemplateId ? '编辑模板' : '保存为模板' }}</h2>
+                    <p class="mt-1 text-xs leading-5 text-brand-muted">自定义模板会出现在模板面板中，之后可以继续编辑或删除。</p>
+                </div>
+                <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="block">
+                            <span class="mb-1 block wb-label">模板名称</span>
+                            <input v-model="templateFormTitle" class="wb-input w-full" placeholder="例如：概念 MV 冷感棚拍" />
+                        </label>
+                        <label class="block">
+                            <span class="mb-1 block wb-label">分类</span>
+                            <input v-model="templateFormCategory" class="wb-input w-full" placeholder="我的模板" />
+                        </label>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
+                        <label class="block">
+                            <span class="mb-1 block wb-label">标签</span>
+                            <input v-model="templateFormTags" class="wb-input w-full" placeholder="用逗号分隔，例如：自拍, K-pop, 棚拍" />
+                        </label>
+                        <label class="block">
+                            <span class="mb-1 block wb-label">模式</span>
+                            <select v-model="templateFormMode" class="wb-input w-full">
+                                <option value="both">通用</option>
+                                <option value="text">文生图</option>
+                                <option value="image">需参考图</option>
+                            </select>
+                        </label>
+                    </div>
+                    <label class="block">
+                        <span class="mb-1 block wb-label">说明</span>
+                        <input v-model="templateFormDescription" class="wb-input w-full" placeholder="这个模板适合什么场景。" />
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block wb-label">模板提示词</span>
+                        <textarea v-model="templateFormPrompt" class="wb-input min-h-[190px] w-full resize-y py-3 leading-6" placeholder="保存后，选择模板会把这段内容拼入最终提示词。" />
+                    </label>
+                </div>
+                <div class="flex flex-wrap justify-between gap-2 border-t border-brand-line p-4">
+                    <button v-if="editingTemplateId" type="button" class="wb-secondary text-brand-accent" @click="deleteCustomTemplate(editingTemplateId)">删除模板</button>
+                    <span v-else />
+                    <div class="flex gap-2">
+                        <button type="button" class="wb-secondary" @click="closeTemplateEditor">取消</button>
+                        <button type="submit" class="wb-primary" :disabled="!templateFormTitle.trim() || !templateFormPrompt.trim()">保存</button>
+                    </div>
+                </div>
+            </form>
         </div>
 
         <main v-if="currentView === 'assets'" class="wb-shell py-4 pb-10">
@@ -723,8 +832,8 @@ import Footer from './components/Footer.vue'
 import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
 import { fetchModels, generateImage, improvePrompt } from './services/api'
 import { styleTemplates } from './data/templates'
-import { promptPhraseGroups } from './data/promptPhrases'
-import { LocalStorage } from './utils/storage'
+import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
+import { LocalStorage, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
 import {
     deleteGenerationHistoryItem,
     getGenerationHistoryItems,
@@ -732,7 +841,7 @@ import {
     type GenerationHistoryItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiModel, GenerateRecipe, GenerateRequest, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole } from './types'
+import type { ApiModel, GenerateRecipe, GenerateRequest, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 const apiKey = ref('')
@@ -755,6 +864,23 @@ const currentView = ref<'studio' | 'assets'>('studio')
 const showPromptTools = ref(false)
 const showTemplatePanel = ref(false)
 const showApiSettings = ref(false)
+const customPromptPhraseGroups = ref<StoredPromptPhraseGroup[]>([])
+const promptPhraseOverrides = ref<StoredPromptPhraseOverride[]>([])
+const customStyleTemplates = ref<StyleTemplate[]>([])
+const showPhraseEditor = ref(false)
+const editingPhraseGroupId = ref('')
+const editingPhraseOriginalId = ref('')
+const editingPhraseIsCustom = ref(false)
+const phraseFormLabel = ref('')
+const phraseFormValue = ref('')
+const showTemplateEditor = ref(false)
+const editingTemplateId = ref('')
+const templateFormTitle = ref('')
+const templateFormCategory = ref('我的模板')
+const templateFormTags = ref('')
+const templateFormDescription = ref('')
+const templateFormPrompt = ref('')
+const templateFormMode = ref<StyleTemplate['mode']>('both')
 const modelOptions = ref<ModelOption[]>([])
 const selectedModel = ref('')
 const isFetchingModels = ref(false)
@@ -827,6 +953,9 @@ onMounted(() => {
     const savedPromptAssistantEndpoint = LocalStorage.getPromptAssistantEndpoint()
     const savedPromptAssistantModel = LocalStorage.getPromptAssistantModelId()
     assetCollections.value = LocalStorage.getAssetCollections()
+    customPromptPhraseGroups.value = LocalStorage.getCustomPromptPhraseGroups()
+    promptPhraseOverrides.value = LocalStorage.getPromptPhraseOverrides()
+    customStyleTemplates.value = LocalStorage.getCustomStyleTemplates()
 
     if (savedApiKey) {
         apiKey.value = savedApiKey
@@ -1275,11 +1404,59 @@ const portraitAssistPrompt = computed(() => {
     ].filter(Boolean).join(' ')
 })
 
-const selectedTemplatePrompt = computed(() => selectedStyle.value ? styleTemplates.find(template => template.id === selectedStyle.value)?.prompt || '' : '')
+const getPhraseId = (groupId: string, phrase: PromptPhrase) => phrase.id || `${groupId}:${phrase.label}:${phrase.value}`
+
+const mergedPromptPhraseGroups = computed<PromptPhraseGroup[]>(() => {
+    const overrides = new Map(promptPhraseOverrides.value.map(override => [override.id, override]))
+    const builtInGroups = promptPhraseGroups.map(group => ({
+        ...group,
+        phrases: group.phrases.map(phrase => {
+            const id = getPhraseId(group.id, phrase)
+            const override = overrides.get(id)
+            return {
+                ...phrase,
+                id,
+                label: override?.label || phrase.label,
+                value: override?.value || phrase.value,
+                source: 'builtin' as const,
+                isCustomized: Boolean(override)
+            }
+        })
+    }))
+
+    const groupMap = new Map<string, PromptPhraseGroup>(builtInGroups.map(group => [group.id, { ...group, phrases: [...group.phrases] }]))
+
+    for (const customGroup of customPromptPhraseGroups.value) {
+        const phrases = customGroup.phrases.map(phrase => ({
+            ...phrase,
+            source: 'custom' as const
+        }))
+        const existingGroup = groupMap.get(customGroup.id)
+        if (existingGroup) {
+            existingGroup.phrases = [...existingGroup.phrases, ...phrases]
+        } else {
+            groupMap.set(customGroup.id, {
+                id: customGroup.id,
+                title: customGroup.title,
+                description: customGroup.description || '我的自定义词组。',
+                phrases
+            })
+        }
+    }
+
+    return Array.from(groupMap.values())
+})
+
+const allStyleTemplates = computed<StyleTemplate[]>(() => [
+    ...styleTemplates.map(template => ({ ...template, source: 'builtin' as const })),
+    ...customStyleTemplates.value.map(template => ({ ...template, source: 'custom' as const }))
+])
+
+const selectedTemplatePrompt = computed(() => selectedStyle.value ? allStyleTemplates.value.find(template => template.id === selectedStyle.value)?.prompt || '' : '')
 const generationCountOptions = [1, 2, 3, 4]
 const activeSupplementLabel = computed(() => {
     if (selectedStyle.value) {
-        return styleTemplates.find(template => template.id === selectedStyle.value)?.title || '模板'
+        return allStyleTemplates.value.find(template => template.id === selectedStyle.value)?.title || '模板'
     }
     if (customPrompt.value.trim()) {
         return '自定义'
@@ -1287,11 +1464,180 @@ const activeSupplementLabel = computed(() => {
     return ''
 })
 const supplementPrompt = computed(() => selectedTemplatePrompt.value || customPrompt.value.trim())
-const availableStyleTemplates = computed(() => selectedImages.value.length ? styleTemplates : styleTemplates.filter(template => template.mode !== 'image'))
+const availableStyleTemplates = computed(() => selectedImages.value.length ? allStyleTemplates.value : allStyleTemplates.value.filter(template => template.mode !== 'image'))
 
 const insertTextPromptPhrase = (phrase: string) => {
     const current = textToImagePrompt.value.trim()
     textToImagePrompt.value = current ? `${current}, ${phrase}` : phrase
+}
+
+const closePhraseEditor = () => {
+    showPhraseEditor.value = false
+    editingPhraseGroupId.value = ''
+    editingPhraseOriginalId.value = ''
+    editingPhraseIsCustom.value = false
+    phraseFormLabel.value = ''
+    phraseFormValue.value = ''
+}
+
+const openPhraseEditor = (groupId: string, phrase?: PromptPhrase) => {
+    editingPhraseGroupId.value = groupId || mergedPromptPhraseGroups.value[0]?.id || ''
+    editingPhraseOriginalId.value = phrase ? getPhraseId(editingPhraseGroupId.value, phrase) : ''
+    editingPhraseIsCustom.value = phrase?.source === 'custom'
+    phraseFormLabel.value = phrase?.label || ''
+    phraseFormValue.value = phrase?.value || ''
+    showPhraseEditor.value = true
+}
+
+const savePhraseEdit = () => {
+    const groupId = editingPhraseGroupId.value || mergedPromptPhraseGroups.value[0]?.id || 'custom'
+    const label = phraseFormLabel.value.trim()
+    const value = phraseFormValue.value.trim()
+    if (!label || !value) return
+
+    if (editingPhraseOriginalId.value && !editingPhraseIsCustom.value) {
+        const nextOverride: StoredPromptPhraseOverride = {
+            id: editingPhraseOriginalId.value,
+            groupId,
+            label,
+            value
+        }
+        promptPhraseOverrides.value = [
+            ...promptPhraseOverrides.value.filter(override => override.id !== nextOverride.id),
+            nextOverride
+        ]
+        LocalStorage.savePromptPhraseOverrides(promptPhraseOverrides.value)
+        closePhraseEditor()
+        return
+    }
+
+    const phraseId = editingPhraseOriginalId.value || `custom-phrase-${Date.now()}`
+    const group = mergedPromptPhraseGroups.value.find(item => item.id === groupId)
+    const customGroupId = groupId
+    const existingCustomGroup = customPromptPhraseGroups.value.find(item => item.id === customGroupId)
+    const nextPhrase = { id: phraseId, label, value }
+
+    if (existingCustomGroup) {
+        customPromptPhraseGroups.value = customPromptPhraseGroups.value.map(item =>
+            item.id === customGroupId
+                ? { ...item, phrases: [...item.phrases.filter(phrase => phrase.id !== phraseId), nextPhrase] }
+                : item
+        )
+    } else {
+        customPromptPhraseGroups.value = [
+            ...customPromptPhraseGroups.value,
+            {
+                id: customGroupId,
+                title: group?.title || '我的词组',
+                description: group?.description || '我的自定义词组。',
+                phrases: [nextPhrase]
+            }
+        ]
+    }
+
+    LocalStorage.saveCustomPromptPhraseGroups(customPromptPhraseGroups.value)
+    closePhraseEditor()
+}
+
+const deletePhraseEdit = () => {
+    if (!editingPhraseOriginalId.value) return
+
+    if (editingPhraseIsCustom.value) {
+        customPromptPhraseGroups.value = customPromptPhraseGroups.value
+            .map(group => ({
+                ...group,
+                phrases: group.phrases.filter(phrase => phrase.id !== editingPhraseOriginalId.value)
+            }))
+            .filter(group => group.phrases.length || !promptPhraseGroups.some(builtinGroup => builtinGroup.id === group.id))
+        LocalStorage.saveCustomPromptPhraseGroups(customPromptPhraseGroups.value)
+    } else {
+        promptPhraseOverrides.value = promptPhraseOverrides.value.filter(override => override.id !== editingPhraseOriginalId.value)
+        LocalStorage.savePromptPhraseOverrides(promptPhraseOverrides.value)
+    }
+
+    closePhraseEditor()
+}
+
+const closeTemplateEditor = () => {
+    showTemplateEditor.value = false
+    editingTemplateId.value = ''
+    templateFormTitle.value = ''
+    templateFormCategory.value = '我的模板'
+    templateFormTags.value = ''
+    templateFormDescription.value = ''
+    templateFormPrompt.value = ''
+    templateFormMode.value = 'both'
+}
+
+const openTemplateEditor = (template: StyleTemplate) => {
+    if (template.source !== 'custom') return
+    editingTemplateId.value = template.id
+    templateFormTitle.value = template.title
+    templateFormCategory.value = template.category || '我的模板'
+    templateFormTags.value = (template.tags || []).join(', ')
+    templateFormDescription.value = template.description
+    templateFormPrompt.value = template.prompt
+    templateFormMode.value = template.mode || 'both'
+    showTemplateEditor.value = true
+}
+
+const openBlankTemplateEditor = () => {
+    closeTemplateEditor()
+    showTemplateEditor.value = true
+}
+
+const openTemplateEditorFromCurrentPrompt = () => {
+    const prompt = [textToImagePrompt.value.trim(), supplementPrompt.value].filter(Boolean).join('\n\n')
+    if (!prompt) return
+
+    closeTemplateEditor()
+    templateFormTitle.value = textToImagePrompt.value.trim().slice(0, 16) || activeSupplementLabel.value || '我的模板'
+    templateFormCategory.value = '我的模板'
+    templateFormTags.value = activeSupplementLabel.value ? activeSupplementLabel.value : ''
+    templateFormDescription.value = '从当前提示词保存。'
+    templateFormPrompt.value = prompt
+    templateFormMode.value = selectedImages.value.length ? 'image' : 'both'
+    showTemplateEditor.value = true
+}
+
+const saveCustomTemplate = () => {
+    const title = templateFormTitle.value.trim()
+    const prompt = templateFormPrompt.value.trim()
+    if (!title || !prompt) return
+
+    const template: StyleTemplate = {
+        id: editingTemplateId.value || `custom-template-${Date.now()}`,
+        title,
+        prompt,
+        image: '',
+        description: templateFormDescription.value.trim() || '我的自定义模板。',
+        category: templateFormCategory.value.trim() || '我的模板',
+        mode: templateFormMode.value || 'both',
+        tags: templateFormTags.value
+            .split(/[,，]/)
+            .map(tag => tag.trim())
+            .filter(Boolean),
+        source: 'custom'
+    }
+
+    customStyleTemplates.value = [
+        ...customStyleTemplates.value.filter(item => item.id !== template.id),
+        template
+    ]
+    LocalStorage.saveCustomStyleTemplates(customStyleTemplates.value)
+    selectedStyle.value = template.id
+    customPrompt.value = ''
+    showTemplatePanel.value = true
+    closeTemplateEditor()
+}
+
+const deleteCustomTemplate = (templateId: string) => {
+    customStyleTemplates.value = customStyleTemplates.value.filter(template => template.id !== templateId)
+    LocalStorage.saveCustomStyleTemplates(customStyleTemplates.value)
+    if (selectedStyle.value === templateId) {
+        selectedStyle.value = ''
+    }
+    closeTemplateEditor()
 }
 
 const buildPromptAssistantContext = () => {

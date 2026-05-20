@@ -58,6 +58,7 @@ export interface StyleTemplate {
     category?: string
     mode?: 'text' | 'image' | 'both'
     tags?: string[]
+    source?: 'builtin' | 'custom'
 }
 
 export type ReferenceImageRole = 'character' | 'outfit' | 'background' | 'product' | 'style' | 'other'
