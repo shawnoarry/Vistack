@@ -1,6 +1,5 @@
 <template>
-    <div class="bg-white border-4 border-black border-t-0 rounded-b-lg p-4 shadow-lg h-full flex flex-col">
-        <!-- Upload Area -->
+    <div class="flex h-full flex-col gap-3">
         <div
             ref="uploadArea"
             @click="fileInput?.click()"
@@ -9,41 +8,50 @@
             @dragleave.prevent="handleDragLeave"
             @drop.prevent="handleDrop"
             :class="[
-                'border-4 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-300 flex-1 flex flex-col justify-center',
-                isDragOver ? 'border-pink-400 bg-pink-50' : 'border-gray-300 bg-gray-50 hover:border-pink-400 hover:bg-pink-50'
+                'flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed p-5 text-center transition',
+                isDragOver ? 'border-brand-accent bg-brand-accent/10' : 'border-brand-line bg-white hover:border-brand-accent/50 hover:bg-brand-surface'
             ]"
         >
             <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="handleFileSelect" />
 
-            <!-- Upload Icon -->
-            <div class="mb-4">
-                <div class="w-12 h-12 bg-black rounded-lg mx-auto flex items-center justify-center">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                        />
-                    </svg>
-                </div>
+            <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-lg border border-brand-line bg-brand-surface text-brand-ink">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                </svg>
             </div>
 
-            <h3 class="text-lg font-bold mb-2 flex items-center justify-center gap-2">🍌 拖拽上传</h3>
-            <p class="text-gray-600 mb-1">或点击浏览文件</p>
-            <p class="text-sm text-gray-500">支持多张图片 JPG, PNG, GIF 格式 (最大 5MB)</p>
+            <h3 class="text-sm font-semibold text-brand-ink">拖拽或点击上传</h3>
+            <p class="mt-1 text-xs text-brand-muted">支持多张 JPG、PNG、GIF 图片，单张建议 5MB 以内。</p>
         </div>
 
-        <!-- Thumbnails -->
-        <div v-if="thumbnails.length > 0" class="grid grid-cols-4 gap-3 mt-4">
-            <div v-for="(thumbnail, index) in thumbnails" :key="index" class="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group border-2 border-black">
-                <img :src="thumbnail" :alt="`Image ${index + 1}`" class="w-full h-full object-cover" />
-                <button
-                    @click="removeThumbnail(index)"
-                    class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                >
-                    ×
-                </button>
+        <div v-if="thumbnails.length > 0" class="space-y-2">
+            <div v-for="(thumbnail, index) in thumbnails" :key="`${thumbnail}-${index}`" class="rounded-lg border border-brand-line bg-white p-2">
+                <div class="flex gap-2">
+                    <div class="group relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-brand-line bg-brand-surface">
+                        <img :src="thumbnail" :alt="`Image ${index + 1}`" class="h-full w-full object-cover" />
+                        <button
+                            type="button"
+                            @click="removeThumbnail(index)"
+                            class="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md bg-brand-ink/90 text-sm font-semibold text-brand-surface opacity-0 transition hover:bg-brand-accent group-hover:opacity-100"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <label class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">参考图语义</label>
+                        <input
+                            :value="labels[index] || defaultLabel(index)"
+                            @input="updateLabel(index, ($event.target as HTMLInputElement).value)"
+                            class="mt-1 w-full rounded-md border border-brand-line bg-brand-surface px-2 py-1.5 text-xs text-brand-ink outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10"
+                            :placeholder="defaultLabel(index)"
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -54,10 +62,12 @@ import { ref, computed } from 'vue'
 
 const props = defineProps<{
     modelValue: string[]
+    labels?: string[]
 }>()
 
 const emit = defineEmits<{
     'update:modelValue': [value: string[]]
+    'update:labels': [value: string[]]
 }>()
 
 const fileInput = ref<HTMLInputElement>()
@@ -65,6 +75,9 @@ const uploadArea = ref<HTMLElement>()
 const isDragOver = ref(false)
 
 const thumbnails = computed(() => props.modelValue)
+const labels = computed(() => props.labels || [])
+
+const defaultLabel = (index: number) => `角色${index + 1}`
 
 const handleFileSelect = (event: Event) => {
     const target = event.target as HTMLInputElement
@@ -105,6 +118,7 @@ const handleFiles = (files: File[]) => {
             if (e.target?.result) {
                 const newImages = [...props.modelValue, e.target.result as string]
                 emit('update:modelValue', newImages)
+                emit('update:labels', [...labels.value, defaultLabel(newImages.length - 1)])
             }
         }
         reader.readAsDataURL(file)
@@ -114,5 +128,12 @@ const handleFiles = (files: File[]) => {
 const removeThumbnail = (index: number) => {
     const newImages = props.modelValue.filter((_, i) => i !== index)
     emit('update:modelValue', newImages)
+    emit('update:labels', labels.value.filter((_, i) => i !== index))
+}
+
+const updateLabel = (index: number, label: string) => {
+    const nextLabels = [...labels.value]
+    nextLabels[index] = label
+    emit('update:labels', nextLabels)
 }
 </script>

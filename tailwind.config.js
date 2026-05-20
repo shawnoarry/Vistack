@@ -7,6 +7,13 @@ export default {
     theme: {
         extend: {
             colors: {
+                brand: {
+                    ink: '#191919',
+                    muted: '#9999A1',
+                    line: '#E6E6E9',
+                    accent: '#CD4631',
+                    surface: '#F4F4F6'
+                },
                 dark: {
                     bg: '#121212',
                     card: '#1e1e1e',

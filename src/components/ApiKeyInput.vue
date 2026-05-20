@@ -1,96 +1,98 @@
 <template>
-    <div class="bg-white border-4 border-black rounded-lg p-3 shadow-lg">
-        <div class="mb-2">
-            <h3 class="font-bold text-gray-800 flex items-center gap-2 mb-2">
-                🔑 API 配置
-                <span v-if="modelValue" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">密钥已保存</span>
-            </h3>
-            <p class="text-sm text-gray-600">可自定义 API 密钥与端点，默认使用 OpenRouter</p>
+    <div class="rounded-lg border border-brand-line bg-white p-4 shadow-sm shadow-black/5">
+        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-brand-ink">API 配置</h3>
+                <p class="mt-1 text-xs text-brand-muted">可使用 OpenRouter，也可填写 Grsai 或其他兼容端点。</p>
+            </div>
+            <span v-if="modelValue" class="w-fit rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">密钥已保存</span>
         </div>
 
-        <div class="space-y-3">
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px]">
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">API 密钥</label>
+                <label class="mb-1 block wb-label">API 密钥</label>
                 <div class="flex gap-2">
                     <input
                         type="password"
                         :value="modelValue"
                         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-                        placeholder="输入你的 OpenRouter API 密钥..."
-                        class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                        placeholder="输入 API 密钥"
+                        class="wb-input min-w-0 flex-1"
                     />
                     <button
                         v-if="modelValue"
+                        type="button"
                         @click="clearApiKey"
-                        class="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
-                        title="清除缓存的API密钥"
+                        class="rounded-lg border border-brand-accent/30 bg-brand-accent/10 px-3 py-2 text-sm font-semibold text-brand-accent transition hover:bg-brand-accent/15"
+                        title="清除缓存的 API 密钥"
                     >
-                        🗑️
+                        清除
                     </button>
                 </div>
-                <div class="flex items-center justify-between mt-1">
-                    <p class="text-xs text-gray-500">
-                        从 <a href="https://openrouter.ai/" target="_blank" class="text-orange-500 hover:underline font-medium">OpenRouter.ai</a> 获取你的 API 密钥
+                <div class="mt-1 flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs text-brand-muted">
+                        默认 OpenRouter，其他供应商请同时修改端点。
                     </p>
-                    <p v-if="modelValue" class="text-xs text-green-600 flex items-center gap-1">💾 已自动保存到本地</p>
+                    <p v-if="modelValue" class="text-xs text-brand-accent">已自动保存到本地</p>
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">API 端点</label>
+                <label class="mb-1 block wb-label">API 端点</label>
                 <div class="flex gap-2">
                     <input
                         type="text"
                         :value="endpoint"
                         @input="$emit('update:endpoint', ($event.target as HTMLInputElement).value)"
-                        placeholder="例如 https://openrouter.ai/api/v1/chat/completions"
-                        class="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                        placeholder="例如 https://grsai.dakka.com.cn/v1/api/generate"
+                        class="wb-input min-w-0 flex-1"
                     />
                     <button
                         v-if="isCustomEndpoint"
+                        type="button"
                         @click="resetEndpoint"
-                        class="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                        class="wb-secondary"
                         title="恢复默认端点"
                     >
-                        ♻️
+                        默认
                     </button>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">如果你的模型提供方与 OpenRouter 不同，可在此填写自定义地址</p>
+                <p class="mt-1 text-xs text-brand-muted">Grsai 生成接口、OpenAI Images、OpenRouter Chat 均会自动识别。</p>
             </div>
 
             <div>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <button
+                        type="button"
                         @click="$emit('fetch-models')"
                         :disabled="!canFetchModels || modelLoading"
                         :class="[
-                            'px-3 py-2 rounded-lg border-2 border-black font-semibold text-sm transition-colors shadow-sm flex items-center justify-center gap-2',
+                            'inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold transition',
                             modelLoading
-                                ? 'bg-gray-300 text-gray-600 cursor-wait'
+                                ? 'cursor-wait bg-brand-line text-brand-muted'
                                 : canFetchModels
-                                  ? 'bg-purple-500 text-white hover:bg-purple-600'
-                                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                  ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90'
+                                  : 'cursor-not-allowed bg-brand-line text-brand-muted'
                         ]"
                     >
-                        <span v-if="modelLoading">⏳ 正在获取...</span>
-                        <span v-else>📥 获取模型列表</span>
+                        {{ modelLoading ? '正在获取...' : '获取模型列表' }}
                     </button>
-                    <span v-if="models.length" class="text-xs text-gray-600">已载入 {{ models.length }} 个模型</span>
+                    <span v-if="models.length" class="text-xs text-brand-muted">已载入 {{ models.length }} 个模型</span>
                 </div>
-                <p v-if="modelError" class="text-xs text-red-600 mt-2">⚠️ {{ modelError }}</p>
+                <p v-if="modelError" class="mt-2 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">{{ modelError }}</p>
 
                 <div class="mt-3">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">选择文生图模型</label>
+                    <label class="mb-1 block wb-label">模型</label>
                     <select
                         :value="model"
                         @change="handleModelChange"
-                        class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                        class="wb-input w-full"
                     >
                         <option v-for="item in optionList" :key="item.id" :value="item.id">
-                            {{ item.supportsImages ? '🖼️ ' : '' }}{{ item.label }}
+                            {{ item.supportsImages ? '[image] ' : '' }}{{ item.label }}
                         </option>
                     </select>
-                    <p v-if="selectedModelInfo" class="text-xs text-gray-500 mt-1">{{ selectedModelInfo }}</p>
+                    <p v-if="selectedModelInfo" class="mt-1 text-xs text-brand-muted">{{ selectedModelInfo }}</p>
                 </div>
             </div>
         </div>

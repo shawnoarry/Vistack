@@ -42,4 +42,7 @@ export interface StyleTemplate {
     prompt: string
     image: string
     description: string
+    category?: string
+    mode?: 'text' | 'image' | 'both'
+    tags?: string[]
 }

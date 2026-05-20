@@ -1,14 +1,11 @@
 <template>
-    <div class="bg-white border-4 border-black border-t-0 rounded-b-lg p-4 shadow-lg space-y-4">
-        <!-- Image Size Selection -->
+    <div class="space-y-4">
         <div>
-            <label class="block text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
-                📏 图像尺寸
-            </label>
+            <label class="wb-label block">图像尺寸</label>
             <select
                 :value="imageSize"
                 @change="$emit('update:imageSize', ($event.target as HTMLInputElement).value)"
-                class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm font-medium"
+                class="wb-input mt-2 w-full font-medium"
             >
                 <option value="1K">1K - 标准清晰度</option>
                 <option value="2K">2K - 高清晰度</option>
@@ -16,39 +13,36 @@
             </select>
         </div>
 
-  
-        <!-- Google Search Toggle -->
-        <div>
-            <label class="flex items-center gap-3 cursor-pointer">
+        <div v-if="showGoogleSearch" class="rounded-lg border border-brand-line bg-white p-3">
+            <label class="flex cursor-pointer items-start gap-3">
                 <input
                     type="checkbox"
                     :checked="enableGoogleSearch"
                     @change="$emit('update:enableGoogleSearch', ($event.target as HTMLInputElement).checked)"
-                    class="w-4 h-4 text-purple-600 border-2 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                    class="mt-0.5 h-4 w-4 rounded border-brand-line bg-brand-surface text-brand-accent focus:ring-brand-accent"
                 />
-                <span class="text-sm font-bold text-gray-800 flex items-center gap-2">
-                    🔍 启用谷歌搜索
+                <span>
+                    <span class="block text-sm font-semibold text-brand-ink">启用 Google Search</span>
+                    <span class="mt-1 block text-xs text-brand-muted">允许 Gemini 3 Pro Image 使用搜索信息生成图像。</span>
                 </span>
             </label>
-            <p class="text-xs text-gray-500 mt-1 ml-7">
-                允许模型使用谷歌搜索获取最新信息来生成图像
-            </p>
         </div>
-
-        <p class="text-xs text-gray-500 mt-2">
-            💡 Gemini 3 Pro Image 专用配置，同时作用于「文生图」与「图文生图」功能
-        </p>
     </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
     imageSize: string
     enableGoogleSearch: boolean
+    modelType?: string
 }>()
 
 defineEmits<{
     'update:imageSize': [value: string]
     'update:enableGoogleSearch': [value: boolean]
 }>()
+
+const showGoogleSearch = computed(() => props.modelType === 'gemini-3-pro-image')
 </script>
