@@ -2,24 +2,94 @@ import type { StyleTemplate } from '../types'
 
 export const styleTemplates: StyleTemplate[] = [
     {
-        id: 'figurine',
+        id: 'phone-selfie-natural',
+        title: '手机镜头自拍',
+        category: '手机人像',
+        mode: 'both',
+        tags: ['自拍', '手机感', '真实皮肤'],
+        prompt: '生成一张像手机前置摄像头拍摄的自然自拍。主体看向镜头，构图轻微随手感，保留真实皮肤纹理、自然表情和轻微镜头畸变。光线像室内窗边或街边自然光，不要棚拍感，不要过度磨皮，不要商业大片质感。画面应该像真实社交平台随手发布的照片。',
+        image: '',
+        description: '更接近真实手机自拍，而不是精修写真。'
+    },
+    {
+        id: 'korean-ootd-mirror',
+        title: '韩式 OOTD 镜自拍',
+        category: '手机人像',
+        mode: 'both',
+        tags: ['OOTD', '镜自拍', '韩系穿搭'],
+        prompt: '生成一张韩式 OOTD 镜自拍。主体站在全身镜前，用手机遮住部分脸或自然拿在胸前，服装搭配清爽、有层次，姿态放松。背景可以是公寓玄关、衣帽间、咖啡店洗手间或简洁街区店面。保留真实手机拍摄的纵向构图、环境反射、自然光和生活感。',
+        image: '',
+        description: '适合穿搭、服装参考和日常社交图。'
+    },
+    {
+        id: 'idol-backstage-selfie',
+        title: 'Idol 后台自拍',
+        category: 'K-pop 生态',
+        mode: 'both',
+        tags: ['idol', '后台', '自拍'],
+        prompt: '生成一张 K-pop idol 后台自拍风格图片。主体像在打歌后台、化妆间或练习室用手机自拍，妆发精致但表情自然，服装有舞台造型感。背景出现柔和的化妆灯、衣架、工作人员虚化或练习室镜面，但不要杂乱。画面质感应该像官方社媒更新，不要像电影剧照或商业广告。',
+        image: '',
+        description: '适合做偶像社媒自拍、后台花絮感图像。'
+    },
+    {
+        id: 'fancam-cover',
+        title: '直拍封面',
+        category: 'K-pop 生态',
+        mode: 'both',
+        tags: ['直拍', '舞台', '封面'],
+        prompt: '生成一张 K-pop 直拍视频封面感图片。主体在舞台上处于清晰的高光瞬间，眼神有抓取感，动作停在最有记忆点的一帧。舞台灯光、LED 背景和浅景深要明显，但主体脸部和服装细节保持清楚。构图适合竖版或方形封面，不添加文字，不生成水印。',
+        image: '',
+        description: '偏舞台直拍截图和粉丝会收藏的封面图。'
+    },
+    {
+        id: 'airport-preview',
+        title: '机场路透',
+        category: 'K-pop 生态',
+        mode: 'both',
+        tags: ['机场', '站姐', '媒体图'],
+        prompt: '生成一张韩娱机场路透风格图片。主体穿着日常但有造型感的机场穿搭，正在机场出入口、航站楼通道或保姆车旁自然行走。画面像长焦媒体图或站姐预览图，背景有人群、行李箱、闪光灯和轻微运动模糊。保留真实抓拍感，不要过度摆拍，不要红毯或棚拍质感。',
+        image: '',
+        description: '用于机场、出入境、媒体抓拍类图像。'
+    },
+    {
+        id: 'after-work-preview',
+        title: '下班路透',
+        category: 'K-pop 生态',
+        mode: 'both',
+        tags: ['下班路', '站姐', '夜景'],
+        prompt: '生成一张 idol 下班路透风格图片。主体从电视台、练习室或活动场馆离开，穿着私服或半舞台造型，身边有保姆车、工作人员、粉丝和闪光灯。使用夜间长焦抓拍、轻微噪点、背景虚化和真实媒体图质感。主体应清楚、有氛围，但不要像正式写真。',
+        image: '',
+        description: '适合“下班路”“出勤”“饭拍预览”的氛围。'
+    },
+    {
+        id: 'korean-cafe-snapshot',
+        title: '韩系咖啡店随拍',
+        category: '生活方式',
+        mode: 'both',
+        tags: ['咖啡店', '日常', '自然光'],
+        prompt: '生成一张韩系咖啡店日常随拍。主体坐在窗边、吧台或小圆桌旁，画面有手机随手拍的松弛感。光线柔和，背景有咖啡杯、甜点、玻璃窗、街景或简洁室内设计。整体干净、自然、轻社交平台风格，不要厚重滤镜，不要过度商业化。',
+        image: '',
+        description: '适合生活照、约会感、社媒日常图。'
+    },
+    {
+        id: 'street-paparazzi',
+        title: '街头媒体抓拍',
+        category: '真实摄影',
+        mode: 'both',
+        tags: ['抓拍', '长焦', '街拍'],
+        prompt: '生成一张街头媒体抓拍风格图片。主体自然行走或回头，画面来自远处长焦镜头，背景有城市街区、车辆、行人和轻微压缩感。表情和姿态不要太摆拍，服装细节清楚，整体像真实街拍或新闻图片。保留一点颗粒、运动感和环境不完美。',
+        image: '',
+        description: '更真实的街拍、路透和媒体图质感。'
+    },
+    {
+        id: 'figure-collectible',
         title: '桌面手办风格',
         category: '角色商品化',
         mode: 'image',
         tags: ['角色', '手办', '包装'],
-        prompt: 'Create a 1/7 scale commercialized figurine of the character in the reference image, in a realistic product photography style. Place the figurine on a clean computer desk with a transparent round acrylic base, no text on the base. Show a monitor in the background displaying the ZBrush modeling process for this figurine. Add a premium toy packaging box beside the monitor, printed with flat 2D artwork based on the original reference. Preserve the character identity, costume details, colors, proportions, and recognizable accessories.',
+        prompt: '把参考角色转成收藏级桌面手办。手办放在干净电脑桌上，有透明圆形亚克力底座，旁边有高级玩具包装盒，包装图案来自参考角色。背景可以出现显示建模过程的屏幕。保留角色身份、服装颜色、发型、配饰和比例，不要在底座或包装上生成不可读文字。',
         image: '/1.png',
-        description: '把上传角色转成收藏级桌面手办，并生成包装与制作过程展示。'
-    },
-    {
-        id: 'fastfood-solitude',
-        title: '深夜食堂的孤寂',
-        category: '叙事场景',
-        mode: 'image',
-        tags: ['电影感', '角色融入', '夜景'],
-        prompt: 'Create a cinematic night scene inside a fast food restaurant. In the foreground, show a lonely table with burgers, fries, and a smartphone clearly displaying the uploaded character image. A hand reaches toward the food, suggesting solitude. In the blurred midground, a couple sits together in a quiet intimate moment; one person is a realistic cosplay interpretation of the uploaded character, preserving signature hairstyle, costume colors, props, armor, ears, wings, or other recognizable cues. Background: large glass windows, soft neon city lights, shallow depth of field. Mood: melancholic, bittersweet, cinematic.',
-        image: '/2.png',
-        description: '把参考角色自然融入一个有情绪张力的电影化夜间场景。'
+        description: '保留原有热门手办玩法，但改成中文可读。'
     },
     {
         id: 'product-hero',
@@ -27,49 +97,9 @@ export const styleTemplates: StyleTemplate[] = [
         category: '商业视觉',
         mode: 'both',
         tags: ['产品', '电商', '海报'],
-        prompt: 'Create a premium product hero image with a clean editorial composition. Use a precise studio lighting setup, crisp shadows, controlled reflections, and a restrained background. The main subject should be centered with enough negative space for optional headline placement. Keep textures realistic, edges sharp, colors balanced, and avoid clutter. The final image should feel like a high-end campaign visual for a modern consumer brand.',
+        prompt: '生成一张高级产品主视觉。主体清晰居中，背景干净，光线精准，阴影和反射真实可控。画面需要给标题或版式留出适当空间，材质边缘清楚，颜色克制，不要杂乱。最终效果像现代消费品牌的电商主图或活动视觉。',
         image: '',
-        description: '适合商品、设备、包装或任意主体的高级商业主图。'
-    },
-    {
-        id: 'character-poster',
-        title: '角色宣传海报',
-        category: '角色商品化',
-        mode: 'both',
-        tags: ['角色', '海报', '宣传'],
-        prompt: 'Create a polished character promotional poster. Keep the character identity consistent and make the pose confident and readable. Use a clean graphic background, dramatic but controlled lighting, subtle atmospheric depth, and strong silhouette separation. Add visual hierarchy through composition only; do not add unreadable text. The result should look like official key art for a game, anime, or collectible launch.',
-        image: '',
-        description: '把角色做成官方 key art 风格的宣传图。'
-    },
-    {
-        id: 'interior-lifestyle',
-        title: '生活方式室内场景',
-        category: '生活方式',
-        mode: 'both',
-        tags: ['室内', '生活方式', '自然光'],
-        prompt: 'Create a refined lifestyle interior scene with natural daylight, tactile materials, and a calm editorial mood. Arrange the subject in a believable lived-in environment, with soft shadows, realistic scale, and a balanced composition. Use warm-neutral highlights only as lighting, not as a dominant color palette. Keep the image clean, premium, and suitable for a design magazine.',
-        image: '',
-        description: '适合家居、人物、产品放入自然室内环境。'
-    },
-    {
-        id: 'fashion-lookbook',
-        title: '时装 Lookbook',
-        category: '人像时尚',
-        mode: 'both',
-        tags: ['人像', '服装', '大片'],
-        prompt: 'Create a fashion lookbook image with a confident model pose, clean styling, and editorial lighting. Preserve important facial features or outfit cues from the reference if provided. Use a minimal set, refined fabric texture, accurate anatomy, and a tasteful magazine composition. Avoid exaggerated retouching and keep the final image commercially polished.',
-        image: '',
-        description: '适合人物、穿搭、角色服装再设计。'
-    },
-    {
-        id: 'isometric-workspace',
-        title: '等距工作台插画',
-        category: '插画风格',
-        mode: 'text',
-        tags: ['插画', '工作台', '等距'],
-        prompt: 'Create an isometric illustration of a modern creative workstation. Include a large canvas, reference image thumbnails, model controls, task history, and a clean generation panel. Use precise geometry, crisp edges, soft shadows, and a restrained palette with one red accent color. The composition should feel like a premium software product illustration, not a marketing hero graphic.',
-        image: '',
-        description: '适合直接文生图生成工作台、软件或工具类插画。'
+        description: '适合商品、设备、包装或任意主体。'
     },
     {
         id: 'cinematic-environment',
@@ -77,28 +107,8 @@ export const styleTemplates: StyleTemplate[] = [
         category: '叙事场景',
         mode: 'both',
         tags: ['电影感', '环境', '光影'],
-        prompt: 'Create a cinematic environment shot with a clear focal subject, layered foreground and background depth, volumetric but restrained lighting, and realistic material response. Use a strong sense of place and story while keeping the composition uncluttered. Avoid over-saturated colors and make the image feel like a still frame from a high-budget film.',
+        prompt: '生成一张电影剧照感环境图。主体明确，前景、中景、背景有层次，光影有叙事感但不要过度夸张。环境需要真实可信，材质和透视准确，颜色不要过饱和。画面像高预算电影里的一个静帧。',
         image: '',
-        description: '适合把主体放入更完整的故事环境。'
-    },
-    {
-        id: 'logo-to-object',
-        title: 'Logo 实体化',
-        category: '商业视觉',
-        mode: 'image',
-        tags: ['品牌', 'Logo', '实体化'],
-        prompt: 'Transform the reference logo or flat graphic into a realistic physical object. Preserve the core shape, proportions, and brand recognition. Render it as a premium material object on a clean surface, with accurate bevels, soft reflections, and studio lighting. Avoid adding unrelated symbols or text. The final image should be suitable for a brand presentation.',
-        image: '',
-        description: '把上传的标志、图形或符号变成可展示的实体物件。'
-    },
-    {
-        id: 'social-square',
-        title: '社媒方图封面',
-        category: '商业视觉',
-        mode: 'both',
-        tags: ['封面', '社媒', '方图'],
-        prompt: 'Create a square social media cover image with a bold central subject, clean negative space, and strong readability at small sizes. Use a premium editorial composition, restrained background details, and one clear accent color. Do not include text unless explicitly requested. The image should work as a polished thumbnail or campaign cover.',
-        image: '',
-        description: '适合 1:1 社媒封面、活动图和缩略图。'
+        description: '适合把人物或主体放进更完整的故事环境。'
     }
 ]

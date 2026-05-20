@@ -1,4 +1,4 @@
-import type { ApiModel, GenerateRequest, GenerateResponse, ModelListResponse } from '../types'
+import type { ApiModel, GenerateRequest, GenerateResponse, ModelListResponse, PromptAssistantRequest, PromptAssistantResponse } from '../types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from '../config/api'
 
 type ApiProvider = 'openai-chat' | 'openai-image' | 'grsai' | 'grsai-draw'
@@ -166,6 +166,43 @@ export async function fetchModels(apikey: string, endpoint: string): Promise<Api
     }
 
     return fetchModelsFromKnownEndpoints(apikey, profile.endpoint)
+}
+
+export async function improvePrompt(request: PromptAssistantRequest): Promise<PromptAssistantResponse> {
+    const payload: Record<string, unknown> = {
+        model: request.model.trim(),
+        messages: [
+            {
+                role: 'system',
+                content: [
+                    '你是 Vistack 的中文生图提示词助手。',
+                    '你的任务是把用户的中文想法整理成更稳定、更清晰的图像生成提示词。',
+                    '保留用户指定的人物、参考图角色、服装、场景、文化语境和审美偏好。',
+                    '不要添加真实艺人姓名、品牌商标、随机文字、水印或额外解释。',
+                    '输出只包含优化后的提示词本身，不要使用 Markdown。'
+                ].join('\n')
+            },
+            {
+                role: 'user',
+                content: [
+                    '请优化下面的生图提示词，优先使用中文，必要的摄影/平台术语可保留英文。',
+                    '要求：结构清楚，适合图像模型理解；强调真实手机镜头、参考图使用方式、主体一致性和质量约束；不要改变用户原意。',
+                    request.context ? `当前创作上下文：\n${request.context}` : '',
+                    `用户原始提示词：\n${request.prompt}`
+                ].filter(Boolean).join('\n\n')
+            }
+        ],
+        temperature: 0.4
+    }
+
+    const data = await postJson(request.endpoint, request.apikey, payload)
+    const content = extractTextContent(data).trim()
+
+    if (!content) {
+        throw new Error(`提示词助手没有返回文本: ${summarizeResponse(data)}`)
+    }
+
+    return { prompt: content }
 }
 
 async function generateWithProfile(profile: ApiProfile, request: GenerateRequest): Promise<GenerateResponse> {
@@ -732,6 +769,30 @@ function extractImageUrls(value: unknown): string[] {
 
     visit(value)
     return urls
+}
+
+function extractTextContent(value: unknown): string {
+    const root = getObject(value)
+    const choices = getArray(root?.choices)
+    const message = getObject(getObject(choices?.[0])?.message)
+    const directContent = message?.content
+
+    if (typeof directContent === 'string') {
+        return directContent
+    }
+
+    if (Array.isArray(directContent)) {
+        return directContent
+            .map(part => {
+                if (typeof part === 'string') return part
+                if (!isRecord(part)) return ''
+                return getString(part.text) || getString(part.content)
+            })
+            .filter(Boolean)
+            .join('\n')
+    }
+
+    return getString(root?.output_text) || getString(root?.text) || getString(root?.content)
 }
 
 function extractTaskId(value: unknown): string | null {

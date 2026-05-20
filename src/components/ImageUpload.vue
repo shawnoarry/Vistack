@@ -26,7 +26,7 @@
             </div>
 
             <h3 class="text-sm font-semibold text-brand-ink">拖拽或点击上传参考图</h3>
-            <p class="mt-1 text-xs text-brand-muted">可一次上传多张。每张上传后可标注它代表的人物、主体、服装或背景。</p>
+            <p class="mt-1 text-xs text-brand-muted">可一次上传多张。每张上传后可指定类型、分组名称和补充说明。</p>
         </div>
 
         <div v-if="thumbnails.length > 0" class="space-y-2">
@@ -42,14 +42,37 @@
                             ×
                         </button>
                     </div>
-                    <div class="min-w-0 flex-1">
-                        <label class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">这张图代表</label>
-                        <input
-                            :value="labels[index] || defaultLabel(index)"
-                            @input="updateLabel(index, ($event.target as HTMLInputElement).value)"
-                            class="mt-1 w-full rounded-md border border-brand-line bg-brand-surface px-2 py-1.5 text-xs text-brand-ink outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10"
-                            :placeholder="`${defaultLabel(index)} / 服装参考 / 背景参考`"
-                        />
+                    <div class="min-w-0 flex-1 space-y-2">
+                        <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
+                            <label class="min-w-0">
+                                <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">类型</span>
+                                <select
+                                    :value="metaFor(index).role"
+                                    @change="updateMeta(index, { role: ($event.target as HTMLSelectElement).value as ReferenceImageRole })"
+                                    class="mt-1 w-full rounded-md border border-brand-line bg-brand-surface px-2 py-1.5 text-xs text-brand-ink outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10"
+                                >
+                                    <option v-for="option in roleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                </select>
+                            </label>
+                            <label class="min-w-0">
+                                <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">名称 / 分组</span>
+                                <input
+                                    :value="metaFor(index).label"
+                                    @input="updateMeta(index, { label: ($event.target as HTMLInputElement).value })"
+                                    class="mt-1 w-full rounded-md border border-brand-line bg-brand-surface px-2 py-1.5 text-xs text-brand-ink outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10"
+                                    :placeholder="defaultLabel(index)"
+                                />
+                            </label>
+                        </div>
+                        <label class="block">
+                            <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">说明</span>
+                            <input
+                                :value="metaFor(index).note || ''"
+                                @input="updateMeta(index, { note: ($event.target as HTMLInputElement).value })"
+                                class="mt-1 w-full rounded-md border border-brand-line bg-brand-surface px-2 py-1.5 text-xs text-brand-ink outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10"
+                                placeholder="例如：保持发型和脸型 / 只参考衣服 / 作为室内背景"
+                            />
+                        </label>
                     </div>
                 </div>
             </div>
@@ -59,15 +82,18 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import type { ReferenceImageMeta, ReferenceImageRole } from '../types'
 
 const props = defineProps<{
     modelValue: string[]
     labels?: string[]
+    metadata?: ReferenceImageMeta[]
 }>()
 
 const emit = defineEmits<{
     'update:modelValue': [value: string[]]
     'update:labels': [value: string[]]
+    'update:metadata': [value: ReferenceImageMeta[]]
 }>()
 
 const fileInput = ref<HTMLInputElement>()
@@ -76,8 +102,29 @@ const isDragOver = ref(false)
 
 const thumbnails = computed(() => props.modelValue)
 const labels = computed(() => props.labels || [])
+const metadata = computed(() => props.metadata || [])
+
+const roleOptions: Array<{ value: ReferenceImageRole; label: string }> = [
+    { value: 'character', label: '人物/角色' },
+    { value: 'outfit', label: '服装' },
+    { value: 'background', label: '背景' },
+    { value: 'product', label: '产品/主体' },
+    { value: 'style', label: '风格' },
+    { value: 'other', label: '其他' }
+]
 
 const defaultLabel = (index: number) => `角色${index + 1}`
+
+const defaultMeta = (index: number): ReferenceImageMeta => ({
+    role: 'character',
+    label: labels.value[index] || defaultLabel(index),
+    note: ''
+})
+
+const metaFor = (index: number): ReferenceImageMeta => ({
+    ...defaultMeta(index),
+    ...(metadata.value[index] || {})
+})
 
 const handleFileSelect = (event: Event) => {
     const target = event.target as HTMLInputElement
@@ -119,6 +166,7 @@ const handleFiles = (files: File[]) => {
                 const newImages = [...props.modelValue, e.target.result as string]
                 emit('update:modelValue', newImages)
                 emit('update:labels', [...labels.value, defaultLabel(newImages.length - 1)])
+                emit('update:metadata', [...metadata.value, defaultMeta(newImages.length - 1)])
             }
         }
         reader.readAsDataURL(file)
@@ -129,6 +177,19 @@ const removeThumbnail = (index: number) => {
     const newImages = props.modelValue.filter((_, i) => i !== index)
     emit('update:modelValue', newImages)
     emit('update:labels', labels.value.filter((_, i) => i !== index))
+    emit('update:metadata', metadata.value.filter((_, i) => i !== index))
+}
+
+const updateMeta = (index: number, patch: Partial<ReferenceImageMeta>) => {
+    const current = metaFor(index)
+    const nextMeta = { ...current, ...patch }
+    const nextMetadata = [...metadata.value]
+    nextMetadata[index] = nextMeta
+    emit('update:metadata', nextMetadata)
+
+    if (patch.label !== undefined) {
+        updateLabel(index, patch.label)
+    }
 }
 
 const updateLabel = (index: number, label: string) => {

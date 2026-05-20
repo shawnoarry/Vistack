@@ -9,7 +9,7 @@
                     activeTab === 'style' ? 'bg-brand-accent text-brand-surface' : 'text-brand-muted hover:text-brand-ink'
                 ]"
             >
-                预设风格
+                创作模板
             </button>
             <button
                 type="button"
@@ -19,7 +19,7 @@
                     activeTab === 'custom' ? 'bg-brand-accent text-brand-surface' : 'text-brand-muted hover:text-brand-ink'
                 ]"
             >
-                自定义
+                自定义补充
             </button>
         </div>
 
@@ -93,21 +93,21 @@
         </div>
 
         <div v-else class="flex flex-1 flex-col gap-2">
-            <label class="wb-label">改图提示词</label>
+            <label class="wb-label">补充提示词</label>
 
             <textarea
                 :value="customPrompt"
                 @input="updateCustomPrompt(($event.target as HTMLTextAreaElement).value)"
-                placeholder="例如：保持主体构图，将图片改成干净的产品海报风格，提升质感与光影。"
+                placeholder="例如：保持主体构图，将画面改成干净的产品海报风格，提升质感与光影。"
                 class="wb-input min-h-[180px] w-full flex-1 resize-none py-3 leading-6"
             />
 
-            <p class="text-xs text-brand-muted">描述越具体，模型越容易保持主体并执行指定风格。</p>
+            <p class="text-xs text-brand-muted">这段内容会作为主提示词的补充。选择创作模板和填写自定义补充会互相替换。</p>
 
             <PromptPhraseBuilder
                 :groups="phraseGroups"
                 title="词组积木"
-                description="点击词组追加到自定义改图提示词。"
+                description="点击词组追加到自定义补充提示词。"
                 @insert="insertPhrase"
             />
         </div>
@@ -162,7 +162,7 @@ const filteredTemplates = computed(() => {
 
 const modeLabel = (mode: StyleTemplate['mode']) => {
     if (mode === 'text') return '文生图'
-    if (mode === 'image') return '图文'
+    if (mode === 'image') return '需参考图'
     return '通用'
 }
 

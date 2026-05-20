@@ -6,6 +6,9 @@ export class LocalStorage {
     private static readonly API_ENDPOINT = 'vistack-api-endpoint'
     private static readonly MODEL_ID = 'vistack-model-id'
     private static readonly MODEL_CACHE = 'vistack-model-cache'
+    private static readonly PROMPT_ASSISTANT_API_KEY = 'vistack-prompt-assistant-api-key'
+    private static readonly PROMPT_ASSISTANT_ENDPOINT = 'vistack-prompt-assistant-endpoint'
+    private static readonly PROMPT_ASSISTANT_MODEL_ID = 'vistack-prompt-assistant-model-id'
     private static readonly LEGACY_KEYS = {
         API_KEY: 'nano-banana-api-key',
         API_ENDPOINT: 'nano-banana-api-endpoint',
@@ -94,6 +97,81 @@ export class LocalStorage {
             localStorage.removeItem(this.MODEL_ID)
         } catch (error) {
             console.warn('无法清除本地存储的模型ID:', error)
+        }
+    }
+
+    static savePromptAssistantApiKey(apiKey: string): void {
+        try {
+            localStorage.setItem(this.PROMPT_ASSISTANT_API_KEY, apiKey)
+        } catch (error) {
+            console.warn('无法保存提示词助手 API 密钥:', error)
+        }
+    }
+
+    static getPromptAssistantApiKey(): string {
+        try {
+            return localStorage.getItem(this.PROMPT_ASSISTANT_API_KEY) || ''
+        } catch (error) {
+            console.warn('无法读取提示词助手 API 密钥:', error)
+            return ''
+        }
+    }
+
+    static clearPromptAssistantApiKey(): void {
+        try {
+            localStorage.removeItem(this.PROMPT_ASSISTANT_API_KEY)
+        } catch (error) {
+            console.warn('无法清除提示词助手 API 密钥:', error)
+        }
+    }
+
+    static savePromptAssistantEndpoint(endpoint: string): void {
+        try {
+            localStorage.setItem(this.PROMPT_ASSISTANT_ENDPOINT, endpoint)
+        } catch (error) {
+            console.warn('无法保存提示词助手端点:', error)
+        }
+    }
+
+    static getPromptAssistantEndpoint(): string {
+        try {
+            return localStorage.getItem(this.PROMPT_ASSISTANT_ENDPOINT) || ''
+        } catch (error) {
+            console.warn('无法读取提示词助手端点:', error)
+            return ''
+        }
+    }
+
+    static clearPromptAssistantEndpoint(): void {
+        try {
+            localStorage.removeItem(this.PROMPT_ASSISTANT_ENDPOINT)
+        } catch (error) {
+            console.warn('无法清除提示词助手端点:', error)
+        }
+    }
+
+    static savePromptAssistantModelId(modelId: string): void {
+        try {
+            localStorage.setItem(this.PROMPT_ASSISTANT_MODEL_ID, modelId)
+        } catch (error) {
+            console.warn('无法保存提示词助手模型:', error)
+        }
+    }
+
+    static getPromptAssistantModelId(): string {
+        try {
+            return localStorage.getItem(this.PROMPT_ASSISTANT_MODEL_ID) || ''
+        } catch (error) {
+            console.warn('无法读取提示词助手模型:', error)
+            return ''
+        }
+    }
+
+    static clearPromptAssistantModelId(): void {
+        try {
+            localStorage.removeItem(this.PROMPT_ASSISTANT_MODEL_ID)
+        } catch (error) {
+            console.warn('无法清除提示词助手模型:', error)
         }
     }
 

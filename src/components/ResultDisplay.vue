@@ -27,6 +27,14 @@
                             <span class="font-mono text-xs text-brand-line">{{ imageSizes[img] || `Result ${index + 1}` }} · {{ index + 1 }}/{{ results.length }}</span>
                             <div class="flex gap-2">
                                 <button
+                                    v-if="canReuse"
+                                    type="button"
+                                    @click="$emit('reuse')"
+                                    class="rounded-md border border-brand-accent bg-brand-accent px-2.5 py-1 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90"
+                                >
+                                    复用本次
+                                </button>
+                                <button
                                     type="button"
                                     @click="previewImage = img"
                                     class="rounded-md border border-brand-surface/20 bg-brand-surface/10 px-2.5 py-1 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/20"
@@ -89,6 +97,7 @@
                 <div class="flex gap-2">
                     <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="$emit('download', previewImage)">下载</button>
                     <button v-if="canPush" type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="$emit('push', previewImage)">作为参考图</button>
+                    <button v-if="canReuse" type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="$emit('reuse')">复用本次</button>
                     <button type="button" class="rounded-md bg-brand-accent px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="previewImage = ''">关闭</button>
                 </div>
             </div>
@@ -107,6 +116,7 @@ const props = defineProps<{
     loading: boolean
     error: string | null
     canPush: boolean
+    canReuse: boolean
 }>()
 
 const imageSizes = ref<Record<string, string>>({})
@@ -139,5 +149,6 @@ const onImageLoad = (event: Event, image: string) => {
 defineEmits<{
     download: [image: string]
     push: [image: string]
+    reuse: []
 }>()
 </script>

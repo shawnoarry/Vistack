@@ -13,6 +13,28 @@
                 </div>
 
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div class="grid grid-cols-2 rounded-lg border border-brand-line bg-white p-1 text-sm font-semibold">
+                        <button
+                            type="button"
+                            @click="currentView = 'studio'"
+                            :class="[
+                                'rounded-md px-3 py-2 transition',
+                                currentView === 'studio' ? 'bg-brand-ink text-brand-surface' : 'text-brand-muted hover:text-brand-ink'
+                            ]"
+                        >
+                            创作台
+                        </button>
+                        <button
+                            type="button"
+                            @click="currentView = 'assets'"
+                            :class="[
+                                'rounded-md px-3 py-2 transition',
+                                currentView === 'assets' ? 'bg-brand-ink text-brand-surface' : 'text-brand-muted hover:text-brand-ink'
+                            ]"
+                        >
+                            资产库
+                        </button>
+                    </div>
                     <div class="max-w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink sm:max-w-[440px]">
                         <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-muted">Endpoint</div>
                         <div class="truncate">{{ apiEndpoint || DEFAULT_API_ENDPOINT }}</div>
@@ -42,6 +64,9 @@
                     v-model="apiKey"
                     v-model:endpoint="apiEndpoint"
                     v-model:model="selectedModel"
+                    v-model:prompt-assistant-api-key="promptAssistantApiKey"
+                    v-model:prompt-assistant-endpoint="promptAssistantEndpoint"
+                    v-model:prompt-assistant-model="promptAssistantModel"
                     :models="modelOptions"
                     :model-loading="isFetchingModels"
                     :model-error="modelsError"
@@ -51,128 +76,84 @@
             </div>
         </section>
 
-        <main class="wb-shell grid gap-4 py-4 pb-10 lg:grid-cols-[420px_minmax(0,1fr)_360px] xl:grid-cols-[460px_minmax(0,1fr)_380px]">
+        <main v-if="currentView === 'studio'" class="wb-shell grid gap-4 py-4 pb-[420px] lg:grid-cols-[380px_minmax(0,1fr)_340px] lg:pb-[320px]">
             <aside class="space-y-4">
-                <section class="wb-panel">
-                    <div class="mb-4">
-                        <h2 class="text-sm font-semibold text-brand-ink">输入与参考</h2>
-                        <p class="mt-1 text-xs text-brand-muted">同一段主提示词会用于无参考图生成，也会用于带参考图生成。</p>
-                    </div>
-
-                    <label class="block">
-                        <span class="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <span class="wb-label">主提示词</span>
-                            <select v-model="quickTextTemplateId" class="rounded-md border border-brand-line bg-brand-surface px-2 py-1 text-xs text-brand-ink outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10">
-                                <option value="">插入内置提示词</option>
-                                <option v-for="template in textPromptTemplates" :key="template.id" :value="template.id">
-                                    {{ template.title }}
-                                </option>
-                            </select>
-                        </span>
-                        <textarea
-                            v-model="textToImagePrompt"
-                            placeholder="描述你想生成或改动的画面。上传参考图后，这段提示词仍然会参与生成。"
-                            class="wb-input min-h-[120px] w-full resize-none py-3 leading-6"
-                        />
-                    </label>
-
-                    <div class="mt-4">
-                        <PromptPhraseBuilder
-                            :groups="promptPhraseGroups"
-                            title="提示词词组"
-                            description="点击后追加到主提示词。"
-                            @insert="insertTextPromptPhrase"
-                        />
-                    </div>
-
-                    <div class="my-4 border-t border-brand-line" />
-
+                <section class="wb-panel bg-white">
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <div>
-                            <h3 class="text-sm font-semibold text-brand-ink">参考图（可选）</h3>
-                            <p class="mt-1 text-xs text-brand-muted">上传后可用同一段主提示词进行参考图生成。</p>
+                            <p class="wb-label text-brand-accent">Reference ingredients</p>
+                            <h2 class="mt-1 text-base font-semibold text-brand-ink">参考图定义</h2>
+                            <p class="mt-1 text-xs text-brand-muted">先放入人物、主体、服装或背景，再在底部描述要生成的画面。</p>
                         </div>
                         <span class="wb-chip">{{ selectedImages.length }} 张</span>
                     </div>
-                    <ImageUpload v-model="selectedImages" v-model:labels="referenceImageLabels" />
+                    <ImageUpload v-model="selectedImages" v-model:labels="referenceImageLabels" v-model:metadata="referenceImageMetadata" />
 
-                    <p v-if="selectedImages.length" class="mt-3 rounded-lg border border-brand-line bg-brand-surface p-3 text-xs leading-5 text-brand-muted">
-                        语义是告诉模型“这张图代表谁/什么”。同一个人有多张参考图时，都填同一个名字，例如都填“角色1”；不同人物分别填“角色1”“角色2”。非人物图可以写“服装参考”“背景参考”“产品主体”。
-                    </p>
+                    <div v-if="selectedImages.length" class="mt-3 rounded-lg border border-brand-line bg-white p-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="wb-label">将发送给模型的参考图语义</span>
+                            <span class="rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-[11px] font-semibold text-brand-accent">已生效</span>
+                        </div>
+                        <p class="mt-2 text-xs leading-5 text-brand-muted">{{ referenceImageRolePrompt }}</p>
+                        <p class="mt-2 text-xs leading-5 text-brand-muted">
+                            同一个人有多张参考图时，类型选“人物/角色”并填同一个名称；换装、换背景、产品主图等场景请分别选择“服装”“背景”“产品/主体”。
+                        </p>
+                    </div>
 
                     <div class="my-4 border-t border-brand-line" />
 
                     <div class="mb-3">
-                        <h3 class="text-sm font-semibold text-brand-ink">合影助手</h3>
-                        <p class="mt-1 text-xs text-brand-muted">多张人物参考图时启用，会把角色映射、合照动作和防混脸约束拼入提示词。</p>
+                        <div class="flex items-center justify-between gap-3">
+                            <h3 class="text-sm font-semibold text-brand-ink">合影助手</h3>
+                            <span :class="[
+                                'rounded-md border px-2 py-1 text-[11px] font-semibold',
+                                portraitAssistEnabled && portraitAssistAvailable
+                                    ? 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
+                                    : 'border-brand-line bg-brand-surface text-brand-muted'
+                            ]">
+                                {{ portraitAssistStatus }}
+                            </span>
+                        </div>
+                        <p class="mt-1 text-xs text-brand-muted">多张人物参考图时启用。它会把角色映射、合照动作和防混脸约束拼进最终提示词，不做真实图像预处理。</p>
                     </div>
                     <div class="space-y-3">
-                        <label class="flex items-center gap-2 text-sm font-semibold text-brand-ink">
-                            <input v-model="portraitAssistEnabled" type="checkbox" class="h-4 w-4 rounded border-brand-line text-brand-accent focus:ring-brand-accent" />
-                            启用合影伪预处理
+                        <label :class="[
+                            'flex items-center gap-2 text-sm font-semibold',
+                            portraitAssistAvailable ? 'text-brand-ink' : 'text-brand-muted'
+                        ]">
+                            <input
+                                v-model="portraitAssistEnabled"
+                                type="checkbox"
+                                :disabled="!portraitAssistAvailable"
+                                class="h-4 w-4 rounded border-brand-line text-brand-accent focus:ring-brand-accent disabled:cursor-not-allowed disabled:opacity-50"
+                            />
+                            启用合影提示增强
                         </label>
                         <div class="grid grid-cols-2 gap-2">
                             <label class="min-w-0">
                                 <span class="wb-label mb-1 block">合影动作</span>
-                                <select v-model="portraitPose" class="wb-input w-full">
+                                <select v-model="portraitPose" :disabled="!portraitAssistAvailable" class="wb-input w-full disabled:cursor-not-allowed disabled:opacity-60">
                                     <option v-for="pose in portraitPoseOptions" :key="pose.value" :value="pose.value">{{ pose.label }}</option>
                                 </select>
                             </label>
                             <label class="min-w-0">
                                 <span class="wb-label mb-1 block">场景关系</span>
-                                <select v-model="portraitRelation" class="wb-input w-full">
+                                <select v-model="portraitRelation" :disabled="!portraitAssistAvailable" class="wb-input w-full disabled:cursor-not-allowed disabled:opacity-60">
                                     <option v-for="relation in portraitRelationOptions" :key="relation.value" :value="relation.value">{{ relation.label }}</option>
                                 </select>
                             </label>
                         </div>
-                        <textarea v-model="portraitExtraPrompt" class="wb-input min-h-[76px] w-full resize-none py-2" placeholder="补充：例如看向镜头、保持角色服装、自然互动。" />
+                        <textarea
+                            v-model="portraitExtraPrompt"
+                            :disabled="!portraitAssistAvailable"
+                            class="wb-input min-h-[76px] w-full resize-none py-2 disabled:cursor-not-allowed disabled:opacity-60"
+                            placeholder="补充：例如看向镜头、保持角色服装、自然互动。"
+                        />
+                        <div v-if="portraitAssistEnabled && portraitAssistAvailable" class="rounded-lg border border-brand-line bg-brand-surface p-3 text-xs leading-5 text-brand-muted">
+                            {{ portraitAssistPrompt }}
+                        </div>
                     </div>
 
-                    <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                        <button
-                            type="button"
-                            @click="handleTextToImageGenerate"
-                            :disabled="!canGenerateTextImage"
-                            :class="[
-                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
-                                canGenerateTextImage
-                                    ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90'
-                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
-                            ]"
-                        >
-                            {{ isTextToImageLoading ? '生成中...' : '无参考图生成' }}
-                        </button>
-                        <button
-                            type="button"
-                            @click="handleGenerate"
-                            :disabled="!canGenerate"
-                            :class="[
-                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
-                                canGenerate
-                                    ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90'
-                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
-                            ]"
-                        >
-                            {{ isLoading ? '生成中...' : '使用参考图生成' }}
-                        </button>
-                    </div>
-
-                    <p class="mt-2 text-xs leading-5 text-brand-muted">
-                        无参考图生成只使用主提示词；使用参考图生成会同时读取参考图、参考图语义、合影助手和下方可选模板。
-                    </p>
-                </section>
-
-                <section class="wb-panel">
-                    <div class="mb-3">
-                        <h2 class="text-sm font-semibold text-brand-ink">模板与补充提示词</h2>
-                        <p class="mt-1 text-xs text-brand-muted">可选。使用参考图生成时，会和主提示词一起发送。</p>
-                    </div>
-                    <StylePromptSelector
-                        v-model:selectedStyle="selectedStyle"
-                        v-model:customPrompt="customPrompt"
-                        :templates="styleTemplates"
-                        :phrase-groups="promptPhraseGroups"
-                    />
                 </section>
             </aside>
 
@@ -188,13 +169,34 @@
                         <span v-else class="wb-chip">待命</span>
                     </div>
                 </div>
+                <div v-if="selectedImages.length" class="mb-4 rounded-lg border border-brand-line bg-brand-surface p-3">
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <span class="wb-label">Active ingredients</span>
+                        <span class="text-xs text-brand-muted">{{ selectedImages.length }} reference images</span>
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto pb-1">
+                        <div
+                            v-for="(image, index) in selectedImages"
+                            :key="`active-${image}-${index}`"
+                            class="w-24 shrink-0"
+                        >
+                            <div class="aspect-square overflow-hidden rounded-md border border-brand-line bg-white">
+                                <img :src="image" :alt="`参考图 ${index + 1}`" class="h-full w-full object-cover" />
+                            </div>
+                            <p class="mt-1 truncate text-xs font-semibold text-brand-ink">{{ referenceImageMetadata[index]?.label || referenceImageLabels[index] || `角色${index + 1}` }}</p>
+                            <p class="truncate text-[11px] text-brand-muted">{{ roleLabel(referenceImageMetadata[index]?.role || 'character') }}</p>
+                        </div>
+                    </div>
+                </div>
                 <ResultDisplay
                     :results="displayResults"
                     :loading="displayLoading"
                     :error="displayError"
                     :can-push="canPushDisplayResult"
+                    :can-reuse="Boolean(displayResults.length)"
                     @download="handleDownloadResult"
                     @push="handlePushDisplayResult"
+                    @reuse="handleReuseCurrentRecipe"
                 />
             </section>
 
@@ -217,84 +219,60 @@
                     </dl>
                 </section>
 
-                <section v-if="showAspectRatioSelector" class="wb-panel">
-                    <div class="mb-3">
-                        <h2 class="text-sm font-semibold text-brand-ink">比例</h2>
-                        <p class="mt-1 text-xs text-brand-muted">Nano Banana、Gemini、GPT Image 等模型会按能力映射到对应请求参数。</p>
-                    </div>
-                    <AspectRatioSelector v-model="selectedAspectRatio" :model-type="selectedImageModelType" :image-size="gemini3ImageSize" />
-                </section>
-
-                <section v-if="showImageSizeConfig" class="wb-panel">
-                    <div class="mb-3">
-                        <h2 class="text-sm font-semibold text-brand-ink">分辨率</h2>
-                        <p class="mt-1 text-xs text-brand-muted">支持 1K、2K、4K；仅在模型支持时显示额外配置。</p>
-                    </div>
-                    <Gemini3ProConfig
-                        v-model:imageSize="gemini3ImageSize"
-                        v-model:enableGoogleSearch="gemini3EnableGoogleSearch"
-                        :model-type="selectedImageModelType"
-                    />
-                </section>
-
                 <section class="wb-panel">
-                    <h2 class="text-sm font-semibold text-brand-ink">运行信息</h2>
-                    <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
-                        <div class="rounded-lg border border-brand-line bg-white p-3">
-                            <div class="text-xs text-brand-muted">比例</div>
-                            <div class="mt-1 font-semibold text-brand-ink">{{ selectedAspectRatio }}</div>
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-sm font-semibold text-brand-ink">提示词预览</h2>
+                            <p class="mt-1 text-xs text-brand-muted">这里展示下一次生成会提交给模型的文本内容。</p>
                         </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-3">
-                            <div class="text-xs text-brand-muted">尺寸</div>
-                            <div class="mt-1 font-semibold text-brand-ink">{{ gemini3ImageSize }}</div>
-                        </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-3">
-                            <div class="text-xs text-brand-muted">参考图</div>
-                            <div class="mt-1 font-semibold text-brand-ink">{{ selectedImages.length }}</div>
-                        </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-3">
-                            <div class="text-xs text-brand-muted">模型数</div>
-                            <div class="mt-1 font-semibold text-brand-ink">{{ modelOptions.length }}</div>
-                        </div>
+                        <span class="wb-chip">{{ selectedImages.length ? '参考图模式' : '文生图模式' }}</span>
+                    </div>
+                    <div class="max-h-[240px] overflow-y-auto rounded-lg border border-brand-line bg-white p-3 text-xs leading-5 text-brand-muted">
+                        <pre class="whitespace-pre-wrap font-sans">{{ promptPreview || '填写主提示词后会显示预览。' }}</pre>
                     </div>
                 </section>
 
                 <section class="wb-panel">
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <div>
-                            <h2 class="text-sm font-semibold text-brand-ink">生成历史</h2>
-                            <p class="mt-1 text-xs text-brand-muted">成功结果会保存在本地浏览器，除非你手动清空或浏览器清理站点数据。</p>
+                            <h2 class="text-sm font-semibold text-brand-ink">近期资产</h2>
+                            <p class="mt-1 text-xs text-brand-muted">首页只展示近期和收藏入口；全量管理进入资产库。</p>
                         </div>
                         <button
                             v-if="generationHistory.length"
                             type="button"
-                            @click="clearGenerationHistory"
-                            class="text-xs font-semibold text-brand-muted transition hover:text-brand-accent"
+                            @click="currentView = 'assets'"
+                            class="text-xs font-semibold text-brand-accent transition hover:text-brand-ink"
                         >
-                            清空
+                            查看资产库
                         </button>
                     </div>
 
-                    <div v-if="generationHistory.length" class="mb-3 grid grid-cols-2 gap-2">
-                        <select v-model="historyFilter" class="wb-input min-h-10 py-2 text-xs">
-                            <option value="all">全部记录</option>
-                            <option value="favorite">收藏</option>
-                            <option value="text">文生图</option>
-                            <option value="image">参考图生成</option>
-                            <option v-for="category in historyCategories" :key="category" :value="`category:${category}`">{{ category }}</option>
-                        </select>
-                        <input v-model="historyNewCategory" class="wb-input min-h-10 py-2 text-xs" placeholder="新分类名" />
+                    <div v-if="generationHistory.length" class="mb-3 grid grid-cols-3 gap-2 text-center text-xs">
+                        <div class="rounded-lg border border-brand-line bg-white p-2">
+                            <div class="text-brand-muted">全部</div>
+                            <div class="mt-1 text-base font-semibold text-brand-ink">{{ generationHistory.length }}</div>
+                        </div>
+                        <div class="rounded-lg border border-brand-line bg-white p-2">
+                            <div class="text-brand-muted">收藏</div>
+                            <div class="mt-1 text-base font-semibold text-brand-ink">{{ favoriteHistory.length }}</div>
+                        </div>
+                        <div class="rounded-lg border border-brand-line bg-white p-2">
+                            <div class="text-brand-muted">收藏夹</div>
+                            <div class="mt-1 text-base font-semibold text-brand-ink">{{ historyCategories.length }}</div>
+                        </div>
                     </div>
 
-                    <div v-if="filteredGenerationHistory.length" class="max-h-[420px] space-y-3 overflow-y-auto pr-1">
-                        <article v-for="item in filteredGenerationHistory" :key="item.id" class="rounded-lg border border-brand-line bg-white p-3">
+                    <div v-if="recentGenerationHistory.length" class="space-y-3">
+                        <article v-for="item in recentGenerationHistory" :key="item.id" class="rounded-lg border border-brand-line bg-white p-3">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="text-xs font-semibold text-brand-ink">
                                         {{ item.source === 'text' ? '文生图' : '参考图生成' }}
+                                        <span v-if="item.recipe?.referenceImages?.length" class="text-brand-muted"> · {{ item.recipe.referenceImages.length }} 张参考图</span>
                                         <span v-if="item.category" class="text-brand-muted"> · {{ item.category }}</span>
                                     </p>
-                                    <p class="mt-1 truncate text-xs text-brand-muted">{{ item.prompt }}</p>
+                                    <p class="mt-1 truncate text-xs text-brand-muted">{{ item.recipe?.mainPrompt || item.prompt }}</p>
                                 </div>
                                 <button type="button" class="shrink-0 rounded-md bg-brand-line/60 px-2 py-1 text-[11px] text-brand-muted transition hover:text-brand-accent" @click="toggleHistoryFavorite(item)">
                                     {{ item.favorite ? '已收藏' : item.aspectRatio }}
@@ -315,18 +293,272 @@
 
                             <div class="mt-3 flex flex-wrap gap-2">
                                 <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="restoreHistoryItem(item)">查看</button>
-                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushHistoryImages(item)">作为参考图</button>
-                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="reuseHistoryPrompt(item)">复用提示词</button>
-                                <button v-if="historyNewCategory.trim()" type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="setHistoryCategory(item, historyNewCategory.trim())">归类</button>
+                                <button type="button" class="wb-primary min-h-8 px-2 text-xs" @click="reuseHistoryRecipe(item)">一键复用</button>
+                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushHistoryImages(item)">结果作参考</button>
+                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="reuseHistoryPrompt(item)">仅提示词</button>
                                 <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="toggleHistoryFavorite(item)">{{ item.favorite ? '取消收藏' : '收藏' }}</button>
                             </div>
                         </article>
                     </div>
 
                     <p v-else-if="historyLoading" class="rounded-lg border border-dashed border-brand-line bg-white p-4 text-sm text-brand-muted">正在读取本地历史...</p>
-                    <p v-else class="rounded-lg border border-dashed border-brand-line bg-white p-4 text-sm text-brand-muted">{{ generationHistory.length ? '当前筛选下没有记录。' : '成功生成后，历史记录会出现在这里。' }}</p>
+                    <p v-else class="rounded-lg border border-dashed border-brand-line bg-white p-4 text-sm text-brand-muted">成功生成后，近期资产会出现在这里。</p>
                 </section>
             </aside>
+        </main>
+
+        <section
+            v-if="currentView === 'studio'"
+            class="fixed inset-x-0 bottom-0 z-30 border-t border-brand-line bg-brand-surface/95 shadow-2xl shadow-black/25 backdrop-blur"
+        >
+            <div class="wb-shell py-4">
+                <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+                    <div class="rounded-lg border border-brand-line bg-white p-3">
+                        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <span class="wb-label">Prompt box</span>
+                                <p class="mt-1 text-xs text-brand-muted">底部固定输入器。参考图语义、合影助手和模板补充会自动拼入最终提示词。</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" class="wb-secondary min-h-9 px-3 text-xs" @click="showPromptTools = !showPromptTools">
+                                    {{ showPromptTools ? '收起词组' : '词组' }}
+                                </button>
+                                <button type="button" class="wb-secondary min-h-9 px-3 text-xs" @click="showTemplatePanel = true">
+                                    模板
+                                    <span v-if="activeSupplementLabel" class="ml-1 text-brand-accent">已选</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    :disabled="!canImprovePrompt"
+                                    :class="[
+                                        'inline-flex min-h-9 items-center rounded-lg px-3 text-xs font-semibold transition',
+                                        canImprovePrompt
+                                            ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90'
+                                            : 'cursor-not-allowed bg-brand-line text-brand-muted'
+                                    ]"
+                                    @click="handleImprovePrompt"
+                                >
+                                    {{ isPromptAssistantLoading ? '优化中...' : 'AI 优化' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <textarea
+                            v-model="textToImagePrompt"
+                            placeholder="描述你想生成或改动的画面。参考图会作为素材参与生成，可以写：让角色1穿着服装参考，在背景参考中拍摄产品级主视觉。"
+                            class="wb-input min-h-[150px] w-full resize-none bg-white py-3 text-base leading-7"
+                        />
+
+                        <div v-if="showPromptTools" class="mt-3 rounded-lg border border-brand-line bg-brand-surface p-3">
+                            <PromptPhraseBuilder
+                                :groups="promptPhraseGroups"
+                                title="提示词词组"
+                                description="点击后追加到主提示词。"
+                                @insert="insertTextPromptPhrase"
+                            />
+                        </div>
+
+                        <p v-if="promptAssistantError" class="mt-2 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">
+                            {{ promptAssistantError }}
+                        </p>
+                        <p v-else-if="!promptAssistantReady" class="mt-2 text-xs text-brand-muted">
+                            配置提示词助手 URL / Key / Model 后，可用低费率文本模型先整理中文提示词。
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col gap-2 rounded-lg border border-brand-line bg-white p-3">
+                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                            <div class="rounded-md bg-brand-surface p-2">
+                                <div class="text-brand-muted">参考图</div>
+                                <div class="mt-1 font-semibold text-brand-ink">{{ selectedImages.length }}</div>
+                            </div>
+                            <div class="rounded-md bg-brand-surface p-2">
+                                <div class="text-brand-muted">比例</div>
+                                <div class="mt-1 font-semibold text-brand-ink">{{ showAspectRatioSelector ? selectedAspectRatio : '自动' }}</div>
+                            </div>
+                            <div class="rounded-md bg-brand-surface p-2">
+                                <div class="text-brand-muted">尺寸</div>
+                                <div class="mt-1 font-semibold text-brand-ink">{{ showImageSizeConfig ? gemini3ImageSize : '自动' }}</div>
+                            </div>
+                        </div>
+
+                        <div v-if="showAspectRatioSelector" class="rounded-lg border border-brand-line bg-brand-surface p-3">
+                            <div class="mb-2 flex items-center justify-between gap-2">
+                                <span class="wb-label">比例</span>
+                                <span class="text-[11px] text-brand-muted">按当前模型映射</span>
+                            </div>
+                            <AspectRatioSelector v-model="selectedAspectRatio" :model-type="selectedImageModelType" :image-size="gemini3ImageSize" />
+                        </div>
+
+                        <div v-if="showImageSizeConfig" class="rounded-lg border border-brand-line bg-brand-surface p-3">
+                            <div class="mb-2 flex items-center justify-between gap-2">
+                                <span class="wb-label">分辨率</span>
+                                <span class="text-[11px] text-brand-muted">生成前参数</span>
+                            </div>
+                            <Gemini3ProConfig
+                                v-model:imageSize="gemini3ImageSize"
+                                v-model:enableGoogleSearch="gemini3EnableGoogleSearch"
+                                :model-type="selectedImageModelType"
+                            />
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div class="rounded-md bg-brand-surface p-2">
+                                <div class="text-brand-muted">模型</div>
+                                <div class="mt-1 truncate font-semibold text-brand-ink">{{ selectedImageModelType || '自动识别' }}</div>
+                            </div>
+                            <div class="rounded-md bg-brand-surface p-2">
+                                <div class="text-brand-muted">模板</div>
+                                <div class="mt-1 truncate font-semibold text-brand-ink">{{ activeSupplementLabel || '未选' }}</div>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            @click="handleGenerate"
+                            :disabled="!canGenerate"
+                            :class="[
+                                'inline-flex min-h-12 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
+                                canGenerate
+                                    ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90'
+                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
+                            ]"
+                        >
+                            {{ isLoading ? '生成中...' : '使用参考图生成' }}
+                        </button>
+                        <button
+                            type="button"
+                            @click="handleTextToImageGenerate"
+                            :disabled="!canGenerateTextImage"
+                            :class="[
+                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
+                                canGenerateTextImage
+                                    ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90'
+                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
+                            ]"
+                        >
+                            {{ isTextToImageLoading ? '生成中...' : '无参考图生成' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div v-if="showTemplatePanel" class="fixed inset-0 z-50 flex items-end justify-center bg-brand-ink/55 p-4 sm:items-center">
+            <section class="max-h-[86vh] w-full max-w-5xl overflow-hidden rounded-lg border border-brand-line bg-brand-surface shadow-2xl shadow-black/30">
+                <div class="flex items-start justify-between gap-3 border-b border-brand-line bg-white p-4">
+                    <div>
+                        <p class="wb-label text-brand-accent">Prompt assist</p>
+                        <h2 class="mt-1 text-lg font-semibold text-brand-ink">创作模板与补充提示词</h2>
+                        <p class="mt-1 text-sm text-brand-muted">模板只是快捷辅助，不占用主创作台。选择后会拼入底部提示词预览。</p>
+                    </div>
+                    <button type="button" class="wb-secondary min-h-9 px-3 text-xs" @click="showTemplatePanel = false">关闭</button>
+                </div>
+                <div class="max-h-[calc(86vh-88px)] overflow-y-auto p-4">
+                    <StylePromptSelector
+                        v-model:selectedStyle="selectedStyle"
+                        v-model:customPrompt="customPrompt"
+                        :templates="availableStyleTemplates"
+                        :phrase-groups="promptPhraseGroups"
+                    />
+                </div>
+            </section>
+        </div>
+
+        <main v-if="currentView === 'assets'" class="wb-shell py-4 pb-10">
+            <section class="rounded-lg border border-brand-line bg-brand-surface p-4 shadow-sm shadow-black/5">
+                <div class="mb-4 flex flex-col gap-3 border-b border-brand-line pb-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p class="wb-label text-brand-accent">Local asset library</p>
+                        <h1 class="mt-1 text-2xl font-semibold text-brand-ink">资产库</h1>
+                        <p class="mt-1 text-sm text-brand-muted">管理本地生成历史、收藏和自定义收藏夹。数据保存在当前浏览器。</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="wb-secondary" @click="currentView = 'studio'">返回创作台</button>
+                        <button v-if="generationHistory.length" type="button" class="wb-secondary text-brand-accent" @click="clearGenerationHistory">清空历史</button>
+                    </div>
+                </div>
+
+                <div class="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
+                    <aside class="space-y-3">
+                        <div class="rounded-lg border border-brand-line bg-white p-3">
+                            <label class="wb-label mb-2 block">筛选</label>
+                            <select v-model="historyFilter" class="wb-input w-full min-h-10 py-2 text-xs">
+                                <option value="all">全部记录</option>
+                                <option value="favorite">收藏</option>
+                                <option value="text">文生图</option>
+                                <option value="image">参考图生成</option>
+                                <option v-for="category in historyCategories" :key="category" :value="`category:${category}`">{{ category }}</option>
+                            </select>
+                        </div>
+                        <div class="rounded-lg border border-brand-line bg-white p-3">
+                            <label class="wb-label mb-2 block">新收藏夹</label>
+                            <input v-model="historyNewCategory" class="wb-input w-full min-h-10 py-2 text-xs" placeholder="例如：头像 / 商业主图" />
+                            <p class="mt-2 text-xs leading-5 text-brand-muted">输入名称后，可把任意资产归入这个收藏夹。</p>
+                        </div>
+                        <div class="rounded-lg border border-brand-line bg-white p-3">
+                            <div class="wb-label mb-2">概览</div>
+                            <div class="grid grid-cols-3 gap-2 text-center text-xs lg:grid-cols-1">
+                                <div class="rounded-md bg-brand-surface p-2">
+                                    <div class="text-brand-muted">全部</div>
+                                    <div class="mt-1 font-semibold text-brand-ink">{{ generationHistory.length }}</div>
+                                </div>
+                                <div class="rounded-md bg-brand-surface p-2">
+                                    <div class="text-brand-muted">收藏</div>
+                                    <div class="mt-1 font-semibold text-brand-ink">{{ favoriteHistory.length }}</div>
+                                </div>
+                                <div class="rounded-md bg-brand-surface p-2">
+                                    <div class="text-brand-muted">收藏夹</div>
+                                    <div class="mt-1 font-semibold text-brand-ink">{{ historyCategories.length }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <section>
+                        <div v-if="filteredGenerationHistory.length" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            <article v-for="item in filteredGenerationHistory" :key="item.id" class="rounded-lg border border-brand-line bg-white p-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-semibold text-brand-ink">
+                                            {{ item.source === 'text' ? '文生图' : '参考图生成' }}
+                                            <span v-if="item.recipe?.referenceImages?.length" class="text-brand-muted"> · {{ item.recipe.referenceImages.length }} 张参考图</span>
+                                            <span v-if="item.category" class="text-brand-muted"> · {{ item.category }}</span>
+                                        </p>
+                                        <p class="mt-1 line-clamp-2 text-xs leading-5 text-brand-muted">{{ item.recipe?.mainPrompt || item.prompt }}</p>
+                                    </div>
+                                    <button type="button" class="shrink-0 rounded-md bg-brand-line/60 px-2 py-1 text-[11px] text-brand-muted transition hover:text-brand-accent" @click="toggleHistoryFavorite(item)">
+                                        {{ item.favorite ? '已收藏' : item.aspectRatio }}
+                                    </button>
+                                </div>
+
+                                <div class="mt-3 grid grid-cols-4 gap-2">
+                                    <button
+                                        v-for="(image, index) in item.images.slice(0, 4)"
+                                        :key="`${item.id}-${index}`"
+                                        type="button"
+                                        @click="restoreHistoryItem(item)"
+                                        class="aspect-square overflow-hidden rounded-md border border-brand-line bg-brand-surface"
+                                    >
+                                        <img :src="image" :alt="`历史结果 ${index + 1}`" class="h-full w-full object-cover" />
+                                    </button>
+                                </div>
+
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="restoreHistoryItem(item)">查看</button>
+                                    <button type="button" class="wb-primary min-h-8 px-2 text-xs" @click="reuseHistoryRecipe(item)">一键复用</button>
+                                    <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushHistoryImages(item)">结果作参考</button>
+                                    <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="reuseHistoryPrompt(item)">仅提示词</button>
+                                    <button v-if="historyNewCategory.trim()" type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="setHistoryCategory(item, historyNewCategory.trim())">归入 {{ historyNewCategory.trim() }}</button>
+                                    <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="toggleHistoryFavorite(item)">{{ item.favorite ? '取消收藏' : '收藏' }}</button>
+                                </div>
+                            </article>
+                        </div>
+
+                        <p v-else-if="historyLoading" class="rounded-lg border border-dashed border-brand-line bg-white p-6 text-sm text-brand-muted">正在读取本地历史...</p>
+                        <p v-else class="rounded-lg border border-dashed border-brand-line bg-white p-6 text-sm text-brand-muted">{{ generationHistory.length ? '当前筛选下没有记录。' : '成功生成后，资产会出现在这里。' }}</p>
+                    </section>
+                </div>
+            </section>
         </main>
 
         <div class="wb-shell pb-10">
@@ -345,7 +577,7 @@ import Footer from './components/Footer.vue'
 import AspectRatioSelector from './components/AspectRatioSelector.vue'
 import Gemini3ProConfig from './components/Gemini3ProConfig.vue'
 import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
-import { fetchModels, generateImage } from './services/api'
+import { fetchModels, generateImage, improvePrompt } from './services/api'
 import { styleTemplates } from './data/templates'
 import { promptPhraseGroups } from './data/promptPhrases'
 import { LocalStorage } from './utils/storage'
@@ -356,13 +588,14 @@ import {
     type GenerationHistoryItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiModel, GenerateRequest, ModelOption } from './types'
-import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from './config/api'
+import type { ApiModel, GenerateRecipe, GenerateRequest, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole } from './types'
+import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 const apiKey = ref('')
 const apiEndpoint = ref('')
 const selectedImages = ref<string[]>([])
 const referenceImageLabels = ref<string[]>([])
+const referenceImageMetadata = ref<ReferenceImageMeta[]>([])
 const selectedStyle = ref('')
 const customPrompt = ref('')
 const isLoading = ref(false)
@@ -373,13 +606,21 @@ const textToImageResult = ref<string[]>([])
 const textToImageError = ref<string | null>(null)
 const isTextToImageLoading = ref(false)
 const latestResultSource = ref<'text' | 'image' | null>(null)
+const latestGenerationRecipe = ref<GenerationRecipe | null>(null)
+const currentView = ref<'studio' | 'assets'>('studio')
+const showPromptTools = ref(false)
+const showTemplatePanel = ref(false)
 const showApiSettings = ref(false)
 const modelOptions = ref<ModelOption[]>([])
 const selectedModel = ref('')
 const isFetchingModels = ref(false)
 const modelsError = ref<string | null>(null)
+const promptAssistantApiKey = ref('')
+const promptAssistantEndpoint = ref('')
+const promptAssistantModel = ref('')
+const isPromptAssistantLoading = ref(false)
+const promptAssistantError = ref<string | null>(null)
 const selectedAspectRatio = ref('1:1')
-const quickTextTemplateId = ref('')
 const portraitAssistEnabled = ref(false)
 const portraitPose = ref('standing side by side')
 const portraitRelation = ref('natural friendly group portrait')
@@ -404,6 +645,15 @@ const portraitRelationOptions = [
     { label: '电影剧照', value: 'cinematic two-character still frame' }
 ]
 
+const referenceRoleLabels: Record<ReferenceImageRole, string> = {
+    character: '人物/角色',
+    outfit: '服装',
+    background: '背景',
+    product: '产品/主体',
+    style: '风格',
+    other: '其他'
+}
+
 // Image model settings
 const gemini3ImageSize = ref('2K')
 const gemini3EnableGoogleSearch = ref(false)
@@ -420,6 +670,9 @@ onMounted(() => {
     const savedApiKey = LocalStorage.getApiKey()
     const savedEndpoint = LocalStorage.getApiEndpoint()
     const savedModelId = LocalStorage.getModelId()
+    const savedPromptAssistantApiKey = LocalStorage.getPromptAssistantApiKey()
+    const savedPromptAssistantEndpoint = LocalStorage.getPromptAssistantEndpoint()
+    const savedPromptAssistantModel = LocalStorage.getPromptAssistantModelId()
 
     if (savedApiKey) {
         apiKey.value = savedApiKey
@@ -439,6 +692,9 @@ onMounted(() => {
     // Restore values before endpoint watchers begin syncing user edits.
     selectedModel.value = modelIdToUse
     apiEndpoint.value = endpointToUse
+    promptAssistantApiKey.value = savedPromptAssistantApiKey
+    promptAssistantEndpoint.value = savedPromptAssistantEndpoint.trim() || DEFAULT_PROMPT_ASSISTANT_ENDPOINT
+    promptAssistantModel.value = savedPromptAssistantModel.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID
 
     ensureSelectedOptionPresent()
 
@@ -522,9 +778,52 @@ watch(
 )
 
 watch(
+    promptAssistantApiKey,
+    (newApiKey: string) => {
+        const trimmed = newApiKey.trim()
+        if (trimmed) {
+            LocalStorage.savePromptAssistantApiKey(trimmed)
+        } else {
+            LocalStorage.clearPromptAssistantApiKey()
+        }
+    },
+    { immediate: false }
+)
+
+watch(
+    promptAssistantEndpoint,
+    (newEndpoint: string) => {
+        const trimmed = newEndpoint.trim()
+        if (trimmed) {
+            LocalStorage.savePromptAssistantEndpoint(trimmed)
+        } else {
+            LocalStorage.clearPromptAssistantEndpoint()
+        }
+    },
+    { immediate: false }
+)
+
+watch(
+    promptAssistantModel,
+    (newModel: string) => {
+        const trimmed = newModel.trim()
+        if (trimmed) {
+            LocalStorage.savePromptAssistantModelId(trimmed)
+        } else {
+            LocalStorage.clearPromptAssistantModelId()
+        }
+    },
+    { immediate: false }
+)
+
+watch(
     selectedImages,
     images => {
         referenceImageLabels.value = images.map((_, index) => referenceImageLabels.value[index] || `角色${index + 1}`)
+        referenceImageMetadata.value = images.map((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index))
+        if (images.length < 2) {
+            portraitAssistEnabled.value = false
+        }
     },
     { deep: true }
 )
@@ -690,11 +989,37 @@ const buildFallbackLabel = (modelId: string): string => {
     return lastSegment || modelId
 }
 
+const roleLabel = (role: ReferenceImageRole): string => referenceRoleLabels[role] || referenceRoleLabels.other
+
+const normalizeReferenceMeta = (meta: ReferenceImageMeta | undefined, index: number): ReferenceImageMeta => ({
+    role: meta?.role || 'character',
+    label: meta?.label?.trim() || referenceImageLabels.value[index]?.trim() || `角色${index + 1}`,
+    note: meta?.note?.trim() || ''
+})
+
+const normalizeReferenceRecipeMeta = (meta: ReferenceImageMeta | undefined, index: number): ReferenceImageMeta => ({
+    role: meta?.role || 'character',
+    label: meta?.label?.trim() || `角色${index + 1}`,
+    note: meta?.note?.trim() || ''
+})
+
+const buildGenerationRecipe = (compiledPrompt: string): GenerationRecipe => ({
+    mainPrompt: textToImagePrompt.value.trim(),
+    compiledPrompt,
+    supplementPrompt: supplementPrompt.value,
+    selectedStyle: selectedStyle.value,
+    customPrompt: customPrompt.value,
+    referenceImages: [...selectedImages.value],
+    referenceImageLabels: selectedImages.value.map((_, index) => referenceImageLabels.value[index] || `角色${index + 1}`),
+    referenceImageMetadata: selectedImages.value.map((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index))
+})
+
 const pushImageToUpload = (image: string | null) => {
     if (!image) return
     const filtered = selectedImages.value.filter(existing => existing !== image)
     selectedImages.value = [image, ...filtered]
     referenceImageLabels.value = selectedImages.value.map((_, index) => referenceImageLabels.value[index] || `角色${index + 1}`)
+    referenceImageMetadata.value = selectedImages.value.map((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index))
 }
 
 const displayLoading = computed(() => {
@@ -736,17 +1061,53 @@ const canGenerate = computed(
         !isLoading.value
 )
 
+const promptAssistantReady = computed(
+    () =>
+        Boolean(promptAssistantApiKey.value.trim()) &&
+        Boolean(promptAssistantEndpoint.value.trim()) &&
+        Boolean(promptAssistantModel.value.trim())
+)
+
+const canImprovePrompt = computed(
+    () =>
+        promptAssistantReady.value &&
+        textToImagePrompt.value.trim() &&
+        !isPromptAssistantLoading.value
+)
+
 const referenceImageRolePrompt = computed(() => {
     if (!selectedImages.value.length) return ''
-    const roles = selectedImages.value.map((_, index) => referenceImageLabels.value[index]?.trim() || `角色${index + 1}`)
-    return `Reference image mapping: ${roles.map((role, index) => `image ${index + 1} is ${role}`).join('; ')}. Preserve each referenced character or subject identity separately.`
+    const mappings = selectedImages.value.map((_, index) => {
+        const meta = normalizeReferenceMeta(referenceImageMetadata.value[index], index)
+        const note = meta.note ? `; note: ${meta.note}` : ''
+        return `image ${index + 1}: ${roleLabel(meta.role)} "${meta.label}"${note}`
+    })
+
+    return [
+        `Reference image mapping: ${mappings.join('; ')}.`,
+        'Use character references to preserve identity; use outfit references for clothing and styling only; use background references for environment only; use product references as the main subject when present; use style references for visual treatment only.',
+        'Do not merge separate character identities unless the prompt explicitly asks for it.'
+    ].join(' ')
+})
+
+const characterReferenceCount = computed(() =>
+    selectedImages.value.filter((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index).role === 'character').length
+)
+const portraitAssistAvailable = computed(() => characterReferenceCount.value >= 2)
+const portraitAssistStatus = computed(() => {
+    if (!portraitAssistAvailable.value) return '需要 2 张以上人物参考图'
+    return portraitAssistEnabled.value ? '将拼入提示词' : '未启用'
 })
 
 const portraitAssistPrompt = computed(() => {
-    if (!portraitAssistEnabled.value || selectedImages.value.length < 2) return ''
+    if (!portraitAssistEnabled.value || !portraitAssistAvailable.value) return ''
 
-    const roles = selectedImages.value.map((_, index) => referenceImageLabels.value[index]?.trim() || `角色${index + 1}`)
-    const roleText = roles.map((role, index) => `${role} from reference image ${index + 1}`).join(', ')
+    const characterRefs = selectedImages.value
+        .map((_, index) => ({ index, meta: normalizeReferenceMeta(referenceImageMetadata.value[index], index) }))
+        .filter(item => item.meta.role === 'character')
+    const roleText = (characterRefs.length ? characterRefs : selectedImages.value.map((_, index) => ({ index, meta: normalizeReferenceMeta(referenceImageMetadata.value[index], index) })))
+        .map(item => `${item.meta.label} from reference image ${item.index + 1}`)
+        .join(', ')
     const extra = portraitExtraPrompt.value.trim()
 
     return [
@@ -759,28 +1120,104 @@ const portraitAssistPrompt = computed(() => {
     ].filter(Boolean).join(' ')
 })
 
-const textPromptTemplates = computed(() => styleTemplates.filter(template => template.mode !== 'image'))
-
-watch(quickTextTemplateId, templateId => {
-    if (!templateId) return
-
-    const template = styleTemplates.find(item => item.id === templateId)
-    if (template) {
-        textToImagePrompt.value = template.prompt
+const selectedTemplatePrompt = computed(() => selectedStyle.value ? styleTemplates.find(template => template.id === selectedStyle.value)?.prompt || '' : '')
+const activeSupplementLabel = computed(() => {
+    if (selectedStyle.value) {
+        return styleTemplates.find(template => template.id === selectedStyle.value)?.title || '模板'
     }
-    quickTextTemplateId.value = ''
+    if (customPrompt.value.trim()) {
+        return '自定义'
+    }
+    return ''
 })
+const supplementPrompt = computed(() => selectedTemplatePrompt.value || customPrompt.value.trim())
+const availableStyleTemplates = computed(() => selectedImages.value.length ? styleTemplates : styleTemplates.filter(template => template.mode !== 'image'))
 
 const insertTextPromptPhrase = (phrase: string) => {
     const current = textToImagePrompt.value.trim()
     textToImagePrompt.value = current ? `${current}, ${phrase}` : phrase
 }
 
-const composeImagePrompt = (supplementPrompt: string) => {
-    return [referenceImageRolePrompt.value, portraitAssistPrompt.value, textToImagePrompt.value.trim(), supplementPrompt]
+const buildPromptAssistantContext = () => {
+    return [
+        selectedImages.value.length ? `参考图数量：${selectedImages.value.length}` : '',
+        referenceImageRolePrompt.value ? `参考图语义：${referenceImageRolePrompt.value}` : '',
+        portraitAssistPrompt.value ? `合影助手：${portraitAssistPrompt.value}` : '',
+        supplementPrompt.value ? `当前模板/补充：${supplementPrompt.value}` : '',
+        showAspectRatioSelector.value ? `目标比例：${selectedAspectRatio.value}` : '',
+        showImageSizeConfig.value ? `目标分辨率：${gemini3ImageSize.value}` : '',
+        '用户偏好：中文提示词优先，偏真实手机镜头、韩系 OOTD、K-pop 生态、自拍、直拍封面、机场/下班路透。'
+    ].filter(Boolean).join('\n')
+}
+
+const resolvePromptAssistantEndpoint = (endpoint: string) => {
+    const trimmed = endpoint.trim() || DEFAULT_PROMPT_ASSISTANT_ENDPOINT
+
+    try {
+        const url = new URL(trimmed)
+        const path = url.pathname.replace(/\/+$/, '')
+
+        if (!path || path === '/') {
+            url.pathname = '/v1/chat/completions'
+            return url.toString()
+        }
+
+        if (path.endsWith('/chat/completions')) {
+            url.pathname = path
+            return url.toString()
+        }
+
+        if (path.endsWith('/v1')) {
+            url.pathname = `${path}/chat/completions`
+            return url.toString()
+        }
+
+        url.pathname = `${path}/v1/chat/completions`
+        return url.toString()
+    } catch {
+        const base = trimmed.replace(/\/+$/, '')
+        if (base.endsWith('/chat/completions')) return base
+        if (base.endsWith('/v1')) return `${base}/chat/completions`
+        return `${base}/v1/chat/completions`
+    }
+}
+
+const handleImprovePrompt = async () => {
+    if (!canImprovePrompt.value) return
+
+    isPromptAssistantLoading.value = true
+    promptAssistantError.value = null
+
+    try {
+        const request: PromptAssistantRequest = {
+            prompt: textToImagePrompt.value.trim(),
+            context: buildPromptAssistantContext(),
+            apikey: promptAssistantApiKey.value.trim(),
+            endpoint: resolvePromptAssistantEndpoint(promptAssistantEndpoint.value),
+            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID
+        }
+        const response = await improvePrompt(request)
+        textToImagePrompt.value = response.prompt
+    } catch (assistantError) {
+        promptAssistantError.value = assistantError instanceof Error ? assistantError.message : '提示词助手调用失败'
+    } finally {
+        isPromptAssistantLoading.value = false
+    }
+}
+
+const composeTextPrompt = () => {
+    return [textToImagePrompt.value.trim(), supplementPrompt.value]
         .filter(part => part.trim())
         .join('\n\n')
 }
+
+const composeImagePrompt = () => {
+    return [referenceImageRolePrompt.value, portraitAssistPrompt.value, textToImagePrompt.value.trim(), supplementPrompt.value]
+        .filter(part => part.trim())
+        .join('\n\n')
+}
+
+const promptPreview = computed(() => selectedImages.value.length ? composeImagePrompt() : composeTextPrompt())
 
 // Show ratio controls for image models that accept aspect ratio or mapped sizes.
 const showAspectRatioSelector = computed(() => {
@@ -827,7 +1264,7 @@ const loadGenerationHistory = async () => {
     }
 }
 
-const addGenerationHistory = async (source: GenerationHistorySource, prompt: string, images: string[]) => {
+const addGenerationHistory = async (source: GenerationHistorySource, prompt: string, images: string[], recipe: GenerationRecipe) => {
     if (!images.length) return
 
     const createdAt = Date.now()
@@ -840,7 +1277,8 @@ const addGenerationHistory = async (source: GenerationHistorySource, prompt: str
         aspectRatio: selectedAspectRatio.value,
         imageSize: gemini3ImageSize.value,
         createdAt,
-        images
+        images,
+        recipe
     }
 
     generationHistory.value = [item, ...generationHistory.value]
@@ -855,6 +1293,9 @@ const addGenerationHistory = async (source: GenerationHistorySource, prompt: str
 const historyCategories = computed(() =>
     Array.from(new Set(generationHistory.value.map(item => item.category).filter(Boolean) as string[]))
 )
+
+const favoriteHistory = computed(() => generationHistory.value.filter(item => item.favorite))
+const recentGenerationHistory = computed(() => generationHistory.value.slice(0, 3))
 
 const filteredGenerationHistory = computed(() => {
     if (historyFilter.value === 'all') return generationHistory.value
@@ -887,28 +1328,49 @@ const setHistoryCategory = (item: GenerationHistoryItem, category: string) => {
 }
 
 const reuseHistoryPrompt = (item: GenerationHistoryItem) => {
-    textToImagePrompt.value = item.prompt
-    if (item.source === 'image') {
-        customPrompt.value = ''
-        selectedStyle.value = ''
+    textToImagePrompt.value = item.recipe?.mainPrompt || item.prompt
+    customPrompt.value = item.recipe?.customPrompt || ''
+    selectedStyle.value = item.recipe?.selectedStyle || ''
+    currentView.value = 'studio'
+}
+
+const applyGenerationRecipe = (recipe: GenerationRecipe | undefined, fallbackPrompt = '') => {
+    textToImagePrompt.value = recipe?.mainPrompt || fallbackPrompt
+    customPrompt.value = recipe?.customPrompt || ''
+    selectedStyle.value = recipe?.selectedStyle || ''
+
+    if (recipe?.referenceImages?.length) {
+        selectedImages.value = [...recipe.referenceImages]
+        referenceImageLabels.value = recipe.referenceImages.map((_, index) => recipe.referenceImageLabels?.[index] || `角色${index + 1}`)
+        referenceImageMetadata.value = recipe.referenceImages.map((_, index) => normalizeReferenceRecipeMeta(recipe.referenceImageMetadata?.[index], index))
     }
+}
+
+const reuseHistoryRecipe = (item: GenerationHistoryItem) => {
+    applyGenerationRecipe(item.recipe, item.prompt)
+
+    selectedAspectRatio.value = item.aspectRatio
+    gemini3ImageSize.value = item.imageSize
+    currentView.value = 'studio'
 }
 
 const restoreHistoryItem = (item: GenerationHistoryItem) => {
     latestResultSource.value = item.source
+    latestGenerationRecipe.value = item.recipe || null
     if (item.source === 'text') {
         textToImageResult.value = item.images
-        textToImagePrompt.value = item.prompt
+        textToImagePrompt.value = item.recipe?.mainPrompt || item.prompt
         textToImageError.value = null
     } else {
         result.value = item.images
-        textToImagePrompt.value = item.prompt
-        customPrompt.value = ''
-        selectedStyle.value = ''
+        textToImagePrompt.value = item.recipe?.mainPrompt || item.prompt
+        customPrompt.value = item.recipe?.customPrompt || ''
+        selectedStyle.value = item.recipe?.selectedStyle || ''
         error.value = null
     }
     selectedAspectRatio.value = item.aspectRatio
     gemini3ImageSize.value = item.imageSize
+    currentView.value = 'studio'
 }
 
 const pushHistoryImages = (item: GenerationHistoryItem) => {
@@ -935,8 +1397,9 @@ const handleTextToImageGenerate = async () => {
     textToImageResult.value = []
 
     try {
+        const prompt = composeTextPrompt()
         const request: GenerateRequest = {
-            prompt: textToImagePrompt.value,
+            prompt,
             images: [],
             apikey: apiKey.value,
             endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
@@ -960,7 +1423,9 @@ const handleTextToImageGenerate = async () => {
         const response = await generateImage(request)
         textToImageResult.value = response.imageUrls
         latestResultSource.value = 'text'
-        addGenerationHistory('text', textToImagePrompt.value, response.imageUrls)
+        const recipe = buildGenerationRecipe(prompt)
+        latestGenerationRecipe.value = recipe
+        addGenerationHistory('text', prompt, response.imageUrls, recipe)
     } catch (err) {
         textToImageError.value = err instanceof Error ? err.message : '生成失败'
         textToImageResult.value = []
@@ -971,6 +1436,11 @@ const handleTextToImageGenerate = async () => {
 
 const handlePushDisplayResult = (image: string) => {
     pushImageToUpload(image)
+}
+
+const handleReuseCurrentRecipe = () => {
+    applyGenerationRecipe(latestGenerationRecipe.value || undefined, textToImagePrompt.value)
+    currentView.value = 'studio'
 }
 
 const handleDownloadResult = async (image: string) => {
@@ -1017,9 +1487,7 @@ const handleGenerate = async () => {
     result.value = []
 
     try {
-        // 使用选中的样式模板或自定义提示词
-        const supplementPrompt = selectedStyle.value ? styleTemplates.find(t => t.id === selectedStyle.value)?.prompt || customPrompt.value : customPrompt.value
-        const prompt = composeImagePrompt(supplementPrompt)
+        const prompt = composeImagePrompt()
 
         const request: GenerateRequest = {
             prompt,
@@ -1046,7 +1514,9 @@ const handleGenerate = async () => {
         const response = await generateImage(request)
         result.value = response.imageUrls
         latestResultSource.value = 'image'
-        addGenerationHistory('image', prompt, response.imageUrls)
+        const recipe = buildGenerationRecipe(prompt)
+        latestGenerationRecipe.value = recipe
+        addGenerationHistory('image', prompt, response.imageUrls, recipe)
     } catch (err) {
         error.value = err instanceof Error ? err.message : '生成失败'
         // Clear stale output after a failed generation.

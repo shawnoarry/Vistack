@@ -1,3 +1,5 @@
+import type { GenerationRecipe } from '../types'
+
 export type GenerationHistorySource = 'text' | 'image'
 
 export interface GenerationHistoryItem {
@@ -12,6 +14,7 @@ export interface GenerationHistoryItem {
     images: string[]
     category?: string
     favorite?: boolean
+    recipe?: GenerationRecipe
 }
 
 const DB_NAME = 'vistack'

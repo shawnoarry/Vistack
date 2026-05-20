@@ -96,6 +96,49 @@
                 </div>
             </div>
         </div>
+
+        <div class="mt-4 rounded-lg border border-brand-line bg-brand-surface p-3">
+            <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h4 class="text-sm font-semibold text-brand-ink">提示词助手 API</h4>
+                    <p class="mt-1 text-xs text-brand-muted">可单独使用低费率文本模型。端点可只填域名，调用时会自动补全 /v1/chat/completions。</p>
+                </div>
+                <span v-if="promptAssistantApiKey" class="w-fit rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">助手已配置</span>
+            </div>
+
+            <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_260px]">
+                <label>
+                    <span class="mb-1 block wb-label">助手密钥</span>
+                    <input
+                        type="password"
+                        :value="promptAssistantApiKey"
+                        @input="$emit('update:promptAssistantApiKey', ($event.target as HTMLInputElement).value)"
+                        placeholder="可与生图 API 不同"
+                        class="wb-input w-full"
+                    />
+                </label>
+                <label>
+                    <span class="mb-1 block wb-label">助手端点</span>
+                    <input
+                        type="text"
+                        :value="promptAssistantEndpoint"
+                        @input="$emit('update:promptAssistantEndpoint', ($event.target as HTMLInputElement).value)"
+                        placeholder="https://your-new-api.example.com"
+                        class="wb-input w-full"
+                    />
+                </label>
+                <label>
+                    <span class="mb-1 block wb-label">助手模型</span>
+                    <input
+                        type="text"
+                        :value="promptAssistantModel"
+                        @input="$emit('update:promptAssistantModel', ($event.target as HTMLInputElement).value)"
+                        placeholder="openai/gpt-4o-mini"
+                        class="wb-input w-full"
+                    />
+                </label>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -112,12 +155,18 @@ const props = defineProps<{
     model: string
     modelLoading: boolean
     modelError: string | null
+    promptAssistantApiKey: string
+    promptAssistantEndpoint: string
+    promptAssistantModel: string
 }>()
 
 const emit = defineEmits<{
     'update:modelValue': [value: string]
     'update:endpoint': [value: string]
     'update:model': [value: string]
+    'update:promptAssistantApiKey': [value: string]
+    'update:promptAssistantEndpoint': [value: string]
+    'update:promptAssistantModel': [value: string]
     'fetch-models': []
     'model-picked': []
 }>()
