@@ -334,6 +334,24 @@
                                 <p class="mt-1 text-xs text-brand-muted">底部固定输入器。参考图语义、合影助手和模板补充会自动拼入最终提示词。</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    :disabled="!canUndoPromptPhrase"
+                                    class="wb-secondary min-h-9 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                                    title="撤销上一次通过词组追加的内容"
+                                    @click="undoLastPromptPhrase"
+                                >
+                                    撤销词组
+                                </button>
+                                <button
+                                    type="button"
+                                    :disabled="!textToImagePrompt.trim()"
+                                    class="wb-secondary min-h-9 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                                    title="清空提示词框"
+                                    @click="clearPromptText"
+                                >
+                                    清除
+                                </button>
                                 <button type="button" class="wb-secondary min-h-9 px-3 text-xs" @click="showPromptTools = !showPromptTools">
                                     {{ showPromptTools ? '收起词组' : '词组' }}
                                 </button>
@@ -367,6 +385,7 @@
 
                         <textarea
                             v-model="textToImagePrompt"
+                            @input="handlePromptManualInput"
                             placeholder="描述你想生成或改动的画面。参考图会作为素材参与生成，可以写：让角色1穿着服装参考，在背景参考中拍摄产品级主视觉。"
                             class="wb-input min-h-[116px] max-h-[180px] w-full resize-y bg-white py-3 text-base leading-7"
                         />
@@ -916,6 +935,8 @@ const isLoading = ref(false)
 const result = ref<string[]>([])
 const error = ref<string | null>(null)
 const textToImagePrompt = ref('')
+const promptPhraseUndoStack = ref<string[]>([])
+const isApplyingPromptHistory = ref(false)
 const textToImageResult = ref<string[]>([])
 const textToImageError = ref<string | null>(null)
 const isTextToImageLoading = ref(false)
@@ -1190,6 +1211,9 @@ watch(
     () => {
         if (textToImageError.value) {
             textToImageError.value = null
+        }
+        if (!isApplyingPromptHistory.value) {
+            promptPhraseUndoStack.value = []
         }
     },
     { immediate: false }
@@ -1604,10 +1628,42 @@ const activeSupplementLabel = computed(() => {
 })
 const supplementPrompt = computed(() => selectedTemplatePrompt.value || customPrompt.value.trim())
 const availableStyleTemplates = computed(() => selectedImages.value.length ? allStyleTemplates.value : allStyleTemplates.value.filter(template => template.mode !== 'image'))
+const canUndoPromptPhrase = computed(() => promptPhraseUndoStack.value.length > 0)
+
+const setTextToImagePromptFromHistory = (nextPrompt: string) => {
+    isApplyingPromptHistory.value = true
+    textToImagePrompt.value = nextPrompt
+    queueMicrotask(() => {
+        isApplyingPromptHistory.value = false
+    })
+}
 
 const insertTextPromptPhrase = (phrase: string) => {
-    const current = textToImagePrompt.value.trim()
-    textToImagePrompt.value = current ? `${current}, ${phrase}` : phrase
+    const current = textToImagePrompt.value
+    promptPhraseUndoStack.value = [...promptPhraseUndoStack.value, current]
+    const normalizedCurrent = current.trim()
+    setTextToImagePromptFromHistory(normalizedCurrent ? `${normalizedCurrent}, ${phrase}` : phrase)
+}
+
+const undoLastPromptPhrase = () => {
+    const previousPrompt = promptPhraseUndoStack.value[promptPhraseUndoStack.value.length - 1]
+    if (previousPrompt === undefined) return
+
+    promptPhraseUndoStack.value = promptPhraseUndoStack.value.slice(0, -1)
+    setTextToImagePromptFromHistory(previousPrompt)
+}
+
+const clearPromptText = () => {
+    if (!textToImagePrompt.value.trim()) return
+
+    promptPhraseUndoStack.value = []
+    setTextToImagePromptFromHistory('')
+}
+
+const handlePromptManualInput = () => {
+    if (!isApplyingPromptHistory.value) {
+        promptPhraseUndoStack.value = []
+    }
 }
 
 const ensureCustomPromptPhraseGroup = (groupId: string) => {
