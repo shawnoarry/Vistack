@@ -10,6 +10,7 @@ export interface PromptPhraseGroup {
     id: string
     title: string
     description: string
+    section?: string
     phrases: PromptPhrase[]
 }
 
@@ -280,6 +281,29 @@ export const promptPhraseGroups: PromptPhraseGroup[] = [
             { label: '真实抓拍', value: '保持真实抓拍的不完美，不要像棚拍写真' },
             { label: '不乱加字', value: '不要生成随机文字、水印、logo 或字幕' },
             { label: '比例自然', value: '身体比例自然，脸、手、肩颈和腿部不要变形' }
+        ]
+    },
+    {
+        id: 'ui-visual-style',
+        title: 'UI 视觉风格',
+        description: '参考 StyleKit 的网页设计风格库整理，用于指定产品界面的视觉语言。',
+        phrases: [
+            { label: '玻璃拟态', value: '玻璃拟态 UI 风格，半透明磨砂玻璃面板、柔和边框、轻微阴影和现代层叠感' },
+            { label: '新拟物', value: '新拟物 UI 风格，浅色同色系背景，柔和内外阴影，按钮和卡片有轻微凸起与凹陷' },
+            { label: '新野兽派', value: '新野兽派 UI 风格，粗黑边框、硬边阴影、直角模块、高对比配色，视觉大胆有冲击力' },
+            { label: '编辑杂志风', value: '编辑杂志风 UI，精致网格、衬线大标题、克制留白和高端内容排版感' },
+            { label: 'Bento 网格', value: 'Bento Grid 界面布局，不同尺寸卡片组成清晰的信息层级，适合产品功能展示' },
+            { label: '企业简洁', value: '企业级简洁 UI，清晰信息层级、克制色彩、可靠的表格和表单组件，适合 B2B 产品' },
+            { label: '极简扁平', value: '极简扁平 UI，无多余装饰，依靠留白、文字层级和少量强调色建立界面秩序' },
+            { label: '柔和界面', value: '柔和友好的 UI 风格，圆润控件、低饱和配色、轻阴影和亲和的消费级应用气质' },
+            { label: '暗黑模式', value: '暗黑模式产品 UI，深色表面层级、微妙边框、高可读文字和克制高亮色' },
+            { label: 'macOS 毛玻璃', value: 'macOS 毛玻璃界面风格，深灰半透明面板、系统级模糊、精致边界和桌面应用质感' },
+            { label: 'Stripe 风格', value: 'Stripe 风格产品 UI，精致专业、可信的金融科技气质，渐变背景、清晰卡片和流畅层级' },
+            { label: 'Notion 风格', value: 'Notion 风格 UI，文档工具感、极简白底、细边框、清晰文字层级和直接可用的功能布局' },
+            { label: 'Apple 风格', value: 'Apple 风格界面，大量留白、精致圆角、微妙阴影、克制高端科技产品质感' },
+            { label: 'Material Design', value: 'Material Design 移动端 UI，清晰纸张层级、大胆主色、规范组件状态和响应式交互' },
+            { label: 'Fluent Design', value: 'Fluent Design UI，光感、深度、动效和材质层次结合，适合跨平台工具界面' },
+            { label: '赛博霓虹', value: '赛博朋克霓虹 UI，深色背景、霓虹发光、高科技边框和未来感数据界面' }
         ]
     },
     {

@@ -546,9 +546,9 @@
             <form class="w-full max-w-md rounded-lg border border-brand-line bg-white p-4 shadow-2xl" @submit.prevent="savePhraseGroupEdit">
                 <div class="mb-4">
                     <p class="wb-label text-brand-accent">Prompt category</p>
-                    <h2 class="mt-1 text-base font-semibold text-brand-ink">{{ editingPromptPhraseGroupId ? '管理分类' : '新增分类' }}</h2>
+                    <h2 class="mt-1 text-base font-semibold text-brand-ink">{{ editingPromptPhraseGroupId ? '编辑分类' : '新建分类' }}</h2>
                     <p class="mt-1 text-xs leading-5 text-brand-muted">
-                        分类名称、描述和归属会保存在当前浏览器。内置分类改名后仍保留原来的内置词组。
+                        分类名称和说明会保存在当前浏览器。修改内置分类名称，不会删除原来的内置词组。
                     </p>
                 </div>
                 <div class="space-y-3">
@@ -562,7 +562,7 @@
                     </label>
                 </div>
                 <div v-if="editingPromptPhraseGroupId" class="mt-4 rounded-lg border border-brand-line bg-brand-surface p-3">
-                    <p class="wb-label">移动词组到这个分类</p>
+                    <p class="wb-label">把词组移到当前分类</p>
                     <div class="mt-2 flex flex-wrap gap-2">
                         <button
                             v-for="group in movablePromptPhraseGroups"
@@ -571,12 +571,12 @@
                             class="rounded-md border border-brand-line bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent hover:text-brand-accent"
                             @click="moveAllPhrasesToEditingGroup(group.id)"
                         >
-                            从 {{ group.title }} 移入
+                            移入 {{ group.title }} 的词组
                         </button>
                         <span v-if="!movablePromptPhraseGroups.length" class="text-xs text-brand-muted">暂无其他分类可移动。</span>
                     </div>
                     <p class="mt-2 text-xs leading-5 text-brand-muted">
-                        也可以打开单个词组，把“分类”改成目标分类来精确移动。
+                        需要只移动某一个词组时，打开词组编辑，把“分类”改成目标分类即可。
                     </p>
                 </div>
                 <div class="mt-4 flex flex-wrap justify-between gap-2">
@@ -587,7 +587,7 @@
                         :disabled="editingPromptPhraseGroupHasPhrases"
                         @click="deletePhraseGroupEdit"
                     >
-                        {{ editingPromptPhraseGroupHasPhrases ? '先移出词组' : '删除分类' }}
+                        {{ editingPromptPhraseGroupHasPhrases ? '先移动词组' : '删除分类' }}
                     </button>
                     <span v-else />
                     <div class="flex gap-2">
@@ -1496,6 +1496,27 @@ const portraitAssistPrompt = computed(() => {
 const getPhraseId = (groupId: string, phrase: PromptPhrase) => phrase.id || `${groupId}:${phrase.label}:${phrase.value}`
 const builtInPromptPhraseGroupIds = new Set(promptPhraseGroups.map(group => group.id))
 const builtInPromptPhraseGroupOrder = new Map(promptPhraseGroups.map((group, index) => [group.id, index]))
+const promptPhraseGroupSections: Record<string, string> = {
+    'universal-subject': '通用基础',
+    'camera-general': '通用基础',
+    'art-style': '通用基础',
+    shot: '通用基础',
+    lighting: '通用基础',
+    composition: '通用基础',
+    mood: '通用基础',
+    quality: '通用基础',
+    'phone-camera': '自拍场景',
+    'selfie-background': '自拍场景',
+    makeup: '人像造型',
+    'hair-styling': '人像造型',
+    'beauty-body': '人像造型',
+    ootd: '人像造型',
+    'kpop-scene': '韩娱场景',
+    'celebrity-material': '韩娱场景',
+    commercial: '商业视觉',
+    'ui-visual-style': '产品 UI',
+    'product-ui-design': '产品 UI'
+}
 const commonPromptPhraseGroupOrder = [
     'universal-subject',
     'camera-general',
@@ -1507,8 +1528,14 @@ const commonPromptPhraseGroupOrder = [
     'quality',
     'phone-camera',
     'selfie-background',
+    'ui-visual-style',
     'product-ui-design'
 ]
+
+const resolvePromptPhraseGroupSection = (groupId: string) => {
+    if (!builtInPromptPhraseGroupIds.has(groupId)) return '自定义'
+    return promptPhraseGroupSections[groupId] || '其他'
+}
 
 const sortPromptPhraseGroups = (groups: PromptPhraseGroup[]) => {
     return [...groups].sort((first, second) => {
@@ -1525,7 +1552,7 @@ const sortPromptPhraseGroups = (groups: PromptPhraseGroup[]) => {
         const secondIsCustom = !builtInPromptPhraseGroupIds.has(second.id)
         if (firstIsCustom !== secondIsCustom) return firstIsCustom ? -1 : 1
 
-        return (builtInPromptPhraseGroupOrder.get(first.id) ?? 999) - (builtInPromptPhraseGroupOrder.get(second.id) ?? 999)
+    return (builtInPromptPhraseGroupOrder.get(first.id) ?? 999) - (builtInPromptPhraseGroupOrder.get(second.id) ?? 999)
     })
 }
 
@@ -1552,6 +1579,7 @@ const mergedPromptPhraseGroups = computed<PromptPhraseGroup[]>(() => {
     for (const group of promptPhraseGroups) {
         groupMap.set(group.id, {
             ...group,
+            section: resolvePromptPhraseGroupSection(group.id),
             phrases: []
         })
     }
@@ -1566,6 +1594,7 @@ const mergedPromptPhraseGroups = computed<PromptPhraseGroup[]>(() => {
                 id: customGroup.id,
                 title: customGroup.title,
                 description: customGroup.description || '我的自定义词组。',
+                section: resolvePromptPhraseGroupSection(customGroup.id),
                 phrases: []
             })
         }
@@ -1581,6 +1610,7 @@ const mergedPromptPhraseGroups = computed<PromptPhraseGroup[]>(() => {
                     id: targetGroupId,
                     title: '我的词组',
                     description: '我的自定义词组。',
+                    section: resolvePromptPhraseGroupSection(targetGroupId),
                     phrases: []
                 })
             }
