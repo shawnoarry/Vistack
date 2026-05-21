@@ -320,6 +320,8 @@
                         @insert="insertTextPromptPhrase"
                         @add="openPhraseEditor"
                         @edit="openPhraseEditor"
+                        @add-group="openBlankPhraseGroupEditor"
+                        @edit-group="openPhraseGroupEditor"
                         editable
                     />
                 </div>
@@ -472,6 +474,8 @@
                         @delete-template="deleteCustomTemplate"
                         @new-phrase="openPhraseEditor"
                         @edit-phrase="openPhraseEditor"
+                        @new-phrase-group="openBlankPhraseGroupEditor"
+                        @edit-phrase-group="openPhraseGroupEditor"
                     />
                 </div>
             </section>
@@ -487,9 +491,10 @@
                 <div class="space-y-3">
                     <label class="block">
                         <span class="mb-1 block wb-label">分类</span>
-                        <select v-model="editingPhraseGroupId" class="wb-input w-full" :disabled="Boolean(editingPhraseOriginalId)">
+                        <select v-model="editingPhraseGroupId" class="wb-input w-full">
                             <option v-for="group in mergedPromptPhraseGroups" :key="group.id" :value="group.id">{{ group.title }}</option>
                         </select>
+                        <p class="mt-1 text-xs text-brand-muted">编辑已有词组时切换分类，即可把它移动到新的分类。</p>
                     </label>
                     <label class="block">
                         <span class="mb-1 block wb-label">短标签</span>
@@ -513,6 +518,62 @@
                     <div class="flex gap-2">
                         <button type="button" class="wb-secondary" @click="closePhraseEditor">取消</button>
                         <button type="submit" class="wb-primary" :disabled="!phraseFormLabel.trim() || !phraseFormValue.trim()">保存</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div v-if="showPhraseGroupEditor" class="fixed inset-0 z-[96] flex items-center justify-center bg-brand-ink/70 p-4" @click.self="closePhraseGroupEditor">
+            <form class="w-full max-w-md rounded-lg border border-brand-line bg-white p-4 shadow-2xl" @submit.prevent="savePhraseGroupEdit">
+                <div class="mb-4">
+                    <p class="wb-label text-brand-accent">Prompt category</p>
+                    <h2 class="mt-1 text-base font-semibold text-brand-ink">{{ editingPromptPhraseGroupId ? '管理分类' : '新增分类' }}</h2>
+                    <p class="mt-1 text-xs leading-5 text-brand-muted">
+                        分类名称、描述和归属会保存在当前浏览器。内置分类改名后仍保留原来的内置词组。
+                    </p>
+                </div>
+                <div class="space-y-3">
+                    <label class="block">
+                        <span class="mb-1 block wb-label">分类名称</span>
+                        <input v-model="phraseGroupFormTitle" class="wb-input w-full" placeholder="例如：我的常用 / 产品主图 / 角色设定" />
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block wb-label">分类说明</span>
+                        <textarea v-model="phraseGroupFormDescription" class="wb-input min-h-[84px] w-full resize-y py-2" placeholder="说明这个分类适合放什么词组。" />
+                    </label>
+                </div>
+                <div v-if="editingPromptPhraseGroupId" class="mt-4 rounded-lg border border-brand-line bg-brand-surface p-3">
+                    <p class="wb-label">移动词组到这个分类</p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <button
+                            v-for="group in movablePromptPhraseGroups"
+                            :key="group.id"
+                            type="button"
+                            class="rounded-md border border-brand-line bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-muted transition hover:border-brand-accent hover:text-brand-accent"
+                            @click="moveAllPhrasesToEditingGroup(group.id)"
+                        >
+                            从 {{ group.title }} 移入
+                        </button>
+                        <span v-if="!movablePromptPhraseGroups.length" class="text-xs text-brand-muted">暂无其他分类可移动。</span>
+                    </div>
+                    <p class="mt-2 text-xs leading-5 text-brand-muted">
+                        也可以打开单个词组，把“分类”改成目标分类来精确移动。
+                    </p>
+                </div>
+                <div class="mt-4 flex flex-wrap justify-between gap-2">
+                    <button
+                        v-if="editingPromptPhraseGroupId && isEditingCustomOnlyPhraseGroup"
+                        type="button"
+                        class="wb-secondary text-brand-accent"
+                        :disabled="editingPromptPhraseGroupHasPhrases"
+                        @click="deletePhraseGroupEdit"
+                    >
+                        {{ editingPromptPhraseGroupHasPhrases ? '先移出词组' : '删除分类' }}
+                    </button>
+                    <span v-else />
+                    <div class="flex gap-2">
+                        <button type="button" class="wb-secondary" @click="closePhraseGroupEditor">取消</button>
+                        <button type="submit" class="wb-primary" :disabled="!phraseGroupFormTitle.trim()">保存</button>
                     </div>
                 </div>
             </form>
@@ -833,7 +894,7 @@ import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
 import { fetchModels, generateImage, improvePrompt } from './services/api'
 import { styleTemplates } from './data/templates'
 import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
-import { LocalStorage, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
+import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
 import {
     deleteGenerationHistoryItem,
     getGenerationHistoryItems,
@@ -841,7 +902,7 @@ import {
     type GenerationHistoryItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiModel, GenerateRecipe, GenerateRequest, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate } from './types'
+import type { ApiModel, GenerateRequest, GenerationRecipe, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 const apiKey = ref('')
@@ -873,6 +934,10 @@ const editingPhraseOriginalId = ref('')
 const editingPhraseIsCustom = ref(false)
 const phraseFormLabel = ref('')
 const phraseFormValue = ref('')
+const showPhraseGroupEditor = ref(false)
+const editingPromptPhraseGroupId = ref('')
+const phraseGroupFormTitle = ref('')
+const phraseGroupFormDescription = ref('')
 const showTemplateEditor = ref(false)
 const editingTemplateId = ref('')
 const templateFormTitle = ref('')
@@ -1405,26 +1470,107 @@ const portraitAssistPrompt = computed(() => {
 })
 
 const getPhraseId = (groupId: string, phrase: PromptPhrase) => phrase.id || `${groupId}:${phrase.label}:${phrase.value}`
+const builtInPromptPhraseGroupIds = new Set(promptPhraseGroups.map(group => group.id))
+const builtInPromptPhraseGroupOrder = new Map(promptPhraseGroups.map((group, index) => [group.id, index]))
+const commonPromptPhraseGroupOrder = [
+    'universal-subject',
+    'camera-general',
+    'art-style',
+    'shot',
+    'lighting',
+    'composition',
+    'mood',
+    'quality',
+    'phone-camera',
+    'selfie-background',
+    'product-ui-design'
+]
+
+const sortPromptPhraseGroups = (groups: PromptPhraseGroup[]) => {
+    return [...groups].sort((first, second) => {
+        const firstCommonIndex = commonPromptPhraseGroupOrder.indexOf(first.id)
+        const secondCommonIndex = commonPromptPhraseGroupOrder.indexOf(second.id)
+
+        if (firstCommonIndex !== -1 || secondCommonIndex !== -1) {
+            if (firstCommonIndex === -1) return 1
+            if (secondCommonIndex === -1) return -1
+            return firstCommonIndex - secondCommonIndex
+        }
+
+        const firstIsCustom = !builtInPromptPhraseGroupIds.has(first.id)
+        const secondIsCustom = !builtInPromptPhraseGroupIds.has(second.id)
+        if (firstIsCustom !== secondIsCustom) return firstIsCustom ? -1 : 1
+
+        return (builtInPromptPhraseGroupOrder.get(first.id) ?? 999) - (builtInPromptPhraseGroupOrder.get(second.id) ?? 999)
+    })
+}
+
+const getPromptPhraseGroupShell = (groupId: string): StoredPromptPhraseGroup => {
+    const group = mergedPromptPhraseGroups.value.find(item => item.id === groupId)
+    return {
+        id: groupId,
+        title: group?.title || '我的词组',
+        description: group?.description || '我的自定义词组。',
+        phrases: []
+    }
+}
+
+const hasPromptPhraseGroupMetaOverride = (group: StoredPromptPhraseGroup) => {
+    const builtInGroup = promptPhraseGroups.find(item => item.id === group.id)
+    if (!builtInGroup) return true
+    return group.title !== builtInGroup.title || group.description !== builtInGroup.description
+}
 
 const mergedPromptPhraseGroups = computed<PromptPhraseGroup[]>(() => {
     const overrides = new Map(promptPhraseOverrides.value.map(override => [override.id, override]))
-    const builtInGroups = promptPhraseGroups.map(group => ({
-        ...group,
-        phrases: group.phrases.map(phrase => {
+    const groupMap = new Map<string, PromptPhraseGroup>()
+
+    for (const group of promptPhraseGroups) {
+        groupMap.set(group.id, {
+            ...group,
+            phrases: []
+        })
+    }
+
+    for (const customGroup of customPromptPhraseGroups.value) {
+        const existingGroup = groupMap.get(customGroup.id)
+        if (existingGroup) {
+            existingGroup.title = customGroup.title || existingGroup.title
+            existingGroup.description = customGroup.description || existingGroup.description
+        } else {
+            groupMap.set(customGroup.id, {
+                id: customGroup.id,
+                title: customGroup.title,
+                description: customGroup.description || '我的自定义词组。',
+                phrases: []
+            })
+        }
+    }
+
+    for (const group of promptPhraseGroups) {
+        for (const phrase of group.phrases) {
             const id = getPhraseId(group.id, phrase)
             const override = overrides.get(id)
-            return {
+            const targetGroupId = override?.groupId || group.id
+            if (!groupMap.has(targetGroupId)) {
+                groupMap.set(targetGroupId, {
+                    id: targetGroupId,
+                    title: '我的词组',
+                    description: '我的自定义词组。',
+                    phrases: []
+                })
+            }
+
+            groupMap.get(targetGroupId)?.phrases.push({
                 ...phrase,
                 id,
                 label: override?.label || phrase.label,
                 value: override?.value || phrase.value,
                 source: 'builtin' as const,
                 isCustomized: Boolean(override)
-            }
-        })
-    }))
-
-    const groupMap = new Map<string, PromptPhraseGroup>(builtInGroups.map(group => [group.id, { ...group, phrases: [...group.phrases] }]))
+            })
+        }
+    }
 
     for (const customGroup of customPromptPhraseGroups.value) {
         const phrases = customGroup.phrases.map(phrase => ({
@@ -1434,17 +1580,10 @@ const mergedPromptPhraseGroups = computed<PromptPhraseGroup[]>(() => {
         const existingGroup = groupMap.get(customGroup.id)
         if (existingGroup) {
             existingGroup.phrases = [...existingGroup.phrases, ...phrases]
-        } else {
-            groupMap.set(customGroup.id, {
-                id: customGroup.id,
-                title: customGroup.title,
-                description: customGroup.description || '我的自定义词组。',
-                phrases
-            })
         }
     }
 
-    return Array.from(groupMap.values())
+    return sortPromptPhraseGroups(Array.from(groupMap.values()))
 })
 
 const allStyleTemplates = computed<StyleTemplate[]>(() => [
@@ -1471,6 +1610,30 @@ const insertTextPromptPhrase = (phrase: string) => {
     textToImagePrompt.value = current ? `${current}, ${phrase}` : phrase
 }
 
+const ensureCustomPromptPhraseGroup = (groupId: string) => {
+    const existingGroup = customPromptPhraseGroups.value.find(group => group.id === groupId)
+    if (existingGroup) return existingGroup
+
+    const shell = getPromptPhraseGroupShell(groupId)
+    customPromptPhraseGroups.value = [...customPromptPhraseGroups.value, shell]
+    return shell
+}
+
+const upsertCustomPromptPhraseGroup = (nextGroup: StoredPromptPhraseGroup) => {
+    const existingGroup = customPromptPhraseGroups.value.find(group => group.id === nextGroup.id)
+    customPromptPhraseGroups.value = existingGroup
+        ? customPromptPhraseGroups.value.map(group =>
+            group.id === nextGroup.id
+                ? { ...group, title: nextGroup.title, description: nextGroup.description, phrases: nextGroup.phrases }
+                : group
+        )
+        : [...customPromptPhraseGroups.value, nextGroup]
+}
+
+const persistPromptPhraseGroups = () => {
+    LocalStorage.saveCustomPromptPhraseGroups(customPromptPhraseGroups.value)
+}
+
 const closePhraseEditor = () => {
     showPhraseEditor.value = false
     editingPhraseGroupId.value = ''
@@ -1481,8 +1644,11 @@ const closePhraseEditor = () => {
 }
 
 const openPhraseEditor = (groupId: string, phrase?: PromptPhrase) => {
-    editingPhraseGroupId.value = groupId || mergedPromptPhraseGroups.value[0]?.id || ''
-    editingPhraseOriginalId.value = phrase ? getPhraseId(editingPhraseGroupId.value, phrase) : ''
+    const originalGroupId = groupId || mergedPromptPhraseGroups.value[0]?.id || ''
+    editingPhraseOriginalId.value = phrase ? getPhraseId(originalGroupId, phrase) : ''
+    editingPhraseGroupId.value = phrase && !phrase.source && editingPhraseOriginalId.value
+        ? promptPhraseOverrides.value.find(override => override.id === editingPhraseOriginalId.value)?.groupId || originalGroupId
+        : originalGroupId
     editingPhraseIsCustom.value = phrase?.source === 'custom'
     phraseFormLabel.value = phrase?.label || ''
     phraseFormValue.value = phrase?.value || ''
@@ -1512,30 +1678,16 @@ const savePhraseEdit = () => {
     }
 
     const phraseId = editingPhraseOriginalId.value || `custom-phrase-${Date.now()}`
-    const group = mergedPromptPhraseGroups.value.find(item => item.id === groupId)
-    const customGroupId = groupId
-    const existingCustomGroup = customPromptPhraseGroups.value.find(item => item.id === customGroupId)
-    const nextPhrase = { id: phraseId, label, value }
+    const nextPhrase: StoredPromptPhrase = { id: phraseId, label, value }
+    ensureCustomPromptPhraseGroup(groupId)
+    customPromptPhraseGroups.value = customPromptPhraseGroups.value.map(group => {
+        const phrases = group.phrases.filter(phrase => phrase.id !== phraseId)
+        return group.id === groupId
+            ? { ...group, phrases: [...phrases, nextPhrase] }
+            : { ...group, phrases }
+    })
 
-    if (existingCustomGroup) {
-        customPromptPhraseGroups.value = customPromptPhraseGroups.value.map(item =>
-            item.id === customGroupId
-                ? { ...item, phrases: [...item.phrases.filter(phrase => phrase.id !== phraseId), nextPhrase] }
-                : item
-        )
-    } else {
-        customPromptPhraseGroups.value = [
-            ...customPromptPhraseGroups.value,
-            {
-                id: customGroupId,
-                title: group?.title || '我的词组',
-                description: group?.description || '我的自定义词组。',
-                phrases: [nextPhrase]
-            }
-        ]
-    }
-
-    LocalStorage.saveCustomPromptPhraseGroups(customPromptPhraseGroups.value)
+    persistPromptPhraseGroups()
     closePhraseEditor()
 }
 
@@ -1548,14 +1700,126 @@ const deletePhraseEdit = () => {
                 ...group,
                 phrases: group.phrases.filter(phrase => phrase.id !== editingPhraseOriginalId.value)
             }))
-            .filter(group => group.phrases.length || !promptPhraseGroups.some(builtinGroup => builtinGroup.id === group.id))
-        LocalStorage.saveCustomPromptPhraseGroups(customPromptPhraseGroups.value)
+            .filter(group => group.phrases.length || hasPromptPhraseGroupMetaOverride(group))
+        persistPromptPhraseGroups()
     } else {
         promptPhraseOverrides.value = promptPhraseOverrides.value.filter(override => override.id !== editingPhraseOriginalId.value)
         LocalStorage.savePromptPhraseOverrides(promptPhraseOverrides.value)
     }
 
     closePhraseEditor()
+}
+
+const closePhraseGroupEditor = () => {
+    showPhraseGroupEditor.value = false
+    editingPromptPhraseGroupId.value = ''
+    phraseGroupFormTitle.value = ''
+    phraseGroupFormDescription.value = ''
+}
+
+const openBlankPhraseGroupEditor = () => {
+    editingPromptPhraseGroupId.value = ''
+    phraseGroupFormTitle.value = ''
+    phraseGroupFormDescription.value = ''
+    showPhraseGroupEditor.value = true
+}
+
+const openPhraseGroupEditor = (group: PromptPhraseGroup) => {
+    editingPromptPhraseGroupId.value = group.id
+    phraseGroupFormTitle.value = group.title
+    phraseGroupFormDescription.value = group.description
+    showPhraseGroupEditor.value = true
+}
+
+const isEditingCustomOnlyPhraseGroup = computed(() =>
+    Boolean(editingPromptPhraseGroupId.value) && !builtInPromptPhraseGroupIds.has(editingPromptPhraseGroupId.value)
+)
+
+const editingPromptPhraseGroupHasPhrases = computed(() =>
+    Boolean(mergedPromptPhraseGroups.value.find(group => group.id === editingPromptPhraseGroupId.value)?.phrases.length)
+)
+
+const movablePromptPhraseGroups = computed(() =>
+    mergedPromptPhraseGroups.value.filter(group => group.id !== editingPromptPhraseGroupId.value && group.phrases.length)
+)
+
+const savePhraseGroupEdit = () => {
+    const title = phraseGroupFormTitle.value.trim()
+    if (!title) return
+
+    const groupId = editingPromptPhraseGroupId.value || `custom-group-${Date.now()}`
+    const existingGroup = customPromptPhraseGroups.value.find(group => group.id === groupId)
+    const sourceGroup = mergedPromptPhraseGroups.value.find(group => group.id === groupId)
+    const nextGroup: StoredPromptPhraseGroup = {
+        id: groupId,
+        title,
+        description: phraseGroupFormDescription.value.trim() || sourceGroup?.description || '我的自定义词组。',
+        phrases: existingGroup?.phrases || []
+    }
+
+    upsertCustomPromptPhraseGroup(nextGroup)
+    persistPromptPhraseGroups()
+    closePhraseGroupEditor()
+}
+
+const moveAllPhrasesToEditingGroup = (sourceGroupId: string) => {
+    const targetGroupId = editingPromptPhraseGroupId.value
+    if (!sourceGroupId || !targetGroupId || sourceGroupId === targetGroupId) return
+
+    const sourceGroup = mergedPromptPhraseGroups.value.find(group => group.id === sourceGroupId)
+    if (!sourceGroup) return
+
+    ensureCustomPromptPhraseGroup(targetGroupId)
+
+    const movedCustomPhrases: StoredPromptPhrase[] = []
+    const movedBuiltinOverrides: StoredPromptPhraseOverride[] = []
+
+    for (const phrase of sourceGroup.phrases) {
+        const phraseId = getPhraseId(sourceGroupId, phrase)
+        if (phrase.source === 'custom') {
+            movedCustomPhrases.push({
+                id: phraseId,
+                label: phrase.label,
+                value: phrase.value
+            })
+        } else {
+            movedBuiltinOverrides.push({
+                id: phraseId,
+                groupId: targetGroupId,
+                label: phrase.label,
+                value: phrase.value
+            })
+        }
+    }
+
+    if (movedCustomPhrases.length) {
+        const movedCustomIds = new Set(movedCustomPhrases.map(phrase => phrase.id))
+        customPromptPhraseGroups.value = customPromptPhraseGroups.value.map(group => {
+            const remainingPhrases = group.phrases.filter(phrase => !movedCustomIds.has(phrase.id))
+            return group.id === targetGroupId
+                ? { ...group, phrases: [...remainingPhrases, ...movedCustomPhrases] }
+                : { ...group, phrases: remainingPhrases }
+        })
+        persistPromptPhraseGroups()
+    }
+
+    if (movedBuiltinOverrides.length) {
+        const movedBuiltinIds = new Set(movedBuiltinOverrides.map(override => override.id))
+        promptPhraseOverrides.value = [
+            ...promptPhraseOverrides.value.filter(override => !movedBuiltinIds.has(override.id)),
+            ...movedBuiltinOverrides
+        ]
+        LocalStorage.savePromptPhraseOverrides(promptPhraseOverrides.value)
+    }
+}
+
+const deletePhraseGroupEdit = () => {
+    const groupId = editingPromptPhraseGroupId.value
+    if (!groupId || builtInPromptPhraseGroupIds.has(groupId) || editingPromptPhraseGroupHasPhrases.value) return
+
+    customPromptPhraseGroups.value = customPromptPhraseGroups.value.filter(group => group.id !== groupId)
+    persistPromptPhraseGroups()
+    closePhraseGroupEditor()
 }
 
 const closeTemplateEditor = () => {

@@ -134,6 +134,8 @@
                 @insert="insertPhrase"
                 @add="groupId => $emit('new-phrase', groupId)"
                 @edit="(groupId, phrase) => $emit('edit-phrase', groupId, phrase)"
+                @add-group="$emit('new-phrase-group')"
+                @edit-group="group => $emit('edit-phrase-group', group)"
                 editable
             />
         </div>
@@ -161,6 +163,8 @@ const emit = defineEmits<{
     'delete-template': [templateId: string]
     'new-phrase': [groupId: string]
     'edit-phrase': [groupId: string, phrase: PromptPhrase]
+    'new-phrase-group': []
+    'edit-phrase-group': [group: PromptPhraseGroup]
 }>()
 
 const activeTab = ref<'style' | 'custom'>('style')
