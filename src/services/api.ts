@@ -118,6 +118,18 @@ const GRS_AI_FALLBACK_MODELS: ApiModel[] = [
 
 export async function generateImage(request: GenerateRequest, maxRetries: number = 5): Promise<GenerateResponse> {
     const targetCount = normalizeImageCount(request.count)
+    if (targetCount > 1) {
+        const tasks = Array.from({ length: targetCount }, () => generateImage({ ...request, count: 1 }, maxRetries))
+        const settled = await Promise.allSettled(tasks)
+        const imageUrls = settled.flatMap(item => item.status === 'fulfilled' ? item.value.imageUrls : [])
+        if (imageUrls.length > 0) {
+            return { imageUrls: imageUrls.slice(0, targetCount) }
+        }
+
+        const firstError = settled.find((item): item is PromiseRejectedResult => item.status === 'rejected')?.reason
+        throw firstError instanceof Error ? firstError : new Error('多图生成失败，请稍后重试')
+    }
+
     const collectedUrls: string[] = []
     let lastError: Error | null = null
 

@@ -36,7 +36,14 @@
                         <img :src="thumbnail" :alt="`Image ${index + 1}`" class="h-full w-full object-cover" />
                         <button
                             type="button"
-                            @click="removeThumbnail(index)"
+                            @click.stop="previewImage = thumbnail"
+                            class="absolute bottom-1 left-1 rounded-md bg-brand-ink/90 px-1.5 py-1 text-[10px] font-semibold text-brand-surface opacity-0 transition hover:bg-brand-accent group-hover:opacity-100"
+                        >
+                            预览
+                        </button>
+                        <button
+                            type="button"
+                            @click.stop="removeThumbnail(index)"
                             class="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md bg-brand-ink/90 text-sm font-semibold text-brand-surface opacity-0 transition hover:bg-brand-accent group-hover:opacity-100"
                         >
                             ×
@@ -78,6 +85,18 @@
             </div>
         </div>
     </div>
+
+    <div v-if="previewImage" class="fixed inset-0 z-[90] flex items-center justify-center bg-brand-ink/85 p-4" @click.self="previewImage = ''">
+        <div class="max-h-full w-full max-w-5xl rounded-lg border border-brand-surface/20 bg-brand-ink p-3 shadow-2xl">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <p class="text-sm font-semibold text-brand-surface">参考图预览</p>
+                <button type="button" class="rounded-md bg-brand-accent px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="previewImage = ''">关闭</button>
+            </div>
+            <div class="max-h-[78vh] overflow-auto rounded-lg bg-black/20">
+                <img :src="previewImage" alt="参考图放大预览" class="mx-auto max-h-[78vh] w-auto max-w-full object-contain" />
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -99,6 +118,7 @@ const emit = defineEmits<{
 const fileInput = ref<HTMLInputElement>()
 const uploadArea = ref<HTMLElement>()
 const isDragOver = ref(false)
+const previewImage = ref('')
 
 const thumbnails = computed(() => props.modelValue)
 const labels = computed(() => props.labels || [])

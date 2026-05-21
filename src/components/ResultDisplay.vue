@@ -1,13 +1,67 @@
 <template>
     <div class="flex min-h-[520px] flex-col rounded-lg border border-brand-line bg-brand-surface p-3">
-        <div class="flex flex-1 items-center justify-center rounded-lg border border-brand-line bg-white p-4">
-            <div v-if="loading" class="text-center">
-                <div class="mx-auto mb-4 h-12 w-12 rounded-full border-2 border-brand-accent/20 border-t-brand-accent animate-spin" />
-                <p class="text-base font-semibold text-brand-ink">正在生成...</p>
-                <p class="mt-1 text-sm text-brand-muted">任务已提交，等待模型返回图片。</p>
+        <div v-if="tasks.length" class="mb-3 rounded-lg border border-brand-line bg-white p-3">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-sm font-semibold text-brand-ink">任务队列</p>
+                    <p class="mt-1 text-xs text-brand-muted">可以连续提交任务，完成后点任务卡片可恢复到主预览。</p>
+                </div>
+                <span class="wb-chip">{{ runningTasks.length }} 进行中</span>
             </div>
+            <div class="columns-1 gap-3 md:columns-2 2xl:columns-3">
+                <article
+                    v-for="task in tasks"
+                    :key="task.id"
+                    class="mb-3 break-inside-avoid rounded-lg border border-brand-line bg-brand-surface p-3"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="truncate text-xs font-semibold text-brand-ink">{{ task.title }}</p>
+                            <p class="mt-1 text-[11px] text-brand-muted">{{ task.count }} 张 · {{ task.aspectRatio }} · {{ task.model }}</p>
+                        </div>
+                        <span
+                            :class="[
+                                'shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold',
+                                task.status === 'running' ? 'bg-brand-accent/10 text-brand-accent' : '',
+                                task.status === 'done' ? 'bg-brand-ink text-brand-surface' : '',
+                                task.status === 'error' ? 'bg-brand-accent text-brand-surface' : ''
+                            ]"
+                        >
+                            {{ taskStatusLabel(task.status) }}
+                        </span>
+                    </div>
 
-            <div v-else-if="error" class="max-w-xl text-center">
+                    <div v-if="task.status === 'running'" class="mt-3 rounded-md border border-dashed border-brand-line bg-white p-3">
+                        <div class="mb-2 h-1.5 overflow-hidden rounded-full bg-brand-line">
+                            <div class="h-full w-1/2 animate-pulse rounded-full bg-brand-accent" />
+                        </div>
+                        <p class="text-xs leading-5 text-brand-muted">已提交给模型，正在等待返回图片。</p>
+                    </div>
+
+                    <button
+                        v-else-if="task.images.length"
+                        type="button"
+                        class="mt-3 grid w-full grid-cols-2 gap-2"
+                        @click="$emit('restore-task', task)"
+                    >
+                        <span
+                            v-for="(image, index) in task.images.slice(0, 4)"
+                            :key="`${task.id}-${index}`"
+                            class="aspect-square overflow-hidden rounded-md border border-brand-line bg-white"
+                        >
+                            <img :src="image" :alt="`${task.title} 结果 ${index + 1}`" class="h-full w-full object-cover" />
+                        </span>
+                    </button>
+
+                    <p v-else-if="task.error" class="mt-3 rounded-md border border-brand-accent/30 bg-brand-accent/10 p-2 text-xs leading-5 text-brand-accent">
+                        {{ task.error }}
+                    </p>
+                </article>
+            </div>
+        </div>
+
+        <div class="flex flex-1 items-center justify-center rounded-lg border border-brand-line bg-white p-4">
+            <div v-if="error" class="max-w-xl text-center">
                 <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-brand-accent/30 bg-brand-accent/10 text-brand-accent">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
@@ -110,9 +164,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import type { GenerationTask, GenerationTaskStatus } from '../types'
 
 const props = defineProps<{
     results: string[]
+    tasks: GenerationTask[]
     loading: boolean
     error: string | null
     canPush: boolean
@@ -121,6 +177,7 @@ const props = defineProps<{
 
 const imageSizes = ref<Record<string, string>>({})
 const previewImage = ref('')
+const runningTasks = computed(() => props.tasks.filter(task => task.status === 'running'))
 
 watch(
     () => props.results,
@@ -150,5 +207,12 @@ defineEmits<{
     download: [image: string]
     push: [image: string]
     reuse: []
+    'restore-task': [task: GenerationTask]
 }>()
+
+const taskStatusLabel = (status: GenerationTaskStatus) => {
+    if (status === 'running') return '生成中'
+    if (status === 'done') return '已完成'
+    return '失败'
+}
 </script>

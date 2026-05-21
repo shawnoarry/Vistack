@@ -91,12 +91,25 @@
 
                     <div v-if="selectedImages.length" class="mt-3 rounded-lg border border-brand-line bg-white p-3">
                         <div class="flex items-center justify-between gap-3">
-                            <span class="wb-label">将发送给模型的参考图语义</span>
+                            <span class="wb-label">参考图核对清单</span>
                             <span class="rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-[11px] font-semibold text-brand-accent">已生效</span>
                         </div>
-                        <p class="mt-2 text-xs leading-5 text-brand-muted">{{ referenceImageRolePrompt }}</p>
+                        <div class="mt-2 space-y-2">
+                            <div
+                                v-for="item in referenceImageChecklist"
+                                :key="item.index"
+                                class="rounded-md border border-brand-line bg-brand-surface px-2.5 py-2 text-xs leading-5"
+                            >
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <span class="font-semibold text-brand-ink">图 {{ item.index }}</span>
+                                    <span class="rounded bg-white px-1.5 py-0.5 font-semibold text-brand-accent">{{ item.role }}</span>
+                                    <span class="text-brand-ink">{{ item.label }}</span>
+                                </div>
+                                <p v-if="item.note" class="mt-1 text-brand-muted">说明：{{ item.note }}</p>
+                            </div>
+                        </div>
                         <p class="mt-2 text-xs leading-5 text-brand-muted">
-                            同一个人有多张参考图时，类型选“人物/角色”并填同一个名称；换装、换背景、产品主图等场景请分别选择“服装”“背景”“产品/主体”。
+                            请确认每张图的类型和名称是否对上。多张图是同一个人时，类型都选“人物/角色”，并填写同一个名称。
                         </p>
                     </div>
 
@@ -165,7 +178,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2 text-xs">
                         <span class="wb-chip">{{ displayResults.length }} outputs</span>
-                        <span v-if="displayLoading" class="rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-brand-accent">生成中</span>
+                        <span v-if="activeGenerationTasks.length" class="rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-brand-accent">{{ activeGenerationTasks.length }} 个任务生成中</span>
                         <span v-else class="wb-chip">待命</span>
                     </div>
                 </div>
@@ -190,10 +203,12 @@
                 </div>
                 <ResultDisplay
                     :results="displayResults"
+                    :tasks="generationTasks"
                     :loading="displayLoading"
                     :error="displayError"
                     :can-push="canPushDisplayResult"
                     :can-reuse="Boolean(displayResults.length)"
+                    @restore-task="restoreTaskResult"
                     @download="handleDownloadResult"
                     @push="handlePushDisplayResult"
                     @reuse="handleReuseCurrentRecipe"
@@ -445,6 +460,7 @@
                             type="button"
                             @click="handleGenerate"
                             :disabled="!canGenerate"
+                            :title="selectedImages.length ? '使用当前参考图生成' : '先上传参考图后再使用此模式'"
                             :class="[
                                 'inline-flex min-h-12 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
                                 canGenerate
@@ -452,12 +468,13 @@
                                     : 'cursor-not-allowed bg-brand-line text-brand-muted'
                             ]"
                         >
-                            {{ isLoading ? '生成中...' : '使用参考图生成' }}
+                            {{ selectedImages.length ? (isLoading ? '参考图生成中...' : '使用参考图生成') : '先上传参考图' }}
                         </button>
                         <button
                             type="button"
                             @click="handleTextToImageGenerate"
                             :disabled="!canGenerateTextImage"
+                            :title="selectedImages.length ? '已上传参考图，请使用参考图生成；移除参考图后可无参考图生成' : '不使用参考图，直接按提示词生成'"
                             :class="[
                                 'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
                                 canGenerateTextImage
@@ -465,7 +482,7 @@
                                     : 'cursor-not-allowed bg-brand-line text-brand-muted'
                             ]"
                         >
-                            {{ isTextToImageLoading ? '生成中...' : '无参考图生成' }}
+                            {{ selectedImages.length ? '请先移除参考图' : (isTextToImageLoading ? '无参考图生成中...' : '无参考图生成') }}
                         </button>
                     </div>
                 </div>
@@ -921,7 +938,7 @@ import {
     type GenerationHistoryItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiModel, GenerateRequest, GenerationRecipe, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate } from './types'
+import type { ApiModel, GenerateRequest, GenerationRecipe, GenerationTask, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 const apiKey = ref('')
@@ -942,6 +959,7 @@ const textToImageError = ref<string | null>(null)
 const isTextToImageLoading = ref(false)
 const latestResultSource = ref<'text' | 'image' | null>(null)
 const latestGenerationRecipe = ref<GenerationRecipe | null>(null)
+const generationTasks = ref<GenerationTask[]>([])
 const currentView = ref<'studio' | 'assets'>('studio')
 const showPromptTools = ref(false)
 const showTemplatePanel = ref(false)
@@ -1387,6 +1405,59 @@ const buildGenerationRecipe = (compiledPrompt: string): GenerationRecipe => ({
     count: generationCount.value
 })
 
+const buildGenerateRequest = (prompt: string, images: string[], count = generationCount.value): GenerateRequest => {
+    const request: GenerateRequest = {
+        prompt,
+        images,
+        apikey: apiKey.value,
+        endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
+        model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
+        count
+    }
+
+    if (showAspectRatioSelector.value) {
+        request.aspectRatio = selectedAspectRatio.value
+    }
+
+    if (showImageSizeConfig.value) {
+        request.imageSize = gemini3ImageSize.value
+    }
+
+    if (supportsGoogleSearch.value) {
+        request.enableGoogleSearch = gemini3EnableGoogleSearch.value
+    }
+
+    return request
+}
+
+const createGenerationTask = (source: GenerationTask['source'], prompt: string, recipe: GenerationRecipe): GenerationTask => {
+    const createdAt = Date.now()
+    const taskNumber = generationTasks.value.length + 1
+    return {
+        id: `${source}-${createdAt}-${Math.random().toString(36).slice(2, 8)}`,
+        source,
+        title: `${source === 'image' ? '参考图生成' : '无参考图生成'} #${taskNumber}`,
+        prompt,
+        status: 'running',
+        createdAt,
+        model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
+        aspectRatio: selectedAspectRatio.value,
+        imageSize: gemini3ImageSize.value,
+        count: recipe.count,
+        images: [],
+        recipe
+    }
+}
+
+const updateGenerationTask = (taskId: string, patch: Partial<GenerationTask>) => {
+    generationTasks.value = generationTasks.value.map(task => task.id === taskId ? { ...task, ...patch } : task)
+}
+
+const syncGenerationLoadingState = () => {
+    isLoading.value = activeGenerationTasks.value.some(task => task.source === 'image')
+    isTextToImageLoading.value = activeGenerationTasks.value.some(task => task.source === 'text')
+}
+
 const pushImageToUpload = (image: string | null) => {
     if (!image) return
     const filtered = selectedImages.value.filter(existing => existing !== image)
@@ -1395,11 +1466,8 @@ const pushImageToUpload = (image: string | null) => {
     referenceImageMetadata.value = selectedImages.value.map((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index))
 }
 
-const displayLoading = computed(() => {
-    if (latestResultSource.value === 'image') return isLoading.value
-    if (latestResultSource.value === 'text') return isTextToImageLoading.value
-    return isLoading.value || isTextToImageLoading.value
-})
+const activeGenerationTasks = computed(() => generationTasks.value.filter(task => task.status === 'running'))
+const displayLoading = computed(() => activeGenerationTasks.value.length > 0)
 
 const displayResults = computed(() => {
     if (latestResultSource.value === 'image') return result.value
@@ -1408,6 +1476,8 @@ const displayResults = computed(() => {
 })
 
 const displayError = computed(() => {
+    const latestErroredTask = generationTasks.value.find(task => task.status === 'error')
+    if (latestErroredTask?.error && !displayResults.value.length) return latestErroredTask.error
     if (latestResultSource.value === 'image') return error.value
     if (latestResultSource.value === 'text') return textToImageError.value
     return error.value || textToImageError.value
@@ -1421,7 +1491,7 @@ const canGenerateTextImage = computed(
         apiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         textToImagePrompt.value.trim() &&
-        !isTextToImageLoading.value
+        selectedImages.value.length === 0
 )
 
 const canGenerate = computed(
@@ -1430,8 +1500,7 @@ const canGenerate = computed(
         apiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         selectedImages.value.length > 0 &&
-        (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim()) &&
-        !isLoading.value
+        (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim())
 )
 
 const promptAssistantReady = computed(
@@ -1462,6 +1531,18 @@ const referenceImageRolePrompt = computed(() => {
         'Do not merge separate character identities unless the prompt explicitly asks for it.'
     ].join(' ')
 })
+
+const referenceImageChecklist = computed(() =>
+    selectedImages.value.map((_, index) => {
+        const meta = normalizeReferenceMeta(referenceImageMetadata.value[index], index)
+        return {
+            index: index + 1,
+            role: roleLabel(meta.role),
+            label: meta.label,
+            note: meta.note
+        }
+    })
+)
 
 const characterReferenceCount = computed(() =>
     selectedImages.value.filter((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index).role === 'character').length
@@ -2404,47 +2485,28 @@ const pushHistoryImages = (item: GenerationHistoryItem) => {
 const handleTextToImageGenerate = async () => {
     if (!canGenerateTextImage.value) return
 
+    const prompt = composeTextPrompt()
+    const recipe = buildGenerationRecipe(prompt)
+    const task = createGenerationTask('text', prompt, recipe)
+    generationTasks.value = [task, ...generationTasks.value]
     latestResultSource.value = 'text'
-    isTextToImageLoading.value = true
     textToImageError.value = null
-    textToImageResult.value = []
+    isTextToImageLoading.value = true
 
     try {
-        const prompt = composeTextPrompt()
-        const request: GenerateRequest = {
-            prompt,
-            images: [],
-            apikey: apiKey.value,
-            endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
-            model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
-            count: generationCount.value
-        }
-
-        // Attach aspect ratio when the selected model supports it.
-        if (showAspectRatioSelector.value) {
-            request.aspectRatio = selectedAspectRatio.value
-        }
-
-        // 如果显示 Gemini 3 Pro Image 配置，则添加相应参数
-        if (showImageSizeConfig.value) {
-            request.imageSize = gemini3ImageSize.value
-        }
-
-        if (supportsGoogleSearch.value) {
-            request.enableGoogleSearch = gemini3EnableGoogleSearch.value
-        }
-
+        const request = buildGenerateRequest(prompt, [], generationCount.value)
         const response = await generateImage(request)
         textToImageResult.value = response.imageUrls
         latestResultSource.value = 'text'
-        const recipe = buildGenerationRecipe(prompt)
         latestGenerationRecipe.value = recipe
-        addGenerationHistory('text', prompt, response.imageUrls, recipe)
+        updateGenerationTask(task.id, { status: 'done', images: response.imageUrls })
+        await addGenerationHistory('text', prompt, response.imageUrls, recipe)
     } catch (err) {
-        textToImageError.value = err instanceof Error ? err.message : '生成失败'
-        textToImageResult.value = []
+        const message = err instanceof Error ? err.message : '生成失败'
+        textToImageError.value = message
+        updateGenerationTask(task.id, { status: 'error', error: message })
     } finally {
-        isTextToImageLoading.value = false
+        syncGenerationLoadingState()
     }
 }
 
@@ -2455,6 +2517,24 @@ const handlePushDisplayResult = (image: string) => {
 const handleReuseCurrentRecipe = () => {
     applyGenerationRecipe(latestGenerationRecipe.value || undefined, textToImagePrompt.value)
     currentView.value = 'studio'
+}
+
+const restoreTaskResult = (task: GenerationTask) => {
+    if (!task.images.length) return
+    latestResultSource.value = task.source
+    latestGenerationRecipe.value = task.recipe
+
+    if (task.source === 'text') {
+        textToImageResult.value = task.images
+        textToImagePrompt.value = task.recipe.mainPrompt || task.prompt
+        textToImageError.value = null
+    } else {
+        result.value = task.images
+        textToImagePrompt.value = task.recipe.mainPrompt || task.prompt
+        customPrompt.value = task.recipe.customPrompt || ''
+        selectedStyle.value = task.recipe.selectedStyle || ''
+        error.value = null
+    }
 }
 
 const handleDownloadResult = async (image: string) => {
@@ -2494,50 +2574,28 @@ const handleDownloadResult = async (image: string) => {
 const handleGenerate = async () => {
     if (!canGenerate.value) return
 
+    const prompt = composeImagePrompt()
+    const recipe = buildGenerationRecipe(prompt)
+    const task = createGenerationTask('image', prompt, recipe)
+    generationTasks.value = [task, ...generationTasks.value]
     latestResultSource.value = 'image'
-    isLoading.value = true
     error.value = null
-    // 立即清除之前的结果，确保用户看到新的生成过程
-    result.value = []
+    isLoading.value = true
 
     try {
-        const prompt = composeImagePrompt()
-
-        const request: GenerateRequest = {
-            prompt,
-            images: selectedImages.value,
-            apikey: apiKey.value,
-            endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
-            model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
-            count: generationCount.value
-        }
-
-        // Attach aspect ratio when the selected model supports it.
-        if (showAspectRatioSelector.value) {
-            request.aspectRatio = selectedAspectRatio.value
-        }
-
-        // 如果显示 Gemini 3 Pro Image 配置，则添加相应参数
-        if (showImageSizeConfig.value) {
-            request.imageSize = gemini3ImageSize.value
-        }
-
-        if (supportsGoogleSearch.value) {
-            request.enableGoogleSearch = gemini3EnableGoogleSearch.value
-        }
-
+        const request = buildGenerateRequest(prompt, [...selectedImages.value], generationCount.value)
         const response = await generateImage(request)
         result.value = response.imageUrls
         latestResultSource.value = 'image'
-        const recipe = buildGenerationRecipe(prompt)
         latestGenerationRecipe.value = recipe
-        addGenerationHistory('image', prompt, response.imageUrls, recipe)
+        updateGenerationTask(task.id, { status: 'done', images: response.imageUrls })
+        await addGenerationHistory('image', prompt, response.imageUrls, recipe)
     } catch (err) {
-        error.value = err instanceof Error ? err.message : '生成失败'
-        // Clear stale output after a failed generation.
-        result.value = []
+        const message = err instanceof Error ? err.message : '生成失败'
+        error.value = message
+        updateGenerationTask(task.id, { status: 'error', error: message })
     } finally {
-        isLoading.value = false
+        syncGenerationLoadingState()
     }
 }
 

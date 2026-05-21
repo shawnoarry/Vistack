@@ -80,3 +80,21 @@ export interface GenerationRecipe {
     referenceImageMetadata: ReferenceImageMeta[]
     count: number
 }
+
+export type GenerationTaskStatus = 'running' | 'done' | 'error'
+
+export interface GenerationTask {
+    id: string
+    source: 'text' | 'image'
+    title: string
+    prompt: string
+    status: GenerationTaskStatus
+    createdAt: number
+    model: string
+    aspectRatio: string
+    imageSize: string
+    count: number
+    images: string[]
+    error?: string
+    recipe: GenerationRecipe
+}
