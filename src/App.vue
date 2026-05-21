@@ -804,7 +804,7 @@
                                     <div class="flex flex-wrap gap-2">
                                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="openHistoryPreview(asset.item, asset.image)">详情</button>
                                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushImageToUpload(asset.image)">作参考</button>
-                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs text-brand-accent" @click="deleteHistoryImage(asset.item, asset.image)">删除</button>
+                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs text-brand-accent" @click="deleteHistoryImageAt(asset.item, asset.index)">删除</button>
                                     </div>
                                     <select
                                         :value="asset.item.category || ''"
@@ -844,7 +844,7 @@
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="handleDownloadResult(historyPreviewImage)">下载</button>
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="pushHistoryImages(historyPreviewItem)">结果作参考</button>
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="reuseHistoryRecipe(historyPreviewItem)">一键复用</button>
-                        <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryImage(historyPreviewItem, historyPreviewImage)">删除当前图</button>
+                        <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryImageAt(historyPreviewItem, historyPreviewItem.images.indexOf(historyPreviewImage))">删除当前图</button>
                         <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryItem(historyPreviewItem)">删除整组</button>
                         <button type="button" class="rounded-md bg-brand-accent px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="historyPreviewItem = null">关闭</button>
                     </div>
@@ -933,8 +933,11 @@ import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from '.
 import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
 import {
     deleteGenerationHistoryItem,
+    deleteStoredImage,
     getGenerationHistoryItems,
+    persistGeneratedImages,
     putGenerationHistoryItem,
+    resolveHistoryItemImages,
     type GenerationHistoryItem,
     type GenerationHistorySource
 } from './utils/historyDb'
@@ -2252,10 +2255,17 @@ const supportsGoogleSearch = computed(() => {
     return modelId.includes('gemini-3-pro-image')
 })
 
+const hydrateHistoryImages = async (items: GenerationHistoryItem[]) => {
+    return Promise.all(items.map(async item => ({
+        ...item,
+        images: await resolveHistoryItemImages(item)
+    })))
+}
+
 const loadGenerationHistory = async () => {
     historyLoading.value = true
     try {
-        generationHistory.value = await getGenerationHistoryItems()
+        generationHistory.value = await hydrateHistoryImages(await getGenerationHistoryItems())
     } catch (historyError) {
         console.warn('无法读取生成历史:', historyError)
     } finally {
@@ -2263,7 +2273,13 @@ const loadGenerationHistory = async () => {
     }
 }
 
-const addGenerationHistory = async (source: GenerationHistorySource, prompt: string, images: string[], recipe: GenerationRecipe) => {
+const addGenerationHistory = async (
+    source: GenerationHistorySource,
+    prompt: string,
+    images: string[],
+    recipe: GenerationRecipe,
+    persistence?: Awaited<ReturnType<typeof persistGeneratedImages>>
+) => {
     if (!images.length) return
 
     const createdAt = Date.now()
@@ -2278,6 +2294,9 @@ const addGenerationHistory = async (source: GenerationHistorySource, prompt: str
         count: recipe.count,
         createdAt,
         images,
+        imageIds: persistence?.imageIds,
+        rawImageUrls: persistence?.rawImageUrls,
+        imagePersistenceWarnings: persistence?.warnings,
         recipe
     }
 
@@ -2422,21 +2441,30 @@ const deleteHistoryItem = async (item: GenerationHistoryItem) => {
 
     try {
         await deleteGenerationHistoryItem(item.id)
+        await Promise.allSettled((item.imageIds || []).map(imageId => deleteStoredImage(imageId)))
     } catch (historyError) {
         console.warn('无法删除生成历史:', historyError)
     }
 }
 
-const deleteHistoryImage = async (item: GenerationHistoryItem, image: string) => {
-    const nextImages = item.images.filter(existing => existing !== image)
+const deleteHistoryImageAt = async (item: GenerationHistoryItem, imageIndex: number) => {
+    if (imageIndex < 0) return
+
+    const nextImages = item.images.filter((_, index) => index !== imageIndex)
+    const nextImageIds = item.imageIds?.filter((_, index) => index !== imageIndex)
+    const nextRawImageUrls = item.rawImageUrls?.filter((_, index) => index !== imageIndex)
+    const deletedImageId = imageIndex >= 0 ? item.imageIds?.[imageIndex] : undefined
 
     if (!nextImages.length) {
         await deleteHistoryItem(item)
         return
     }
 
-    const nextItem = { ...item, images: nextImages }
+    const nextItem = { ...item, images: nextImages, imageIds: nextImageIds, rawImageUrls: nextRawImageUrls }
     await updateHistoryItem(nextItem)
+    if (deletedImageId) {
+        await deleteStoredImage(deletedImageId)
+    }
 
     if (historyPreviewItem.value?.id === item.id) {
         historyPreviewItem.value = nextItem
@@ -2444,6 +2472,10 @@ const deleteHistoryImage = async (item: GenerationHistoryItem, image: string) =>
             ? historyPreviewImage.value
             : nextImages[0]
     }
+}
+
+const deleteHistoryImage = async (item: GenerationHistoryItem, image: string) => {
+    await deleteHistoryImageAt(item, item.images.findIndex(existing => existing === image))
 }
 
 const openOriginalImage = (image: string) => {
@@ -2465,9 +2497,24 @@ const toggleAssetSelection = (assetId: string) => {
 const confirmBulkDeleteAssets = async () => {
     if (bulkDeleteConfirmText.value.trim() !== '删除') return
 
-    const assetsToDelete = [...selectedHistoryAssets.value]
-    for (const asset of assetsToDelete) {
-        await deleteHistoryImage(asset.item, asset.image)
+    const assetsByItem = new Map<string, { item: GenerationHistoryItem; indexes: number[] }>()
+    for (const asset of selectedHistoryAssets.value) {
+        const existing = assetsByItem.get(asset.item.id)
+        if (existing) {
+            existing.indexes.push(asset.index)
+        } else {
+            assetsByItem.set(asset.item.id, { item: asset.item, indexes: [asset.index] })
+        }
+    }
+
+    for (const { item, indexes } of assetsByItem.values()) {
+        let currentItem = generationHistory.value.find(historyItem => historyItem.id === item.id) || item
+        for (const index of [...indexes].sort((a, b) => b - a)) {
+            await deleteHistoryImageAt(currentItem, index)
+            const nextItem = generationHistory.value.find(historyItem => historyItem.id === currentItem.id)
+            if (!nextItem) break
+            currentItem = nextItem
+        }
     }
 
     selectedAssetIds.value = []
@@ -2496,11 +2543,15 @@ const handleTextToImageGenerate = async () => {
     try {
         const request = buildGenerateRequest(prompt, [], generationCount.value)
         const response = await generateImage(request)
-        textToImageResult.value = response.imageUrls
+        const persisted = await persistGeneratedImages(response.imageUrls)
+        textToImageResult.value = persisted.images
+        if (persisted.warnings.length) {
+            textToImageError.value = `生成成功，但有 ${persisted.warnings.length} 张图片未能保存为本地副本，远端链接可能会过期。`
+        }
         latestResultSource.value = 'text'
         latestGenerationRecipe.value = recipe
-        updateGenerationTask(task.id, { status: 'done', images: response.imageUrls })
-        await addGenerationHistory('text', prompt, response.imageUrls, recipe)
+        updateGenerationTask(task.id, { status: 'done', images: persisted.images })
+        await addGenerationHistory('text', prompt, persisted.images, recipe, persisted)
     } catch (err) {
         const message = err instanceof Error ? err.message : '生成失败'
         textToImageError.value = message
@@ -2585,11 +2636,15 @@ const handleGenerate = async () => {
     try {
         const request = buildGenerateRequest(prompt, [...selectedImages.value], generationCount.value)
         const response = await generateImage(request)
-        result.value = response.imageUrls
+        const persisted = await persistGeneratedImages(response.imageUrls)
+        result.value = persisted.images
+        if (persisted.warnings.length) {
+            error.value = `生成成功，但有 ${persisted.warnings.length} 张图片未能保存为本地副本，远端链接可能会过期。`
+        }
         latestResultSource.value = 'image'
         latestGenerationRecipe.value = recipe
-        updateGenerationTask(task.id, { status: 'done', images: response.imageUrls })
-        await addGenerationHistory('image', prompt, response.imageUrls, recipe)
+        updateGenerationTask(task.id, { status: 'done', images: persisted.images })
+        await addGenerationHistory('image', prompt, persisted.images, recipe, persisted)
     } catch (err) {
         const message = err instanceof Error ? err.message : '生成失败'
         error.value = message
