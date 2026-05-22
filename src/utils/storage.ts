@@ -33,6 +33,7 @@ export class LocalStorage {
     private static readonly CUSTOM_PROMPT_PHRASE_GROUPS = 'vistack-custom-prompt-phrase-groups'
     private static readonly PROMPT_PHRASE_OVERRIDES = 'vistack-prompt-phrase-overrides'
     private static readonly CUSTOM_STYLE_TEMPLATES = 'vistack-custom-style-templates'
+    private static readonly THEME_MODE = 'vistack-theme-mode'
     private static readonly LEGACY_KEYS = {
         API_KEY: 'nano-banana-api-key',
         API_ENDPOINT: 'nano-banana-api-endpoint',
@@ -196,6 +197,23 @@ export class LocalStorage {
             localStorage.removeItem(this.PROMPT_ASSISTANT_MODEL_ID)
         } catch (error) {
             console.warn('无法清除提示词助手模型:', error)
+        }
+    }
+
+    static saveThemeMode(mode: 'light' | 'dark'): void {
+        try {
+            localStorage.setItem(this.THEME_MODE, mode)
+        } catch (error) {
+            console.warn('无法保存主题模式:', error)
+        }
+    }
+
+    static getThemeMode(): 'light' | 'dark' {
+        try {
+            return localStorage.getItem(this.THEME_MODE) === 'dark' ? 'dark' : 'light'
+        } catch (error) {
+            console.warn('无法读取主题模式:', error)
+            return 'light'
         }
     }
 

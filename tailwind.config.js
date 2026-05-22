@@ -10,9 +10,15 @@ export default {
                 brand: {
                     ink: '#191919',
                     muted: '#9999A1',
-                    line: '#E6E6E9',
+                    line: '#BFB5AF',
                     accent: '#CD4631',
                     surface: '#F4F4F6'
+                },
+                night: {
+                    accent: '#73648A',
+                    panel: '#453750',
+                    surface: '#333333',
+                    muted: '#9D96B8'
                 },
                 dark: {
                     bg: '#121212',

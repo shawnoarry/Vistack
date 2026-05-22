@@ -1,6 +1,9 @@
 <template>
-    <div class="min-h-screen bg-brand-surface text-brand-ink">
-        <header class="sticky top-0 z-40 border-b border-brand-line bg-white/95 shadow-sm shadow-black/5 backdrop-blur">
+    <div :class="['min-h-screen transition-colors', themeMode === 'dark' ? 'theme-dark bg-[#242424] text-brand-surface' : 'bg-brand-surface text-brand-ink']">
+        <header :class="[
+            'sticky top-0 z-40 border-b shadow-sm backdrop-blur transition-colors',
+            themeMode === 'dark' ? 'border-night-muted/35 bg-[#282828]/95 shadow-black/25' : 'border-brand-line bg-white/95 shadow-black/10'
+        ]">
             <div class="wb-shell flex flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
                     <p class="wb-label text-brand-accent">Multi-model visual studio</p>
@@ -13,13 +16,24 @@
                 </div>
 
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <div class="grid grid-cols-2 rounded-lg border border-brand-line bg-white p-1 text-sm font-semibold">
+                    <button
+                        type="button"
+                        class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-brand-line bg-white px-3 text-sm font-semibold text-brand-ink shadow-sm transition hover:border-brand-muted hover:bg-brand-surface theme-dark:border-night-muted/40 theme-dark:bg-night-panel theme-dark:text-brand-surface theme-dark:hover:bg-night-accent/25"
+                        :title="themeMode === 'dark' ? '切换浅色模式' : '切换深色模式'"
+                        @click="toggleThemeMode"
+                    >
+                        <span class="text-base">{{ themeMode === 'dark' ? '夜' : '日' }}</span>
+                        <span class="text-xs">{{ themeMode === 'dark' ? '深色' : '浅色' }}</span>
+                    </button>
+                    <div class="grid grid-cols-2 rounded-lg border border-brand-line bg-white p-1 text-sm font-semibold theme-dark:border-night-muted/40 theme-dark:bg-night-panel">
                         <button
                             type="button"
                             @click="currentView = 'studio'"
                             :class="[
                                 'rounded-md px-3 py-2 transition',
-                                currentView === 'studio' ? 'bg-brand-ink text-brand-surface' : 'text-brand-muted hover:text-brand-ink'
+                                currentView === 'studio'
+                                    ? (themeMode === 'dark' ? 'bg-night-accent text-white' : 'bg-brand-ink text-brand-surface')
+                                    : (themeMode === 'dark' ? 'text-night-muted hover:text-brand-surface' : 'text-brand-muted hover:text-brand-ink')
                             ]"
                         >
                             创作台
@@ -29,13 +43,15 @@
                             @click="currentView = 'assets'"
                             :class="[
                                 'rounded-md px-3 py-2 transition',
-                                currentView === 'assets' ? 'bg-brand-ink text-brand-surface' : 'text-brand-muted hover:text-brand-ink'
+                                currentView === 'assets'
+                                    ? (themeMode === 'dark' ? 'bg-night-accent text-white' : 'bg-brand-ink text-brand-surface')
+                                    : (themeMode === 'dark' ? 'text-night-muted hover:text-brand-surface' : 'text-brand-muted hover:text-brand-ink')
                             ]"
                         >
                             资产库
                         </button>
                     </div>
-                    <div class="max-w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink sm:max-w-[440px]">
+                    <div class="max-w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink shadow-sm sm:max-w-[440px] theme-dark:border-night-muted/40 theme-dark:bg-night-panel theme-dark:text-brand-surface">
                         <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-muted">Endpoint</div>
                         <div class="truncate">{{ apiEndpoint || DEFAULT_API_ENDPOINT }}</div>
                     </div>
@@ -58,7 +74,7 @@
             </div>
         </header>
 
-        <section v-if="showApiSettings" class="border-b border-brand-line bg-white">
+        <section v-if="showApiSettings" class="border-b border-brand-line bg-white theme-dark:border-night-muted/35 theme-dark:bg-[#282828]">
             <div class="wb-shell py-4">
                 <ApiKeyInput
                     v-model="apiKey"
@@ -78,7 +94,7 @@
 
         <main v-if="currentView === 'studio'" class="wb-shell grid items-start gap-4 py-4 lg:pb-[260px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
             <aside class="space-y-4">
-                <section class="wb-panel bg-white">
+                <section class="wb-panel">
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <div>
                             <p class="wb-label text-brand-accent">Reference ingredients</p>
@@ -292,7 +308,7 @@
                         </div>
                         <span class="wb-chip">{{ selectedImages.length ? '参考图模式' : '文生图模式' }}</span>
                     </div>
-                    <div class="max-h-[240px] overflow-y-auto rounded-lg border border-brand-line bg-white p-3 text-xs leading-5 text-brand-muted">
+                        <div class="max-h-[240px] overflow-y-auto rounded-lg border border-brand-line bg-white p-3 text-xs leading-5 text-brand-muted theme-dark:border-night-muted/35 theme-dark:bg-[#282828] theme-dark:text-night-muted">
                         <pre class="whitespace-pre-wrap font-sans">{{ promptPreview || '填写主提示词后会显示预览。' }}</pre>
                     </div>
                 </section>
@@ -314,22 +330,22 @@
                     </div>
 
                     <div v-if="generationHistory.length" class="mb-3 grid grid-cols-3 gap-2 text-center text-xs">
-                        <div class="rounded-lg border border-brand-line bg-white p-2">
+                        <div class="rounded-lg border border-brand-line bg-white p-2 theme-dark:border-night-muted/35 theme-dark:bg-night-panel">
                             <div class="text-brand-muted">全部</div>
                             <div class="mt-1 text-base font-semibold text-brand-ink">{{ generationHistory.length }}</div>
                         </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-2">
+                        <div class="rounded-lg border border-brand-line bg-white p-2 theme-dark:border-night-muted/35 theme-dark:bg-night-panel">
                             <div class="text-brand-muted">收藏</div>
                             <div class="mt-1 text-base font-semibold text-brand-ink">{{ favoriteHistory.length }}</div>
                         </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-2">
+                        <div class="rounded-lg border border-brand-line bg-white p-2 theme-dark:border-night-muted/35 theme-dark:bg-night-panel">
                             <div class="text-brand-muted">收藏夹</div>
                             <div class="mt-1 text-base font-semibold text-brand-ink">{{ historyCategories.length }}</div>
                         </div>
                     </div>
 
                     <div v-if="recentGenerationHistory.length" class="space-y-3">
-                        <article v-for="item in recentGenerationHistory" :key="item.id" class="rounded-lg border border-brand-line bg-white p-3">
+                        <article v-for="item in recentGenerationHistory" :key="item.id" class="rounded-lg border border-brand-line bg-white p-3 theme-dark:border-night-muted/35 theme-dark:bg-night-panel">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="text-xs font-semibold text-brand-ink">
@@ -375,7 +391,10 @@
 
         <section
             v-if="currentView === 'studio'"
-            class="border-t border-brand-line bg-white/95 shadow-[0_-18px_45px_rgba(25,25,25,0.10)] backdrop-blur lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-30"
+            :class="[
+                'border-t shadow-[0_-18px_45px_rgba(25,25,25,0.10)] backdrop-blur lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-30',
+                themeMode === 'dark' ? 'border-night-muted/35 bg-[#282828]/95 shadow-black/30' : 'border-brand-line bg-white/95'
+            ]"
         >
             <div class="wb-shell py-3">
                 <div v-if="showPromptTools" class="absolute bottom-[calc(100%+10px)] left-1/2 z-40 w-[min(1040px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20">
@@ -393,7 +412,7 @@
                 </div>
 
                 <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
-                    <div class="min-w-0 rounded-lg border border-brand-line bg-white p-3">
+                    <div class="min-w-0 rounded-lg border border-brand-line bg-white p-3 shadow-sm shadow-black/10 theme-dark:border-night-muted/35 theme-dark:bg-night-surface">
                         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                             <div>
                                 <span class="wb-label">Prompt box</span>
@@ -453,7 +472,8 @@
                             v-model="textToImagePrompt"
                             @input="handlePromptManualInput"
                             placeholder="描述你想生成或改动的画面。参考图会作为素材参与生成，可以写：让角色1穿着服装参考，在背景参考中拍摄产品级主视觉。"
-                            class="wb-input min-h-[116px] max-h-[180px] w-full resize-y bg-white py-3 text-base leading-7"
+                            class="wb-input min-h-[86px] max-h-[132px] w-full resize-y py-2.5 text-sm leading-6"
+                            rows="3"
                         />
 
                         <p v-if="promptAssistantError" class="mt-2 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">
@@ -464,7 +484,7 @@
                         </p>
                     </div>
 
-                    <div class="flex min-w-0 flex-col gap-2 rounded-lg border border-brand-line bg-white p-3">
+                    <div class="flex min-w-0 flex-col gap-2 rounded-lg border border-brand-line bg-white p-3 shadow-sm shadow-black/10 theme-dark:border-night-muted/35 theme-dark:bg-night-surface">
                         <div class="grid grid-cols-3 gap-2 text-center text-xs">
                             <div class="rounded-md bg-brand-surface px-2 py-1.5">
                                 <div class="text-brand-muted">参考图</div>
@@ -1060,6 +1080,8 @@ import {
 import type { ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationRecipe, GenerationTask, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
+type ThemeMode = 'light' | 'dark'
+
 const apiKey = ref('')
 const apiEndpoint = ref('')
 const selectedImages = ref<string[]>([])
@@ -1081,6 +1103,7 @@ const latestResultSource = ref<'text' | 'image' | null>(null)
 const latestGenerationRecipe = ref<GenerationRecipe | null>(null)
 const generationTasks = ref<GenerationTask[]>([])
 const currentView = ref<'studio' | 'assets'>('studio')
+const themeMode = ref<ThemeMode>('light')
 const workspaceMode = ref<WorkspaceMode>('quick')
 const canvasItems = ref<CanvasWorkbenchItem[]>([])
 const showPromptTools = ref(false)
@@ -1172,6 +1195,11 @@ const selectedAssetIds = ref<string[]>([])
 const showBulkDeleteDialog = ref(false)
 const bulkDeleteConfirmText = ref('')
 
+const toggleThemeMode = () => {
+    themeMode.value = themeMode.value === 'dark' ? 'light' : 'dark'
+    LocalStorage.saveThemeMode(themeMode.value)
+}
+
 // 组件挂载时从本地存储读取API密钥
 onMounted(() => {
     loadGenerationHistory()
@@ -1187,6 +1215,7 @@ onMounted(() => {
     promptPhraseOverrides.value = LocalStorage.getPromptPhraseOverrides()
     customStyleTemplates.value = LocalStorage.getCustomStyleTemplates()
     canvasItems.value = getCanvasWorkbenchItems()
+    themeMode.value = LocalStorage.getThemeMode()
 
     if (savedApiKey) {
         apiKey.value = savedApiKey
@@ -2051,7 +2080,7 @@ const activeSupplementLabel = computed(() => {
     return ''
 })
 const supplementPrompt = computed(() => selectedTemplatePrompt.value || customPrompt.value.trim())
-const availableStyleTemplates = computed(() => selectedImages.value.length ? allStyleTemplates.value : allStyleTemplates.value.filter(template => template.mode !== 'image'))
+const availableStyleTemplates = computed(() => allStyleTemplates.value)
 const canUndoPromptPhrase = computed(() => promptPhraseUndoStack.value.length > 0)
 
 const setTextToImagePromptFromHistory = (nextPrompt: string) => {

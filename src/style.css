@@ -13,12 +13,20 @@
 }
 
 @layer components {
+    .theme-dark {
+        color-scheme: dark;
+    }
+
     .wb-shell {
         @apply mx-auto w-full max-w-[1920px] px-3 sm:px-4 2xl:px-6;
     }
 
     .wb-panel {
-        @apply rounded-lg border border-brand-line bg-white p-4 shadow-sm shadow-black/5;
+        @apply rounded-lg border border-brand-line bg-white p-4 shadow-sm shadow-black/10;
+    }
+
+    .theme-dark .wb-panel {
+        @apply border-night-muted/35 bg-night-surface text-brand-surface shadow-black/30;
     }
 
     .wb-panel-dark {
@@ -29,12 +37,24 @@
         @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-muted;
     }
 
+    .theme-dark .wb-label {
+        @apply text-night-muted;
+    }
+
     .wb-muted {
         @apply text-brand-muted;
     }
 
+    .theme-dark .wb-muted {
+        @apply text-night-muted;
+    }
+
     .wb-chip {
         @apply inline-flex items-center rounded-md border border-brand-line bg-brand-surface px-2 py-1 text-xs font-medium text-brand-ink;
+    }
+
+    .theme-dark .wb-chip {
+        @apply border-night-muted/40 bg-night-panel text-brand-surface;
     }
 
     .wb-chip-dark {
@@ -42,14 +62,26 @@
     }
 
     .wb-input {
-        @apply min-h-10 rounded-lg border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 focus-visible:border-brand-accent focus-visible:ring-2 focus-visible:ring-brand-accent/10;
+        @apply min-h-10 rounded-lg border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink outline-none shadow-inner shadow-black/5 transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 focus-visible:border-brand-accent focus-visible:ring-2 focus-visible:ring-brand-accent/10;
+    }
+
+    .theme-dark .wb-input {
+        @apply border-night-muted/40 bg-[#282828] text-brand-surface placeholder:text-night-muted focus:border-night-muted focus:ring-night-muted/20;
     }
 
     .wb-primary {
         @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-accent px-4 text-sm font-semibold text-brand-surface shadow-sm shadow-black/5 transition hover:bg-brand-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-brand-muted disabled:text-brand-line;
     }
 
+    .theme-dark .wb-primary {
+        @apply bg-night-accent text-white hover:bg-night-accent/90 focus-visible:ring-night-muted/30 disabled:bg-night-panel disabled:text-night-muted;
+    }
+
     .wb-secondary {
-        @apply inline-flex min-h-10 items-center justify-center rounded-lg border border-brand-line bg-white px-3 text-sm font-semibold text-brand-ink transition hover:border-brand-muted hover:bg-brand-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/20 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+        @apply inline-flex min-h-10 items-center justify-center rounded-lg border border-brand-line bg-white px-3 text-sm font-semibold text-brand-ink shadow-sm shadow-black/5 transition hover:border-brand-muted hover:bg-brand-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/20 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .theme-dark .wb-secondary {
+        @apply border-night-muted/40 bg-night-panel text-brand-surface shadow-black/20 hover:border-night-muted hover:bg-night-accent/25 focus-visible:ring-night-muted/20;
     }
 }
