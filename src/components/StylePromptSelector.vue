@@ -37,6 +37,26 @@
             <div class="rounded-lg border border-brand-line bg-brand-surface px-3 py-2 text-xs leading-5 text-brand-muted">
                 模板是一整套生成方案。选择模板会替换当前“自定义补充”，适合从一个完整方向开始。
             </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand-line bg-white px-3 py-2">
+                <div>
+                    <p class="text-xs font-semibold text-brand-ink">模板语言</p>
+                    <p class="mt-0.5 text-[11px] text-brand-muted">内置模板已提供双语；自定义模板也可以在保存时补齐英文版本。</p>
+                </div>
+                <div class="grid grid-cols-3 rounded-md border border-brand-line bg-brand-surface p-1 text-xs font-semibold">
+                    <button
+                        v-for="option in templateLanguageOptions"
+                        :key="option.value"
+                        type="button"
+                        @click="emit('update:templateLanguage', option.value)"
+                        :class="[
+                            'rounded px-2 py-1.5 transition',
+                            templateLanguage === option.value ? 'bg-brand-ink text-brand-surface' : 'text-brand-muted hover:bg-white hover:text-brand-ink'
+                        ]"
+                    >
+                        {{ option.label }}
+                    </button>
+                </div>
+            </div>
             <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <input v-model="searchQuery" type="search" placeholder="搜索提示词、分类或标签" class="wb-input w-full" />
                 <button type="button" class="wb-secondary min-h-10 px-3 text-xs" @click="$emit('new-template')">新建模板</button>
@@ -80,6 +100,7 @@
                             <div class="flex flex-wrap items-center gap-2">
                                 <div class="text-sm font-semibold text-brand-ink">{{ template.title }}</div>
                                 <span v-if="template.mode" class="rounded bg-brand-line/70 px-1.5 py-0.5 text-[11px] text-brand-muted">{{ modeLabel(template.mode) }}</span>
+                                <span v-if="template.promptEn" class="rounded bg-brand-accent/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand-accent">双语</span>
                             </div>
                             <p class="mt-1 line-clamp-2 text-xs leading-5 text-brand-muted">{{ template.description }}</p>
 
@@ -115,7 +136,7 @@
                                     </svg>
                                 </summary>
                                 <div class="mt-2 rounded-md border border-brand-line bg-brand-surface p-2 text-xs leading-5 text-brand-muted">
-                                    {{ template.prompt }}
+                                    {{ templatePrompt(template) }}
                                 </div>
                             </details>
                         </div>
@@ -223,6 +244,7 @@ import type { PromptPhrase, PromptPhraseGroup } from '../data/promptPhrases'
 const props = defineProps<{
     selectedStyle: string
     customPrompt: string
+    templateLanguage: 'zh' | 'en' | 'bilingual'
     templates: StyleTemplate[]
     promptPoolGroups: PromptPoolGroup[]
     phraseGroups: PromptPhraseGroup[]
@@ -231,6 +253,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     'update:selectedStyle': [value: string]
     'update:customPrompt': [value: string]
+    'update:templateLanguage': [value: 'zh' | 'en' | 'bilingual']
     'new-template': []
     'edit-template': [template: StyleTemplate]
     'delete-template': [templateId: string]
@@ -245,6 +268,11 @@ const searchQuery = ref('')
 const activeCategory = ref('全部')
 const activePoolGroupId = ref(props.promptPoolGroups[0]?.id || '')
 const poolSelection = ref<string[]>([])
+const templateLanguageOptions = [
+    { value: 'zh' as const, label: '中文' },
+    { value: 'en' as const, label: 'English' },
+    { value: 'bilingual' as const, label: '双语' }
+]
 
 const categories = computed(() => ['全部', ...Array.from(new Set(props.templates.map(template => template.category || '其他')))])
 
@@ -274,6 +302,18 @@ const modeLabel = (mode: StyleTemplate['mode']) => {
     if (mode === 'text') return '文生图'
     if (mode === 'image') return '需参考图'
     return '通用'
+}
+
+const templatePrompt = (template: StyleTemplate) => {
+    if (props.templateLanguage === 'en') {
+        return template.promptEn || template.prompt
+    }
+
+    if (props.templateLanguage === 'bilingual' && template.promptEn) {
+        return `${template.prompt}\n\nEnglish version:\n${template.promptEn}`
+    }
+
+    return template.prompt
 }
 
 const activePoolGroup = computed(() =>

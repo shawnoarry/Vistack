@@ -20,6 +20,8 @@ export interface PromptAssistantRequest {
     apikey: string
     endpoint: string
     model: string
+    task?: 'optimize' | 'translate-template'
+    targetLanguage?: 'zh' | 'en'
 }
 
 export interface PromptAssistantResponse {
@@ -53,6 +55,7 @@ export interface StyleTemplate {
     id: string
     title: string
     prompt: string
+    promptEn?: string
     image: string
     description: string
     category?: string

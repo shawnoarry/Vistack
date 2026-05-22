@@ -565,6 +565,7 @@
                     <StylePromptSelector
                         v-model:selectedStyle="selectedStyle"
                         v-model:customPrompt="customPrompt"
+                        v-model:template-language="templateLanguage"
                         :templates="availableStyleTemplates"
                         :prompt-pool-groups="promptPoolGroups"
                         :phrase-groups="mergedPromptPhraseGroups"
@@ -714,9 +715,54 @@
                         <span class="mb-1 block wb-label">说明</span>
                         <input v-model="templateFormDescription" class="wb-input w-full" placeholder="这个模板适合什么场景。" />
                     </label>
+                    <div class="rounded-lg border border-brand-line bg-brand-surface p-3">
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <span class="wb-label">语言版本</span>
+                                <p class="mt-1 text-xs text-brand-muted">保存模板时可只填一种语言，也可以用提示词助手补齐另一种语言。</p>
+                            </div>
+                            <div class="grid grid-cols-3 rounded-md border border-brand-line bg-white p-1 text-xs font-semibold">
+                                <button
+                                    v-for="option in templateFormLanguageOptions"
+                                    :key="option.value"
+                                    type="button"
+                                    @click="templateFormSourceLanguage = option.value"
+                                    :class="[
+                                        'rounded px-2 py-1.5 transition',
+                                        templateFormSourceLanguage === option.value ? 'bg-brand-ink text-brand-surface' : 'text-brand-muted hover:bg-brand-surface hover:text-brand-ink'
+                                    ]"
+                                >
+                                    {{ option.label }}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                class="wb-secondary min-h-9 px-3 text-xs"
+                                :disabled="!canTranslateTemplateToEnglish"
+                                @click="translateTemplatePrompt('en')"
+                            >
+                                {{ templateTranslationTarget === 'en' ? '正在补英文...' : '用助手补英文' }}
+                            </button>
+                            <button
+                                type="button"
+                                class="wb-secondary min-h-9 px-3 text-xs"
+                                :disabled="!canTranslateTemplateToChinese"
+                                @click="translateTemplatePrompt('zh')"
+                            >
+                                {{ templateTranslationTarget === 'zh' ? '正在补中文...' : '用助手补中文' }}
+                            </button>
+                            <span v-if="templateAssistantError" class="rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">{{ templateAssistantError }}</span>
+                        </div>
+                    </div>
                     <label class="block">
-                        <span class="mb-1 block wb-label">模板提示词</span>
-                        <textarea v-model="templateFormPrompt" class="wb-input min-h-[190px] w-full resize-y py-3 leading-6" placeholder="保存后，选择模板会把这段内容拼入最终提示词。" />
+                        <span class="mb-1 block wb-label">中文模板提示词</span>
+                        <textarea v-model="templateFormPrompt" class="wb-input min-h-[170px] w-full resize-y py-3 leading-6" placeholder="保存后，选择中文或双语模式时会使用这段内容。" />
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block wb-label">English template prompt</span>
+                        <textarea v-model="templateFormPromptEn" class="wb-input min-h-[170px] w-full resize-y py-3 leading-6" placeholder="Optional. Used when template language is English or bilingual." />
                     </label>
                 </div>
                 <div class="flex flex-wrap justify-between gap-2 border-t border-brand-line p-4">
@@ -1020,6 +1066,7 @@ const referenceImageLabels = ref<string[]>([])
 const referenceImageMetadata = ref<ReferenceImageMeta[]>([])
 const selectedStyle = ref('')
 const customPrompt = ref('')
+const templateLanguage = ref<'zh' | 'en' | 'bilingual'>('zh')
 const isLoading = ref(false)
 const result = ref<string[]>([])
 const error = ref<string | null>(null)
@@ -1058,6 +1105,10 @@ const templateFormCategory = ref('我的模板')
 const templateFormTags = ref('')
 const templateFormDescription = ref('')
 const templateFormPrompt = ref('')
+const templateFormPromptEn = ref('')
+const templateFormSourceLanguage = ref<'zh' | 'en' | 'bilingual'>('zh')
+const templateTranslationTarget = ref<'zh' | 'en' | null>(null)
+const templateAssistantError = ref<string | null>(null)
 const templateFormMode = ref<StyleTemplate['mode']>('both')
 const modelOptions = ref<ModelOption[]>([])
 const selectedModel = ref('')
@@ -1971,7 +2022,23 @@ const allStyleTemplates = computed<StyleTemplate[]>(() => [
     ...customStyleTemplates.value.map(template => ({ ...template, source: 'custom' as const }))
 ])
 
-const selectedTemplatePrompt = computed(() => selectedStyle.value ? allStyleTemplates.value.find(template => template.id === selectedStyle.value)?.prompt || '' : '')
+const resolveTemplatePrompt = (template: StyleTemplate) => {
+    if (templateLanguage.value === 'en') {
+        return template.promptEn || template.prompt
+    }
+
+    if (templateLanguage.value === 'bilingual' && template.promptEn) {
+        return `${template.prompt}\n\nEnglish version:\n${template.promptEn}`
+    }
+
+    return template.prompt
+}
+
+const selectedTemplatePrompt = computed(() => {
+    if (!selectedStyle.value) return ''
+    const template = allStyleTemplates.value.find(item => item.id === selectedStyle.value)
+    return template ? resolveTemplatePrompt(template) : ''
+})
 const generationCountOptions = [1, 2, 3, 4]
 const activeSupplementLabel = computed(() => {
     if (selectedStyle.value) {
@@ -2242,6 +2309,10 @@ const closeTemplateEditor = () => {
     templateFormTags.value = ''
     templateFormDescription.value = ''
     templateFormPrompt.value = ''
+    templateFormPromptEn.value = ''
+    templateFormSourceLanguage.value = 'zh'
+    templateTranslationTarget.value = null
+    templateAssistantError.value = null
     templateFormMode.value = 'both'
 }
 
@@ -2253,6 +2324,9 @@ const openTemplateEditor = (template: StyleTemplate) => {
     templateFormTags.value = (template.tags || []).join(', ')
     templateFormDescription.value = template.description
     templateFormPrompt.value = template.prompt
+    templateFormPromptEn.value = template.promptEn || ''
+    templateFormSourceLanguage.value = template.promptEn ? 'bilingual' : 'zh'
+    templateAssistantError.value = null
     templateFormMode.value = template.mode || 'both'
     showTemplateEditor.value = true
 }
@@ -2272,8 +2346,89 @@ const openTemplateEditorFromCurrentPrompt = () => {
     templateFormTags.value = activeSupplementLabel.value ? activeSupplementLabel.value : ''
     templateFormDescription.value = '从当前提示词保存。'
     templateFormPrompt.value = prompt
+    templateFormPromptEn.value = ''
+    templateFormSourceLanguage.value = detectTemplateSourceLanguage(prompt)
+    templateAssistantError.value = null
     templateFormMode.value = selectedImages.value.length ? 'image' : 'both'
     showTemplateEditor.value = true
+}
+
+const templateFormLanguageOptions = [
+    { value: 'zh' as const, label: '中文' },
+    { value: 'en' as const, label: '英文' },
+    { value: 'bilingual' as const, label: '双语' }
+]
+
+const detectTemplateSourceLanguage = (value: string): 'zh' | 'en' | 'bilingual' => {
+    const hasChinese = /[\u4e00-\u9fff]/.test(value)
+    const hasEnglish = /[a-zA-Z]/.test(value)
+    if (hasChinese && hasEnglish) return 'bilingual'
+    if (hasEnglish) return 'en'
+    return 'zh'
+}
+
+const promptAssistantConfigured = computed(() =>
+    Boolean(promptAssistantApiKey.value.trim()) &&
+    Boolean(promptAssistantEndpoint.value.trim()) &&
+    Boolean(promptAssistantModel.value.trim())
+)
+
+const canTranslateTemplateToEnglish = computed(() =>
+    promptAssistantConfigured.value &&
+    Boolean(templateFormPrompt.value.trim()) &&
+    templateTranslationTarget.value !== 'en'
+)
+
+const canTranslateTemplateToChinese = computed(() =>
+    promptAssistantConfigured.value &&
+    Boolean((templateFormPromptEn.value || templateFormPrompt.value).trim()) &&
+    templateTranslationTarget.value !== 'zh'
+)
+
+const translateTemplatePrompt = async (targetLanguage: 'zh' | 'en') => {
+    if (templateTranslationTarget.value) return
+    if (!promptAssistantConfigured.value) {
+        templateAssistantError.value = '请先配置提示词助手 API。'
+        return
+    }
+
+    const sourcePrompt = targetLanguage === 'en'
+        ? templateFormPrompt.value.trim()
+        : (templateFormPromptEn.value.trim() || templateFormPrompt.value.trim())
+
+    if (!sourcePrompt) return
+
+    templateTranslationTarget.value = targetLanguage
+    templateAssistantError.value = null
+
+    try {
+        const response = await improvePrompt({
+            prompt: sourcePrompt,
+            context: [
+                `模板名称：${templateFormTitle.value.trim() || '未命名模板'}`,
+                `模板分类：${templateFormCategory.value.trim() || '我的模板'}`,
+                `模板模式：${templateFormMode.value || 'both'}`,
+                `语言来源：${templateFormSourceLanguage.value}`
+            ].join('\n'),
+            apikey: promptAssistantApiKey.value.trim(),
+            endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
+            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID,
+            task: 'translate-template',
+            targetLanguage
+        })
+
+        if (targetLanguage === 'en') {
+            templateFormPromptEn.value = response.prompt
+            templateFormSourceLanguage.value = 'bilingual'
+        } else {
+            templateFormPrompt.value = response.prompt
+            templateFormSourceLanguage.value = 'bilingual'
+        }
+    } catch (error) {
+        templateAssistantError.value = error instanceof Error ? error.message : '模板语言补全失败'
+    } finally {
+        templateTranslationTarget.value = null
+    }
 }
 
 const saveCustomTemplate = () => {
@@ -2285,6 +2440,7 @@ const saveCustomTemplate = () => {
         id: editingTemplateId.value || `custom-template-${Date.now()}`,
         title,
         prompt,
+        promptEn: templateFormPromptEn.value.trim() || undefined,
         image: '',
         description: templateFormDescription.value.trim() || '我的自定义模板。',
         category: templateFormCategory.value.trim() || '我的模板',
