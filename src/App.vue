@@ -1,5 +1,5 @@
 <template>
-    <div :class="['min-h-screen transition-colors', themeMode === 'dark' ? 'theme-dark bg-[#242424] text-brand-surface' : 'bg-brand-surface text-brand-ink']">
+    <div :class="['min-h-screen transition-colors', themeMode === 'dark' ? 'dark bg-[#242424] text-brand-surface' : 'bg-brand-surface text-brand-ink']">
         <header :class="[
             'sticky top-0 z-40 border-b shadow-sm backdrop-blur transition-colors',
             themeMode === 'dark' ? 'border-night-muted/35 bg-[#282828]/95 shadow-black/25' : 'border-brand-line bg-white/95 shadow-black/10'
@@ -18,14 +18,20 @@
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <button
                         type="button"
-                        class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-brand-line bg-white px-3 text-sm font-semibold text-brand-ink shadow-sm transition hover:border-brand-muted hover:bg-brand-surface theme-dark:border-night-muted/40 theme-dark:bg-night-panel theme-dark:text-brand-surface theme-dark:hover:bg-night-accent/25"
+                        class="wb-icon-button h-11 w-11"
+                        :aria-label="themeMode === 'dark' ? '切换浅色模式' : '切换深色模式'"
                         :title="themeMode === 'dark' ? '切换浅色模式' : '切换深色模式'"
                         @click="toggleThemeMode"
                     >
-                        <span class="text-base">{{ themeMode === 'dark' ? '夜' : '日' }}</span>
-                        <span class="text-xs">{{ themeMode === 'dark' ? '深色' : '浅色' }}</span>
+                        <svg v-if="themeMode === 'dark'" class="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v2.5M12 18.5V21M4.5 4.5l1.8 1.8M17.7 17.7l1.8 1.8M3 12h2.5M18.5 12H21M4.5 19.5l1.8-1.8M17.7 6.3l1.8-1.8" />
+                            <circle cx="12" cy="12" r="4" stroke-width="1.8" />
+                        </svg>
+                        <svg v-else class="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20.2 14.6A7.8 7.8 0 019.4 3.8 8.5 8.5 0 1019.9 14c.3.1.4.4.3.6z" />
+                        </svg>
                     </button>
-                    <div class="grid grid-cols-2 rounded-lg border border-brand-line bg-white p-1 text-sm font-semibold theme-dark:border-night-muted/40 theme-dark:bg-night-panel">
+                    <div class="grid grid-cols-2 rounded-lg border border-brand-line bg-white p-1 text-sm font-semibold dark:border-night-muted/40 dark:bg-night-panel">
                         <button
                             type="button"
                             @click="currentView = 'studio'"
@@ -51,7 +57,7 @@
                             资产库
                         </button>
                     </div>
-                    <div class="max-w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink shadow-sm sm:max-w-[440px] theme-dark:border-night-muted/40 theme-dark:bg-night-panel theme-dark:text-brand-surface">
+                    <div class="max-w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink shadow-sm sm:max-w-[440px] dark:border-night-muted/40 dark:bg-night-panel dark:text-brand-surface">
                         <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-muted">Endpoint</div>
                         <div class="truncate">{{ apiEndpoint || DEFAULT_API_ENDPOINT }}</div>
                     </div>
@@ -74,7 +80,7 @@
             </div>
         </header>
 
-        <section v-if="showApiSettings" class="border-b border-brand-line bg-white theme-dark:border-night-muted/35 theme-dark:bg-[#282828]">
+        <section v-if="showApiSettings" class="border-b border-brand-line bg-white dark:border-night-muted/35 dark:bg-[#282828]">
             <div class="wb-shell py-4">
                 <ApiKeyInput
                     v-model="apiKey"
@@ -308,7 +314,7 @@
                         </div>
                         <span class="wb-chip">{{ selectedImages.length ? '参考图模式' : '文生图模式' }}</span>
                     </div>
-                        <div class="max-h-[240px] overflow-y-auto rounded-lg border border-brand-line bg-white p-3 text-xs leading-5 text-brand-muted theme-dark:border-night-muted/35 theme-dark:bg-[#282828] theme-dark:text-night-muted">
+                    <div class="max-h-[240px] overflow-y-auto rounded-lg border border-brand-line bg-white p-3 text-xs leading-5 text-brand-muted dark:border-night-muted/35 dark:bg-[#282828] dark:text-night-muted">
                         <pre class="whitespace-pre-wrap font-sans">{{ promptPreview || '填写主提示词后会显示预览。' }}</pre>
                     </div>
                 </section>
@@ -330,22 +336,22 @@
                     </div>
 
                     <div v-if="generationHistory.length" class="mb-3 grid grid-cols-3 gap-2 text-center text-xs">
-                        <div class="rounded-lg border border-brand-line bg-white p-2 theme-dark:border-night-muted/35 theme-dark:bg-night-panel">
+                        <div class="rounded-lg border border-brand-line bg-white p-2 dark:border-night-muted/35 dark:bg-night-panel">
                             <div class="text-brand-muted">全部</div>
                             <div class="mt-1 text-base font-semibold text-brand-ink">{{ generationHistory.length }}</div>
                         </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-2 theme-dark:border-night-muted/35 theme-dark:bg-night-panel">
+                        <div class="rounded-lg border border-brand-line bg-white p-2 dark:border-night-muted/35 dark:bg-night-panel">
                             <div class="text-brand-muted">收藏</div>
                             <div class="mt-1 text-base font-semibold text-brand-ink">{{ favoriteHistory.length }}</div>
                         </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-2 theme-dark:border-night-muted/35 theme-dark:bg-night-panel">
+                        <div class="rounded-lg border border-brand-line bg-white p-2 dark:border-night-muted/35 dark:bg-night-panel">
                             <div class="text-brand-muted">收藏夹</div>
                             <div class="mt-1 text-base font-semibold text-brand-ink">{{ historyCategories.length }}</div>
                         </div>
                     </div>
 
                     <div v-if="recentGenerationHistory.length" class="space-y-3">
-                        <article v-for="item in recentGenerationHistory" :key="item.id" class="rounded-lg border border-brand-line bg-white p-3 theme-dark:border-night-muted/35 theme-dark:bg-night-panel">
+                        <article v-for="item in recentGenerationHistory" :key="item.id" class="rounded-lg border border-brand-line bg-white p-3 dark:border-night-muted/35 dark:bg-night-panel">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="text-xs font-semibold text-brand-ink">
@@ -396,8 +402,8 @@
                 themeMode === 'dark' ? 'border-night-muted/35 bg-[#282828]/95 shadow-black/30' : 'border-brand-line bg-white/95'
             ]"
         >
-            <div class="wb-shell py-3">
-                <div v-if="showPromptTools" class="absolute bottom-[calc(100%+10px)] left-1/2 z-40 w-[min(1040px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20">
+            <div class="wb-shell py-2.5">
+                <div v-if="showPromptTools" class="absolute bottom-[calc(100%+10px)] left-1/2 z-40 w-[min(1040px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20 dark:border-night-muted/35 dark:bg-night-surface dark:text-brand-surface">
                     <PromptPhraseBuilder
                         :groups="mergedPromptPhraseGroups"
                         title="提示词词组"
@@ -411,59 +417,88 @@
                     />
                 </div>
 
-                <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
-                    <div class="min-w-0 rounded-lg border border-brand-line bg-white p-3 shadow-sm shadow-black/10 theme-dark:border-night-muted/35 theme-dark:bg-night-surface">
+                <div class="grid items-start gap-2.5 lg:grid-cols-[minmax(0,1fr)_250px]">
+                    <div class="min-w-0 rounded-lg border border-brand-line bg-white p-2.5 shadow-sm shadow-black/10 dark:border-night-muted/35 dark:bg-night-surface">
                         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <div>
+                            <div class="min-w-0">
                                 <span class="wb-label">Prompt box</span>
-                                <p class="mt-1 text-xs text-brand-muted">这里写你要生成的画面。若左侧有参考图，“使用参考图生成”会把参考图用途说明一起提交。</p>
+                                <p class="mt-0.5 text-xs text-brand-muted dark:text-night-muted">提示词会和参考图用途说明一起提交。</p>
                             </div>
-                            <div class="flex flex-wrap gap-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
                                 <button
                                     type="button"
                                     :disabled="!canUndoPromptPhrase"
-                                    class="wb-secondary min-h-9 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="wb-icon-button"
                                     title="撤销上一次通过词组追加的内容"
+                                    aria-label="撤销词组"
                                     @click="undoLastPromptPhrase"
                                 >
-                                    撤销词组
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-1" />
+                                    </svg>
                                 </button>
                                 <button
                                     type="button"
                                     :disabled="!textToImagePrompt.trim()"
-                                    class="wb-secondary min-h-9 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="wb-icon-button"
                                     title="清空提示词框"
+                                    aria-label="清空提示词框"
                                     @click="clearPromptText"
                                 >
-                                    清除
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 7h12M10 7V5h4v2M8 7l1 13h6l1-13" />
+                                    </svg>
                                 </button>
-                                <button type="button" class="wb-secondary min-h-9 px-3 text-xs" @click="showPromptTools = !showPromptTools">
-                                    {{ showPromptTools ? '收起词组' : '词组' }}
+                                <button
+                                    type="button"
+                                    class="wb-icon-button"
+                                    :title="showPromptTools ? '收起词组' : '打开词组'"
+                                    :aria-label="showPromptTools ? '收起词组' : '打开词组'"
+                                    @click="showPromptTools = !showPromptTools"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h10M4 18h7" />
+                                    </svg>
                                 </button>
-                                <button type="button" class="wb-secondary min-h-9 px-3 text-xs" @click="showTemplatePanel = true">
-                                    模板
-                                    <span v-if="activeSupplementLabel" class="ml-1 text-brand-accent">已选</span>
+                                <button
+                                    type="button"
+                                    :class="['wb-icon-button', activeSupplementLabel ? 'border-brand-accent text-brand-accent dark:border-night-muted dark:text-brand-surface' : '']"
+                                    :title="activeSupplementLabel ? `模板：${activeSupplementLabel}` : '打开模板'"
+                                    aria-label="打开模板"
+                                    @click="showTemplatePanel = true"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 4h14v16l-7-3-7 3V4z" />
+                                    </svg>
                                 </button>
                                 <button
                                     type="button"
                                     :disabled="!textToImagePrompt.trim() && !supplementPrompt"
-                                    class="wb-secondary min-h-9 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="wb-icon-button"
+                                    title="保存为模板"
+                                    aria-label="保存为模板"
                                     @click="openTemplateEditorFromCurrentPrompt"
                                 >
-                                    存模板
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5h12l2 2v12H5V5zM8 5v5h7V5M8 19v-6h8v6" />
+                                    </svg>
                                 </button>
                                 <button
                                     type="button"
                                     :disabled="!canImprovePrompt"
                                     :class="[
-                                        'inline-flex min-h-9 items-center rounded-lg px-3 text-xs font-semibold transition',
+                                        'wb-icon-button',
                                         canImprovePrompt
-                                            ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90'
-                                            : 'cursor-not-allowed bg-brand-line text-brand-muted'
+                                            ? 'border-brand-accent bg-brand-accent text-brand-surface hover:bg-brand-accent/90 dark:border-night-accent dark:bg-night-accent'
+                                            : 'cursor-not-allowed'
                                     ]"
+                                    :title="isPromptAssistantLoading ? 'AI 优化中' : 'AI 优化提示词'"
+                                    aria-label="AI 优化提示词"
                                     @click="handleImprovePrompt"
                                 >
-                                    {{ isPromptAssistantLoading ? '优化中...' : 'AI 优化' }}
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8L12 3zM6 14l.8 2.2L9 17l-2.2.8L6 20l-.8-2.2L3 17l2.2-.8L6 14zM18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -472,7 +507,7 @@
                             v-model="textToImagePrompt"
                             @input="handlePromptManualInput"
                             placeholder="描述你想生成或改动的画面。参考图会作为素材参与生成，可以写：让角色1穿着服装参考，在背景参考中拍摄产品级主视觉。"
-                            class="wb-input min-h-[86px] max-h-[132px] w-full resize-y py-2.5 text-sm leading-6"
+                            class="wb-input min-h-[72px] max-h-[118px] w-full resize-y py-2 text-sm leading-6"
                             rows="3"
                         />
 
@@ -484,34 +519,34 @@
                         </p>
                     </div>
 
-                    <div class="flex min-w-0 flex-col gap-2 rounded-lg border border-brand-line bg-white p-3 shadow-sm shadow-black/10 theme-dark:border-night-muted/35 theme-dark:bg-night-surface">
-                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div class="rounded-md bg-brand-surface px-2 py-1.5">
-                                <div class="text-brand-muted">参考图</div>
-                                <div class="font-semibold text-brand-ink">{{ selectedImages.length }}</div>
+                    <div class="flex min-w-0 flex-col gap-2 rounded-lg border border-brand-line bg-white p-2.5 shadow-sm shadow-black/10 dark:border-night-muted/35 dark:bg-night-surface">
+                        <div class="grid grid-cols-3 gap-1.5 text-center text-[11px]">
+                            <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
+                                <div class="text-brand-muted dark:text-night-muted">参考</div>
+                                <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ selectedImages.length }}</div>
                             </div>
-                            <div class="rounded-md bg-brand-surface px-2 py-1.5">
-                                <div class="text-brand-muted">比例</div>
-                                <div class="font-semibold text-brand-ink">{{ showAspectRatioSelector ? selectedAspectRatio : '自动' }}</div>
+                            <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
+                                <div class="text-brand-muted dark:text-night-muted">比例</div>
+                                <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ showAspectRatioSelector ? selectedAspectRatio : '自动' }}</div>
                             </div>
-                            <div class="rounded-md bg-brand-surface px-2 py-1.5">
-                                <div class="text-brand-muted">尺寸</div>
-                                <div class="font-semibold text-brand-ink">{{ showImageSizeConfig ? gemini3ImageSize : '自动' }}</div>
+                            <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
+                                <div class="text-brand-muted dark:text-night-muted">尺寸</div>
+                                <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ showImageSizeConfig ? gemini3ImageSize : '自动' }}</div>
                             </div>
                         </div>
 
                         <div
                             :class="[
-                                'rounded-lg border px-3 py-2 text-xs leading-5',
+                                'rounded-lg border px-2.5 py-1.5 text-xs leading-5',
                                 selectedImages.length
-                                    ? 'border-brand-ink/15 bg-brand-ink text-brand-surface'
+                                    ? 'border-brand-ink/15 bg-brand-ink text-brand-surface dark:border-night-muted/45 dark:bg-night-panel'
                                     : 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
                             ]"
                         >
-                            当前提交方式：{{ selectedImages.length ? `参考图生成，会发送 ${selectedImages.length} 张参考图` : '无参考图生成，只发送提示词' }}
+                            {{ selectedImages.length ? `参考图生成 · ${selectedImages.length} 张` : '无参考图 · 只发提示词' }}
                         </div>
 
-                        <div class="grid grid-cols-3 gap-2">
+                        <div class="grid grid-cols-3 gap-1.5">
                             <label class="min-w-0">
                                 <span class="sr-only">生成张数</span>
                                 <select v-model.number="generationCount" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
@@ -534,7 +569,7 @@
                             </label>
                         </div>
 
-                        <label v-if="supportsGoogleSearch" class="flex items-center gap-2 rounded-md bg-brand-surface px-2 py-1.5 text-xs font-semibold text-brand-muted">
+                        <label v-if="supportsGoogleSearch" class="flex items-center gap-2 rounded-md bg-brand-surface px-2 py-1.5 text-xs font-semibold text-brand-muted dark:bg-night-panel dark:text-night-muted">
                             <input v-model="gemini3EnableGoogleSearch" type="checkbox" class="h-3.5 w-3.5 rounded border-brand-line text-brand-accent focus:ring-brand-accent" />
                             Google Search
                         </label>
@@ -544,7 +579,7 @@
                             :disabled="!canGenerate"
                             :title="selectedImages.length ? '使用当前参考图和提示词生成' : '左侧上传参考图后此按钮会启用'"
                             :class="[
-                                'inline-flex min-h-12 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
+                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
                                 canGenerate
                                     ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90'
                                     : 'cursor-not-allowed bg-brand-line text-brand-muted'
@@ -558,7 +593,7 @@
                             :disabled="!canGenerateTextImage"
                             :title="selectedImages.length ? '已上传参考图，请使用参考图生成；移除参考图后可无参考图生成' : '不使用参考图，直接按提示词生成'"
                             :class="[
-                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
+                                'inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
                                 canGenerateTextImage
                                     ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90'
                                     : 'cursor-not-allowed bg-brand-line text-brand-muted'
