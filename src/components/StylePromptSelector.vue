@@ -1,6 +1,6 @@
 <template>
     <div class="flex h-full flex-col gap-3">
-        <div class="grid grid-cols-2 rounded-lg border border-brand-line bg-brand-line/60 p-1">
+        <div class="grid grid-cols-3 rounded-lg border border-brand-line bg-brand-line/60 p-1">
             <button
                 type="button"
                 @click="activeTab = 'style'"
@@ -10,6 +10,16 @@
                 ]"
             >
                 创作模板
+            </button>
+            <button
+                type="button"
+                @click="activeTab = 'pool'"
+                :class="[
+                    'rounded-md px-3 py-2 text-sm font-semibold transition',
+                    activeTab === 'pool' ? 'bg-brand-accent text-brand-surface' : 'text-brand-muted hover:text-brand-ink'
+                ]"
+            >
+                Prompt Pool
             </button>
             <button
                 type="button"
@@ -24,6 +34,9 @@
         </div>
 
         <div v-if="activeTab === 'style'" class="flex flex-1 flex-col gap-3">
+            <div class="rounded-lg border border-brand-line bg-brand-surface px-3 py-2 text-xs leading-5 text-brand-muted">
+                模板是一整套生成方案。选择模板会替换当前“自定义补充”，适合从一个完整方向开始。
+            </div>
             <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <input v-model="searchQuery" type="search" placeholder="搜索提示词、分类或标签" class="wb-input w-full" />
                 <button type="button" class="wb-secondary min-h-10 px-3 text-xs" @click="$emit('new-template')">新建模板</button>
@@ -115,6 +128,65 @@
             </div>
         </div>
 
+        <div v-else-if="activeTab === 'pool'" class="grid flex-1 gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <aside class="rounded-lg border border-brand-line bg-white p-3">
+                <p class="wb-label text-brand-accent">Prompt pool</p>
+                <p class="mt-1 text-sm font-semibold text-brand-ink">提示块池</p>
+                <p class="mt-1 text-xs leading-5 text-brand-muted">Prompt Pool 是成段灵感池，可一次选择多个提示块追加到自定义补充；不会和底部短词组混在一起。</p>
+                <div class="mt-3 space-y-1">
+                    <button
+                        v-for="group in promptPoolGroups"
+                        :key="group.id"
+                        type="button"
+                        @click="activePoolGroupId = group.id"
+                        :class="[
+                            'w-full rounded-md px-2.5 py-2 text-left text-xs font-semibold transition',
+                            activePoolGroupId === group.id ? 'bg-brand-ink text-brand-surface' : 'bg-brand-surface text-brand-muted hover:text-brand-ink'
+                        ]"
+                    >
+                        {{ group.title }}
+                    </button>
+                </div>
+            </aside>
+
+            <div class="min-w-0 rounded-lg border border-brand-line bg-white p-3">
+                <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-brand-ink">{{ activePoolGroup?.title || '提示块池' }}</h3>
+                        <p class="mt-1 text-xs text-brand-muted">{{ activePoolGroup?.description || '选择一个分类后开始组合。' }}</p>
+                    </div>
+                    <button type="button" class="wb-secondary min-h-9 px-3 text-xs" :disabled="!poolSelection.length" @click="applyPoolSelection">
+                        追加 {{ poolSelection.length || '' }} 个提示块
+                    </button>
+                </div>
+
+                <div v-if="activePoolGroup" class="grid max-h-[470px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                    <button
+                        v-for="item in activePoolGroup.items"
+                        :key="item.id"
+                        type="button"
+                        @click="togglePoolItem(item.id)"
+                        :class="[
+                            'rounded-lg border p-3 text-left transition',
+                            poolSelection.includes(item.id) ? 'border-brand-accent bg-brand-accent/10' : 'border-brand-line bg-brand-surface hover:border-brand-muted'
+                        ]"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-brand-ink">{{ item.title }}</p>
+                                <p class="mt-1 text-xs leading-5 text-brand-muted">{{ item.description }}</p>
+                            </div>
+                            <span :class="['mt-0.5 h-4 w-4 shrink-0 rounded border', poolSelection.includes(item.id) ? 'border-brand-accent bg-brand-accent' : 'border-brand-line bg-white']" />
+                        </div>
+                        <div v-if="item.tags?.length" class="mt-2 flex flex-wrap gap-1.5">
+                            <span v-for="tag in item.tags" :key="tag" class="rounded bg-white px-1.5 py-0.5 text-[11px] text-brand-muted">{{ tag }}</span>
+                        </div>
+                        <p class="mt-2 line-clamp-3 text-xs leading-5 text-brand-muted">{{ item.prompt }}</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div v-else class="flex flex-1 flex-col gap-2">
             <label class="wb-label">补充提示词</label>
 
@@ -125,7 +197,7 @@
                 class="wb-input min-h-[180px] w-full flex-1 resize-none py-3 leading-6"
             />
 
-            <p class="text-xs text-brand-muted">这段内容会作为主提示词的补充。选择创作模板和填写自定义补充会互相替换。</p>
+            <p class="text-xs leading-5 text-brand-muted">这段内容会作为主提示词的补充。短词组适合补细节，Prompt Pool 适合追加成段 UI、场景或风格描述。</p>
 
             <PromptPhraseBuilder
                 :groups="phraseGroups"
@@ -144,7 +216,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { StyleTemplate } from '../types'
+import type { PromptPoolGroup, StyleTemplate } from '../types'
 import PromptPhraseBuilder from './PromptPhraseBuilder.vue'
 import type { PromptPhrase, PromptPhraseGroup } from '../data/promptPhrases'
 
@@ -152,6 +224,7 @@ const props = defineProps<{
     selectedStyle: string
     customPrompt: string
     templates: StyleTemplate[]
+    promptPoolGroups: PromptPoolGroup[]
     phraseGroups: PromptPhraseGroup[]
 }>()
 
@@ -167,9 +240,11 @@ const emit = defineEmits<{
     'edit-phrase-group': [group: PromptPhraseGroup]
 }>()
 
-const activeTab = ref<'style' | 'custom'>('style')
+const activeTab = ref<'style' | 'pool' | 'custom'>('style')
 const searchQuery = ref('')
 const activeCategory = ref('全部')
+const activePoolGroupId = ref(props.promptPoolGroups[0]?.id || '')
+const poolSelection = ref<string[]>([])
 
 const categories = computed(() => ['全部', ...Array.from(new Set(props.templates.map(template => template.category || '其他')))])
 
@@ -201,6 +276,32 @@ const modeLabel = (mode: StyleTemplate['mode']) => {
     return '通用'
 }
 
+const activePoolGroup = computed(() =>
+    props.promptPoolGroups.find(group => group.id === activePoolGroupId.value) || props.promptPoolGroups[0] || null
+)
+
+const poolItemsById = computed(() => new Map(
+    props.promptPoolGroups.flatMap(group => group.items).map(item => [item.id, item])
+))
+
+const togglePoolItem = (itemId: string) => {
+    poolSelection.value = poolSelection.value.includes(itemId)
+        ? poolSelection.value.filter(id => id !== itemId)
+        : [...poolSelection.value, itemId]
+}
+
+const applyPoolSelection = () => {
+    const prompts = poolSelection.value
+        .map(id => poolItemsById.value.get(id)?.prompt || '')
+        .filter(Boolean)
+
+    if (!prompts.length) return
+
+    const current = props.customPrompt.trim()
+    updateCustomPrompt(current ? `${current}\n${prompts.join('\n')}` : prompts.join('\n'))
+    poolSelection.value = []
+}
+
 // 监听选择状态，自动切换标签页
 watch(
     () => props.selectedStyle,
@@ -214,10 +315,21 @@ watch(
 watch(
     () => props.customPrompt,
     newValue => {
-        if (newValue && activeTab.value !== 'custom') {
+        if (newValue && activeTab.value !== 'custom' && activeTab.value !== 'pool') {
             activeTab.value = 'custom'
         }
     }
+)
+
+watch(
+    () => props.promptPoolGroups,
+    groups => {
+        if (!groups.some(group => group.id === activePoolGroupId.value)) {
+            activePoolGroupId.value = groups[0]?.id || ''
+            poolSelection.value = []
+        }
+    },
+    { deep: true }
 )
 
 const selectStyle = (styleId: string) => {

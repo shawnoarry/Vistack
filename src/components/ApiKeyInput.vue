@@ -2,15 +2,18 @@
     <div class="rounded-lg border border-brand-line bg-white p-4 shadow-sm shadow-black/5">
         <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-                <h3 class="text-sm font-semibold text-brand-ink">API 配置</h3>
-                <p class="mt-1 text-xs text-brand-muted">可使用 OpenRouter，也可填写 Grsai 或其他兼容端点。</p>
+                <h3 class="text-sm font-semibold text-brand-ink">生图 API 配置</h3>
+                <p class="mt-1 text-xs text-brand-muted">这里仅用于生成图片和获取模型列表。提示词助手使用下方独立配置，不会和生图 Key / URL 合并。</p>
             </div>
-            <span v-if="modelValue" class="w-fit rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">密钥已保存</span>
+            <div class="flex flex-wrap gap-2">
+                <span class="w-fit rounded-md border border-brand-line bg-brand-surface px-2 py-1 text-xs font-medium text-brand-muted">生图专用</span>
+                <span v-if="modelValue" class="w-fit rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">密钥已保存</span>
+            </div>
         </div>
 
         <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px]">
             <div>
-                <label class="mb-1 block wb-label">API 密钥</label>
+                <label class="mb-1 block wb-label">生图 API 密钥</label>
                 <div class="flex gap-2">
                     <input
                         type="password"
@@ -31,20 +34,20 @@
                 </div>
                 <div class="mt-1 flex flex-wrap items-center justify-between gap-2">
                     <p class="text-xs text-brand-muted">
-                        默认 OpenRouter，其他供应商请同时修改端点。
+                        生图 Key 只保存在当前浏览器本地，不会提交到仓库。
                     </p>
                     <p v-if="modelValue" class="text-xs text-brand-accent">已自动保存到本地</p>
                 </div>
             </div>
 
             <div>
-                <label class="mb-1 block wb-label">API 端点</label>
+                <label class="mb-1 block wb-label">生图 API 端点</label>
                 <div class="flex gap-2">
                     <input
                         type="text"
                         :value="endpoint"
                         @input="$emit('update:endpoint', ($event.target as HTMLInputElement).value)"
-                        placeholder="例如 https://grsai.dakka.com.cn/v1/api/generate"
+                        placeholder="例如 https://duckcu.tech/v1 或 https://grsai.dakka.com.cn/v1/api/generate"
                         class="wb-input min-w-0 flex-1"
                     />
                     <button
@@ -57,10 +60,14 @@
                         默认
                     </button>
                 </div>
-                <p class="mt-1 text-xs text-brand-muted">Grsai 生成接口、OpenAI Images、OpenRouter Chat 均会自动识别。</p>
+                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                    <span class="rounded-md border border-brand-line bg-brand-surface px-2 py-0.5 font-semibold text-brand-muted">{{ endpointModeLabel }}</span>
+                    <span class="text-brand-muted">Base URL 会自动补全后缀；完整接口会保持原样。</span>
+                </div>
             </div>
 
             <div>
+                <label class="mb-1 block wb-label">模型列表</label>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <button
                         type="button"
@@ -82,7 +89,7 @@
                 <p v-if="modelError" class="mt-2 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">{{ modelError }}</p>
 
                 <div class="mt-3">
-                    <label class="mb-1 block wb-label">模型</label>
+                    <label class="mb-1 block wb-label">当前生图模型</label>
                     <select
                         :value="model"
                         @change="handleModelChange"
@@ -100,10 +107,17 @@
         <div class="mt-4 rounded-lg border border-brand-line bg-brand-surface p-3">
             <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h4 class="text-sm font-semibold text-brand-ink">提示词助手 API</h4>
-                    <p class="mt-1 text-xs text-brand-muted">可单独使用低费率文本模型。端点可只填域名，调用时会自动补全 /v1/chat/completions。</p>
+                    <h4 class="text-sm font-semibold text-brand-ink">提示词助手 API（独立，可选）</h4>
+                    <p class="mt-1 text-xs text-brand-muted">只影响底部“AI 优化”按钮。它可以使用另一套 Key / URL / 文本模型，不影响正常生图。</p>
                 </div>
-                <span v-if="promptAssistantApiKey" class="w-fit rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">助手已配置</span>
+                <div class="flex flex-wrap gap-2">
+                    <span class="w-fit rounded-md border border-brand-line bg-white px-2 py-1 text-xs font-medium text-brand-muted">不参与生图请求</span>
+                    <span v-if="promptAssistantApiKey" class="w-fit rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">助手已配置</span>
+                </div>
+            </div>
+
+            <div class="mb-3 rounded-md border border-brand-line bg-white px-3 py-2 text-xs leading-5 text-brand-muted">
+                普通生图不需要依赖这里。助手端点填 Base URL 时会自动补全 /chat/completions。
             </div>
 
             <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_260px]">
@@ -123,7 +137,7 @@
                         type="text"
                         :value="promptAssistantEndpoint"
                         @input="$emit('update:promptAssistantEndpoint', ($event.target as HTMLInputElement).value)"
-                        placeholder="https://your-new-api.example.com"
+                        placeholder="https://duckcu.tech/v1 或完整 chat/completions 地址"
                         class="wb-input w-full"
                     />
                 </label>
@@ -187,6 +201,16 @@ const resetEndpoint = () => {
 
 const isCustomEndpoint = computed(() => endpoint.value !== '' && endpoint.value !== DEFAULT_API_ENDPOINT)
 const canFetchModels = computed(() => modelValue.value.trim() !== '' && endpoint.value.trim() !== '')
+const endpointModeLabel = computed(() => {
+    const value = endpoint.value.trim().toLowerCase()
+    if (!value) return '使用默认端点'
+    if (value.includes('grsai') || value.endsWith('/api/generate') || value.endsWith('/v1/api/generate')) return 'Grsai 自动适配'
+    if (value.includes('/draw/')) return 'Draw 任务接口'
+    if (value.endsWith('/chat/completions')) return 'Chat Completions'
+    if (value.endsWith('/images/generations')) return 'Images Generations'
+    if (value.endsWith('/v1')) return 'Base URL'
+    return '自动识别'
+})
 const optionList = computed<ModelOption[]>(() => {
     if (models.value.length) {
         return models.value

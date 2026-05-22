@@ -1,12 +1,15 @@
 # Dependencies
 node_modules/
+.vite-cache/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+preview.*.log
 
 # Build outputs
 dist/
 build/
+.vite-build-check/
 
 # Environment variables
 .env.local

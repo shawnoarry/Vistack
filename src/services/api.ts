@@ -1,5 +1,13 @@
 import type { ApiModel, GenerateRequest, GenerateResponse, ModelListResponse, PromptAssistantRequest, PromptAssistantResponse } from '../types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from '../config/api'
+import {
+    getEndpointPath,
+    isGrsaiEndpoint,
+    resolveChatCompletionsEndpoint,
+    resolveImageGenerationEndpoint,
+    resolveModelEndpointCandidates,
+    resolveSiblingEndpoint
+} from '../utils/apiEndpoint'
 
 type ApiProvider = 'openai-chat' | 'openai-image' | 'grsai' | 'grsai-draw'
 
@@ -137,7 +145,7 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
         try {
             console.log(`Attempting image generation (${attempt}/${maxRetries})...`)
 
-            const profile = getApiProfile(request.endpoint)
+            const profile = getApiProfile(request.endpoint, request.model)
             const response = await generateWithProfile(profile, { ...request, count: targetCount - collectedUrls.length })
 
             if (response.imageUrls.length > 0) {
@@ -222,7 +230,7 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
         temperature: 0.4
     }
 
-    const data = await postJson(request.endpoint, request.apikey, payload)
+    const data = await postJson(resolveChatCompletionsEndpoint(request.endpoint), request.apikey, payload)
     const content = extractTextContent(data).trim()
 
     if (!content) {
@@ -516,8 +524,8 @@ function buildHeaders(apikey: string): Record<string, string> {
     }
 }
 
-function getApiProfile(endpoint?: string): ApiProfile {
-    const apiEndpoint = endpoint?.trim() || DEFAULT_API_ENDPOINT
+function getApiProfile(endpoint?: string, model?: string): ApiProfile {
+    const apiEndpoint = resolveImageGenerationEndpoint(endpoint?.trim() || DEFAULT_API_ENDPOINT, model)
     const path = getEndpointPath(apiEndpoint)
     const isGrsai = isGrsaiEndpoint(apiEndpoint)
 
@@ -544,93 +552,8 @@ function getApiProvider(path: string): ApiProvider {
     return 'openai-chat'
 }
 
-function getEndpointPath(endpoint: string): string {
-    try {
-        return normalizePath(new URL(endpoint).pathname)
-    } catch {
-        return normalizePath(endpoint)
-    }
-}
-
-function isGrsaiEndpoint(endpoint: string): boolean {
-    try {
-        return new URL(endpoint).hostname.toLowerCase().includes('grsai')
-    } catch {
-        return endpoint.toLowerCase().includes('grsai')
-    }
-}
-
 function resolveModelEndpoints(endpoint: string): string[] {
-    const candidates = new Set<string>()
-
-    for (const candidate of [
-        resolveModelsEndpoint(endpoint),
-        resolveSiblingEndpoint(endpoint, 'models'),
-        resolveSiblingEndpoint(endpoint, 'model'),
-        resolveSiblingEndpoint(endpoint, 'models/list'),
-        resolveSiblingEndpoint(endpoint, 'model/list'),
-        resolveSiblingEndpoint(endpoint, 'list/models'),
-        resolveSiblingEndpoint(endpoint, 'list/model')
-    ]) {
-        if (candidate) {
-            candidates.add(candidate)
-        }
-    }
-
-    return [...candidates]
-}
-
-function resolveModelsEndpoint(endpoint: string): string {
-    try {
-        const url = new URL(endpoint)
-        const segments = url.pathname.split('/').filter(Boolean)
-
-        if (segments.length === 0) {
-            url.pathname = '/models'
-            return url.toString()
-        }
-
-        const lastSegment = segments[segments.length - 1]
-
-        if (lastSegment === 'models') {
-            return url.toString()
-        }
-
-        if (lastSegment === 'completions' || lastSegment === 'complete' || lastSegment === 'generate' || lastSegment === 'generations') {
-            segments.pop()
-            const secondLast = segments[segments.length - 1]
-
-            if (secondLast === 'chat' || secondLast === 'images') {
-                segments[segments.length - 1] = 'models'
-            } else {
-                segments.push('models')
-            }
-        } else {
-            segments.push('models')
-        }
-
-        url.pathname = '/' + segments.join('/')
-        return url.toString()
-    } catch (error) {
-        console.warn('Unable to resolve model endpoint; using fallback rule:', error)
-        return endpoint.replace(/\/$/, '') + '/models'
-    }
-}
-
-function resolveSiblingEndpoint(endpoint: string, siblingPath: string): string | null {
-    try {
-        const url = new URL(endpoint)
-        const segments = url.pathname.split('/').filter(Boolean)
-
-        if (segments.length > 0 && segments[segments.length - 1] !== 'models') {
-            segments.pop()
-        }
-
-        url.pathname = '/' + [...segments, ...siblingPath.split('/')].join('/')
-        return url.toString()
-    } catch {
-        return null
-    }
+    return resolveModelEndpointCandidates(endpoint)
 }
 
 function resolveGrsaiResultEndpoint(endpoint: string): string {
@@ -882,10 +805,6 @@ function summarizeResponse(value: unknown): string {
 
 function delay(ms: number): Promise<void> {
     return new Promise(resolve => window.setTimeout(resolve, ms))
-}
-
-function normalizePath(pathname: string): string {
-    return pathname.replace(/\/+$/, '').toLowerCase()
 }
 
 function normalizeImageCount(count?: number): number {

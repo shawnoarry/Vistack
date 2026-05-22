@@ -61,6 +61,21 @@ export interface StyleTemplate {
     source?: 'builtin' | 'custom'
 }
 
+export interface PromptPoolItem {
+    id: string
+    title: string
+    prompt: string
+    description: string
+    tags?: string[]
+}
+
+export interface PromptPoolGroup {
+    id: string
+    title: string
+    description: string
+    items: PromptPoolItem[]
+}
+
 export type ReferenceImageRole = 'character' | 'outfit' | 'background' | 'product' | 'style' | 'other'
 
 export interface ReferenceImageMeta {
@@ -97,4 +112,21 @@ export interface GenerationTask {
     images: string[]
     error?: string
     recipe: GenerationRecipe
+}
+
+export type WorkspaceMode = 'quick' | 'canvas'
+
+export type CanvasWorkbenchItemSource = 'result' | 'history' | 'reference' | 'manual'
+
+export interface CanvasWorkbenchItem {
+    id: string
+    image: string
+    title: string
+    source: CanvasWorkbenchItemSource
+    x: number
+    y: number
+    width: number
+    height: number
+    createdAt: number
+    prompt?: string
 }

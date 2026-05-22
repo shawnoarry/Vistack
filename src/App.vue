@@ -1,6 +1,6 @@
 <template>
-    <div class="min-h-screen bg-brand-ink text-brand-ink">
-        <header class="sticky top-0 z-40 border-b border-brand-line bg-brand-surface/95 backdrop-blur">
+    <div class="min-h-screen bg-brand-surface text-brand-ink">
+        <header class="sticky top-0 z-40 border-b border-brand-line bg-white/95 shadow-sm shadow-black/5 backdrop-blur">
             <div class="wb-shell flex flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
                     <p class="wb-label text-brand-accent">Multi-model visual studio</p>
@@ -58,7 +58,7 @@
             </div>
         </header>
 
-        <section v-if="showApiSettings" class="border-b border-brand-line bg-brand-surface">
+        <section v-if="showApiSettings" class="border-b border-brand-line bg-white">
             <div class="wb-shell py-4">
                 <ApiKeyInput
                     v-model="apiKey"
@@ -76,14 +76,14 @@
             </div>
         </section>
 
-        <main v-if="currentView === 'studio'" class="wb-shell grid gap-4 py-4 lg:pb-[260px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
+        <main v-if="currentView === 'studio'" class="wb-shell grid items-start gap-4 py-4 lg:pb-[260px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
             <aside class="space-y-4">
                 <section class="wb-panel bg-white">
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <div>
                             <p class="wb-label text-brand-accent">Reference ingredients</p>
                             <h2 class="mt-1 text-base font-semibold text-brand-ink">参考图定义</h2>
-                            <p class="mt-1 text-xs text-brand-muted">先放入人物、主体、服装或背景，再在底部描述要生成的画面。</p>
+                            <p class="mt-1 text-xs leading-5 text-brand-muted">上传参考图后先标注用途。这里决定模型把每张图当人物、服装、背景、产品还是风格参考。</p>
                         </div>
                         <span class="wb-chip">{{ selectedImages.length }} 张</span>
                     </div>
@@ -109,7 +109,7 @@
                             </div>
                         </div>
                         <p class="mt-2 text-xs leading-5 text-brand-muted">
-                            请确认每张图的类型和名称是否对上。多张图是同一个人时，类型都选“人物/角色”，并填写同一个名称。
+                            请确认每张图的用途和名称是否对上。多张图是同一个人时，类型都选“人物/角色”，并填写同一个名称；服装、背景、产品请选对应类型。
                         </p>
                     </div>
 
@@ -170,48 +170,98 @@
                 </section>
             </aside>
 
-            <section class="min-w-0 rounded-lg border border-brand-line bg-white p-4 shadow-sm shadow-black/5">
-                <div class="mb-4 flex flex-col gap-3 border-b border-brand-line pb-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 class="text-base font-semibold text-brand-ink">生成结果</h2>
-                        <p class="mt-1 text-sm text-brand-muted">最新结果会显示在这里，可下载，也可推送为下一轮参考图。</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2 text-xs">
-                        <span class="wb-chip">{{ displayResults.length }} outputs</span>
-                        <span v-if="activeGenerationTasks.length" class="rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-brand-accent">{{ activeGenerationTasks.length }} 个任务生成中</span>
-                        <span v-else class="wb-chip">待命</span>
+            <section class="min-w-0 space-y-3">
+                <div class="wb-panel p-2">
+                    <div class="grid grid-cols-2 gap-1 rounded-md bg-brand-line/60 p-1 text-sm font-semibold" role="tablist" aria-label="工作区模式">
+                        <button
+                            type="button"
+                            :aria-pressed="workspaceMode === 'quick'"
+                            @click="workspaceMode = 'quick'"
+                            :class="[
+                                'rounded-md px-3 py-2 transition',
+                                workspaceMode === 'quick' ? 'bg-brand-ink text-brand-surface shadow-sm' : 'text-brand-muted hover:bg-white hover:text-brand-ink'
+                            ]"
+                        >
+                            快速生成
+                        </button>
+                        <button
+                            type="button"
+                            :aria-pressed="workspaceMode === 'canvas'"
+                            @click="workspaceMode = 'canvas'"
+                            :class="[
+                                'rounded-md px-3 py-2 transition',
+                                workspaceMode === 'canvas' ? 'bg-brand-ink text-brand-surface shadow-sm' : 'text-brand-muted hover:bg-white hover:text-brand-ink'
+                            ]"
+                        >
+                            画布工作台
+                            <span v-if="canvasItems.length" class="ml-1 rounded bg-white/15 px-1.5 py-0.5 text-[11px]">{{ canvasItems.length }}</span>
+                        </button>
                     </div>
                 </div>
-                <div v-if="selectedImages.length" class="mb-4 rounded-lg border border-brand-line bg-brand-surface p-3">
-                    <div class="mb-2 flex items-center justify-between gap-3">
-                        <span class="wb-label">Active ingredients</span>
-                        <span class="text-xs text-brand-muted">{{ selectedImages.length }} reference images</span>
-                    </div>
-                    <div class="flex gap-2 overflow-x-auto pb-1">
-                        <div
-                            v-for="(image, index) in selectedImages"
-                            :key="`active-${image}-${index}`"
-                            class="w-24 shrink-0"
-                        >
-                            <div class="aspect-square overflow-hidden rounded-md border border-brand-line bg-white">
-                                <img :src="image" :alt="`参考图 ${index + 1}`" class="h-full w-full object-cover" />
-                            </div>
-                            <p class="mt-1 truncate text-xs font-semibold text-brand-ink">{{ referenceImageMetadata[index]?.label || referenceImageLabels[index] || `角色${index + 1}` }}</p>
-                            <p class="truncate text-[11px] text-brand-muted">{{ roleLabel(referenceImageMetadata[index]?.role || 'character') }}</p>
+
+                <div v-if="workspaceMode === 'quick'" class="wb-panel p-4">
+                    <div class="mb-4 flex flex-col gap-3 border-b border-brand-line pb-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 class="text-base font-semibold text-brand-ink">生成结果</h2>
+                            <p class="mt-1 text-sm text-brand-muted">最新结果和多任务队列会显示在这里。完成后的任务可恢复预览、复用提示词、作参考图或加入画布。</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span class="wb-chip">{{ displayResults.length }} outputs</span>
+                            <span v-if="activeGenerationTasks.length" class="rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-brand-accent">{{ activeGenerationTasks.length }} 个任务生成中</span>
+                            <span v-else class="wb-chip">待命</span>
+                            <button v-if="displayResults.length" type="button" class="wb-secondary min-h-7 px-2 text-xs" @click="addDisplayResultsToCanvas">加入画布</button>
                         </div>
                     </div>
+                    <div v-if="selectedImages.length" class="mb-4 rounded-lg border border-brand-line bg-brand-surface p-3">
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <span class="wb-label">当前会发送给模型的参考图</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-brand-muted">{{ selectedImages.length }} reference images</span>
+                                <button type="button" class="rounded-md border border-brand-line bg-white px-2 py-1 text-xs font-semibold text-brand-muted transition hover:text-brand-accent" @click="addReferencesToCanvas">
+                                    加入画布
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 overflow-x-auto pb-1">
+                            <div
+                                v-for="(image, index) in selectedImages"
+                                :key="`active-${image}-${index}`"
+                                class="w-24 shrink-0"
+                            >
+                                <div class="aspect-square overflow-hidden rounded-md border border-brand-line bg-white">
+                                    <img :src="image" :alt="`参考图 ${index + 1}`" class="h-full w-full object-cover" />
+                                </div>
+                                <p class="mt-1 truncate text-xs font-semibold text-brand-ink">{{ referenceImageMetadata[index]?.label || referenceImageLabels[index] || `角色${index + 1}` }}</p>
+                                <p class="truncate text-[11px] text-brand-muted">{{ roleLabel(referenceImageMetadata[index]?.role || 'character') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <ResultDisplay
+                        :results="displayResults"
+                        :tasks="generationTasks"
+                        :loading="displayLoading"
+                        :error="displayError"
+                        :can-push="canPushDisplayResult"
+                        :can-reuse="Boolean(displayResults.length)"
+                        @restore-task="restoreTaskResult"
+                        @download="handleDownloadResult"
+                        @push="handlePushDisplayResult"
+                        @reuse="handleReuseCurrentRecipe"
+                        @reuse-task="reuseTaskPrompt"
+                        @push-task="pushTaskImages"
+                        @canvas-task="addTaskToCanvas"
+                    />
                 </div>
-                <ResultDisplay
-                    :results="displayResults"
-                    :tasks="generationTasks"
-                    :loading="displayLoading"
-                    :error="displayError"
-                    :can-push="canPushDisplayResult"
-                    :can-reuse="Boolean(displayResults.length)"
-                    @restore-task="restoreTaskResult"
+                <CanvasWorkbench
+                    v-else
+                    :items="canvasItems"
+                    @update="updateCanvasItems"
+                    @remove="removeCanvasItem"
+                    @clear="clearCanvasItems"
+                    @use-reference="pushImageToUpload"
+                    @use-all-references="pushCanvasImagesToUpload"
                     @download="handleDownloadResult"
-                    @push="handlePushDisplayResult"
-                    @reuse="handleReuseCurrentRecipe"
+                    @reuse-prompt="reuseCanvasPrompt"
                 />
             </section>
 
@@ -310,6 +360,7 @@
                                 <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="restoreHistoryItem(item)">查看</button>
                                 <button type="button" class="wb-primary min-h-8 px-2 text-xs" @click="reuseHistoryRecipe(item)">一键复用</button>
                                 <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushHistoryImages(item)">结果作参考</button>
+                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="addHistoryItemToCanvas(item)">加入画布</button>
                                 <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="reuseHistoryPrompt(item)">仅提示词</button>
                                 <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="toggleHistoryFavorite(item)">{{ item.favorite ? '取消收藏' : '收藏' }}</button>
                             </div>
@@ -324,7 +375,7 @@
 
         <section
             v-if="currentView === 'studio'"
-            class="border-t border-brand-line bg-brand-surface/95 shadow-2xl shadow-black/25 backdrop-blur lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-30"
+            class="border-t border-brand-line bg-white/95 shadow-[0_-18px_45px_rgba(25,25,25,0.10)] backdrop-blur lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-30"
         >
             <div class="wb-shell py-3">
                 <div v-if="showPromptTools" class="absolute bottom-[calc(100%+10px)] left-1/2 z-40 w-[min(1040px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20">
@@ -346,7 +397,7 @@
                         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                             <div>
                                 <span class="wb-label">Prompt box</span>
-                                <p class="mt-1 text-xs text-brand-muted">底部固定输入器。参考图语义、合影助手和模板补充会自动拼入最终提示词。</p>
+                                <p class="mt-1 text-xs text-brand-muted">这里写你要生成的画面。若左侧有参考图，“使用参考图生成”会把参考图用途说明一起提交。</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 <button
@@ -429,6 +480,17 @@
                             </div>
                         </div>
 
+                        <div
+                            :class="[
+                                'rounded-lg border px-3 py-2 text-xs leading-5',
+                                selectedImages.length
+                                    ? 'border-brand-ink/15 bg-brand-ink text-brand-surface'
+                                    : 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
+                            ]"
+                        >
+                            当前提交方式：{{ selectedImages.length ? `参考图生成，会发送 ${selectedImages.length} 张参考图` : '无参考图生成，只发送提示词' }}
+                        </div>
+
                         <div class="grid grid-cols-3 gap-2">
                             <label class="min-w-0">
                                 <span class="sr-only">生成张数</span>
@@ -460,7 +522,7 @@
                             type="button"
                             @click="handleGenerate"
                             :disabled="!canGenerate"
-                            :title="selectedImages.length ? '使用当前参考图生成' : '先上传参考图后再使用此模式'"
+                            :title="selectedImages.length ? '使用当前参考图和提示词生成' : '左侧上传参考图后此按钮会启用'"
                             :class="[
                                 'inline-flex min-h-12 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
                                 canGenerate
@@ -468,7 +530,7 @@
                                     : 'cursor-not-allowed bg-brand-line text-brand-muted'
                             ]"
                         >
-                            {{ selectedImages.length ? (isLoading ? '参考图生成中...' : '使用参考图生成') : '先上传参考图' }}
+                            {{ selectedImages.length ? (isLoading ? '参考图生成中...' : `使用 ${selectedImages.length} 张参考图生成`) : '先上传参考图' }}
                         </button>
                         <button
                             type="button"
@@ -482,7 +544,7 @@
                                     : 'cursor-not-allowed bg-brand-line text-brand-muted'
                             ]"
                         >
-                            {{ selectedImages.length ? '请先移除参考图' : (isTextToImageLoading ? '无参考图生成中...' : '无参考图生成') }}
+                            {{ selectedImages.length ? '移除参考图后可用' : (isTextToImageLoading ? '无参考图生成中...' : '无参考图生成') }}
                         </button>
                     </div>
                 </div>
@@ -504,6 +566,7 @@
                         v-model:selectedStyle="selectedStyle"
                         v-model:customPrompt="customPrompt"
                         :templates="availableStyleTemplates"
+                        :prompt-pool-groups="promptPoolGroups"
                         :phrase-groups="mergedPromptPhraseGroups"
                         @new-template="openBlankTemplateEditor"
                         @edit-template="openTemplateEditor"
@@ -804,6 +867,7 @@
                                     <div class="flex flex-wrap gap-2">
                                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="openHistoryPreview(asset.item, asset.image)">详情</button>
                                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushImageToUpload(asset.image)">作参考</button>
+                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="addHistoryItemToCanvas(asset.item, asset.image)">加入画布</button>
                                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs text-brand-accent" @click="deleteHistoryImageAt(asset.item, asset.index)">删除</button>
                                     </div>
                                     <select
@@ -843,6 +907,7 @@
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="openOriginalImage(historyPreviewImage)">原图查看</button>
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="handleDownloadResult(historyPreviewImage)">下载</button>
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="pushHistoryImages(historyPreviewItem)">结果作参考</button>
+                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="addHistoryItemToCanvas(historyPreviewItem, historyPreviewImage)">加入画布</button>
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="reuseHistoryRecipe(historyPreviewItem)">一键复用</button>
                         <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryImageAt(historyPreviewItem, historyPreviewItem.images.indexOf(historyPreviewImage))">删除当前图</button>
                         <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryItem(historyPreviewItem)">删除整组</button>
@@ -925,12 +990,16 @@ import ApiKeyInput from './components/ApiKeyInput.vue'
 import ImageUpload from './components/ImageUpload.vue'
 import StylePromptSelector from './components/StylePromptSelector.vue'
 import ResultDisplay from './components/ResultDisplay.vue'
+import CanvasWorkbench from './components/CanvasWorkbench.vue'
 import Footer from './components/Footer.vue'
 import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
 import { fetchModels, generateImage, improvePrompt } from './services/api'
 import { styleTemplates } from './data/templates'
+import { promptPoolGroups } from './data/promptPool'
 import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
 import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
+import { resolveChatCompletionsEndpoint } from './utils/apiEndpoint'
+import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
 import {
     deleteGenerationHistoryItem,
     deleteStoredImage,
@@ -941,7 +1010,7 @@ import {
     type GenerationHistoryItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiModel, GenerateRequest, GenerationRecipe, GenerationTask, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate } from './types'
+import type { ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationRecipe, GenerationTask, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 const apiKey = ref('')
@@ -964,6 +1033,8 @@ const latestResultSource = ref<'text' | 'image' | null>(null)
 const latestGenerationRecipe = ref<GenerationRecipe | null>(null)
 const generationTasks = ref<GenerationTask[]>([])
 const currentView = ref<'studio' | 'assets'>('studio')
+const workspaceMode = ref<WorkspaceMode>('quick')
+const canvasItems = ref<CanvasWorkbenchItem[]>([])
 const showPromptTools = ref(false)
 const showTemplatePanel = ref(false)
 const showApiSettings = ref(false)
@@ -1063,6 +1134,7 @@ onMounted(() => {
     customPromptPhraseGroups.value = LocalStorage.getCustomPromptPhraseGroups()
     promptPhraseOverrides.value = LocalStorage.getPromptPhraseOverrides()
     customStyleTemplates.value = LocalStorage.getCustomStyleTemplates()
+    canvasItems.value = getCanvasWorkbenchItems()
 
     if (savedApiKey) {
         apiKey.value = savedApiKey
@@ -1396,6 +1468,18 @@ const normalizeReferenceRecipeMeta = (meta: ReferenceImageMeta | undefined, inde
     note: meta?.note?.trim() || ''
 })
 
+const getReferenceMetaByImage = (image: string): ReferenceImageMeta | undefined => {
+    const index = selectedImages.value.findIndex(existing => existing === image)
+    if (index < 0) return undefined
+    return normalizeReferenceMeta(referenceImageMetadata.value[index], index)
+}
+
+const getReferenceLabelByImage = (image: string): string | undefined => {
+    const index = selectedImages.value.findIndex(existing => existing === image)
+    if (index < 0) return undefined
+    return referenceImageLabels.value[index] || normalizeReferenceMeta(referenceImageMetadata.value[index], index).label
+}
+
 const buildGenerationRecipe = (compiledPrompt: string): GenerationRecipe => ({
     mainPrompt: textToImagePrompt.value.trim(),
     compiledPrompt,
@@ -1463,10 +1547,168 @@ const syncGenerationLoadingState = () => {
 
 const pushImageToUpload = (image: string | null) => {
     if (!image) return
-    const filtered = selectedImages.value.filter(existing => existing !== image)
-    selectedImages.value = [image, ...filtered]
-    referenceImageLabels.value = selectedImages.value.map((_, index) => referenceImageLabels.value[index] || `角色${index + 1}`)
-    referenceImageMetadata.value = selectedImages.value.map((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index))
+    pushImagesToUpload([image])
+}
+
+const pushImagesToUpload = (images: string[]) => {
+    const currentMetaByImage = new Map(selectedImages.value.map((image, index) => [image, normalizeReferenceMeta(referenceImageMetadata.value[index], index)]))
+    const currentLabelByImage = new Map(selectedImages.value.map((image, index) => [image, referenceImageLabels.value[index] || currentMetaByImage.get(image)?.label || `角色${index + 1}`]))
+    const nextImages = [...images.filter(Boolean), ...selectedImages.value]
+        .filter((image, index, list) => list.indexOf(image) === index)
+
+    selectedImages.value = nextImages
+    referenceImageLabels.value = nextImages.map((image, index) => currentLabelByImage.get(image) || `角色${index + 1}`)
+    referenceImageMetadata.value = nextImages.map((image, index) => currentMetaByImage.get(image) || normalizeReferenceRecipeMeta(undefined, index))
+}
+
+const updateCanvasItems = (items: CanvasWorkbenchItem[]) => {
+    canvasItems.value = items
+    saveCanvasWorkbenchItems(items)
+}
+
+const createCanvasItem = (
+    image: string,
+    source: CanvasWorkbenchItemSource,
+    title: string,
+    prompt?: string,
+    offset = canvasItems.value.length
+): CanvasWorkbenchItem => {
+    const createdAt = Date.now()
+
+    return {
+        id: `canvas-${createdAt}-${Math.random().toString(36).slice(2, 8)}`,
+        image,
+        title,
+        source,
+        x: 40 + (offset % 5) * 34,
+        y: 40 + (offset % 4) * 30,
+        width: 260,
+        height: 260,
+        createdAt,
+        prompt
+    }
+}
+
+const addImagesToCanvas = (images: string[], source: CanvasWorkbenchItemSource, title: string, prompt?: string) => {
+    const uniqueImages = images.filter(Boolean)
+    if (!uniqueImages.length) return
+
+    const existingImages = new Set(canvasItems.value.map(item => item.image))
+    const additions = uniqueImages
+        .filter(image => !existingImages.has(image))
+        .map((image, index) => createCanvasItem(
+            image,
+            source,
+            uniqueImages.length > 1 ? `${title} ${index + 1}` : title,
+            prompt,
+            canvasItems.value.length + index
+        ))
+
+    if (!additions.length) {
+        workspaceMode.value = 'canvas'
+        currentView.value = 'studio'
+        return
+    }
+
+    updateCanvasItems([...additions, ...canvasItems.value])
+    workspaceMode.value = 'canvas'
+    currentView.value = 'studio'
+}
+
+const syncImagesToCanvas = (images: string[], source: CanvasWorkbenchItemSource, title: string, prompt?: string) => {
+    const uniqueImages = images.filter(Boolean)
+    if (!uniqueImages.length) return
+
+    const existingImages = new Set(canvasItems.value.map(item => item.image))
+    const additions = uniqueImages
+        .filter(image => !existingImages.has(image))
+        .map((image, index) => createCanvasItem(
+            image,
+            source,
+            uniqueImages.length > 1 ? `${title} ${index + 1}` : title,
+            prompt,
+            canvasItems.value.length + index
+        ))
+
+    if (additions.length) {
+        updateCanvasItems([...additions, ...canvasItems.value])
+    }
+}
+
+const addDisplayResultsToCanvas = () => {
+    const title = latestResultSource.value === 'text' ? '文生图结果' : '参考图结果'
+    addImagesToCanvas(displayResults.value, 'result', title, latestGenerationRecipe.value?.mainPrompt || textToImagePrompt.value)
+}
+
+const addReferencesToCanvas = () => {
+    const existingImages = new Set(canvasItems.value.map(item => item.image))
+    const additions = selectedImages.value
+        .filter(image => image && !existingImages.has(image))
+        .map((image, index) => createCanvasItem(
+            image,
+            'reference',
+            getReferenceLabelByImage(image) || getReferenceMetaByImage(image)?.label || `参考图 ${index + 1}`,
+            textToImagePrompt.value,
+            canvasItems.value.length + index
+        ))
+
+    if (additions.length) {
+        updateCanvasItems([...additions, ...canvasItems.value])
+    }
+    workspaceMode.value = 'canvas'
+    currentView.value = 'studio'
+}
+
+const addHistoryItemToCanvas = (item: GenerationHistoryItem, image?: string) => {
+    const prompt = item.recipe?.mainPrompt || item.prompt
+    addImagesToCanvas(image ? [image] : item.images, 'history', item.category || '历史资产', prompt)
+    if (historyPreviewItem.value?.id === item.id) {
+        historyPreviewItem.value = null
+        historyPreviewImage.value = ''
+    }
+}
+
+const removeCanvasItem = (id: string) => {
+    updateCanvasItems(canvasItems.value.filter(item => item.id !== id))
+}
+
+const clearCanvasItems = () => {
+    updateCanvasItems([])
+}
+
+const pushCanvasImagesToUpload = (images: string[]) => {
+    pushImagesToUpload(images)
+    workspaceMode.value = 'quick'
+    currentView.value = 'studio'
+}
+
+const reuseCanvasPrompt = (prompt: string) => {
+    textToImagePrompt.value = prompt
+    selectedStyle.value = ''
+    customPrompt.value = ''
+    workspaceMode.value = 'quick'
+    currentView.value = 'studio'
+}
+
+const reuseTaskPrompt = (task: GenerationTask) => {
+    textToImagePrompt.value = task.recipe.mainPrompt || task.prompt
+    customPrompt.value = task.recipe.customPrompt || ''
+    selectedStyle.value = task.recipe.selectedStyle || ''
+    generationCount.value = task.count || task.recipe.count || 1
+    selectedAspectRatio.value = task.aspectRatio
+    workspaceMode.value = 'quick'
+    currentView.value = 'studio'
+}
+
+const pushTaskImages = (task: GenerationTask) => {
+    pushImagesToUpload(task.images)
+    workspaceMode.value = 'quick'
+    currentView.value = 'studio'
+}
+
+const addTaskToCanvas = (task: GenerationTask) => {
+    const title = task.source === 'text' ? '文生图任务' : '参考图任务'
+    addImagesToCanvas(task.images, 'result', title, task.recipe.mainPrompt || task.prompt)
 }
 
 const activeGenerationTasks = computed(() => generationTasks.value.filter(task => task.status === 'running'))
@@ -2086,38 +2328,6 @@ const buildPromptAssistantContext = () => {
     ].filter(Boolean).join('\n')
 }
 
-const resolvePromptAssistantEndpoint = (endpoint: string) => {
-    const trimmed = endpoint.trim() || DEFAULT_PROMPT_ASSISTANT_ENDPOINT
-
-    try {
-        const url = new URL(trimmed)
-        const path = url.pathname.replace(/\/+$/, '')
-
-        if (!path || path === '/') {
-            url.pathname = '/v1/chat/completions'
-            return url.toString()
-        }
-
-        if (path.endsWith('/chat/completions')) {
-            url.pathname = path
-            return url.toString()
-        }
-
-        if (path.endsWith('/v1')) {
-            url.pathname = `${path}/chat/completions`
-            return url.toString()
-        }
-
-        url.pathname = `${path}/v1/chat/completions`
-        return url.toString()
-    } catch {
-        const base = trimmed.replace(/\/+$/, '')
-        if (base.endsWith('/chat/completions')) return base
-        if (base.endsWith('/v1')) return `${base}/chat/completions`
-        return `${base}/v1/chat/completions`
-    }
-}
-
 const handleImprovePrompt = async () => {
     if (!canImprovePrompt.value) return
 
@@ -2129,7 +2339,7 @@ const handleImprovePrompt = async () => {
             prompt: textToImagePrompt.value.trim(),
             context: buildPromptAssistantContext(),
             apikey: promptAssistantApiKey.value.trim(),
-            endpoint: resolvePromptAssistantEndpoint(promptAssistantEndpoint.value),
+            endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
             model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID
         }
         const response = await improvePrompt(request)
@@ -2383,6 +2593,7 @@ const reuseHistoryPrompt = (item: GenerationHistoryItem) => {
     customPrompt.value = item.recipe?.customPrompt || ''
     selectedStyle.value = item.recipe?.selectedStyle || ''
     currentView.value = 'studio'
+    workspaceMode.value = 'quick'
 }
 
 const applyGenerationRecipe = (recipe: GenerationRecipe | undefined, fallbackPrompt = '') => {
@@ -2405,6 +2616,7 @@ const reuseHistoryRecipe = (item: GenerationHistoryItem) => {
     gemini3ImageSize.value = item.imageSize
     generationCount.value = item.count || item.recipe?.count || 1
     currentView.value = 'studio'
+    workspaceMode.value = 'quick'
 }
 
 const restoreHistoryItem = (item: GenerationHistoryItem) => {
@@ -2425,6 +2637,7 @@ const restoreHistoryItem = (item: GenerationHistoryItem) => {
     gemini3ImageSize.value = item.imageSize
     generationCount.value = item.count || item.recipe?.count || 1
     currentView.value = 'studio'
+    workspaceMode.value = 'quick'
 }
 
 const openHistoryPreview = (item: GenerationHistoryItem, image = item.images[0] || '') => {
@@ -2472,10 +2685,6 @@ const deleteHistoryImageAt = async (item: GenerationHistoryItem, imageIndex: num
             ? historyPreviewImage.value
             : nextImages[0]
     }
-}
-
-const deleteHistoryImage = async (item: GenerationHistoryItem, image: string) => {
-    await deleteHistoryImageAt(item, item.images.findIndex(existing => existing === image))
 }
 
 const openOriginalImage = (image: string) => {
@@ -2551,6 +2760,7 @@ const handleTextToImageGenerate = async () => {
         latestResultSource.value = 'text'
         latestGenerationRecipe.value = recipe
         updateGenerationTask(task.id, { status: 'done', images: persisted.images })
+        syncImagesToCanvas(persisted.images, 'result', '文生图结果', recipe.mainPrompt || prompt)
         await addGenerationHistory('text', prompt, persisted.images, recipe, persisted)
     } catch (err) {
         const message = err instanceof Error ? err.message : '生成失败'
@@ -2568,6 +2778,7 @@ const handlePushDisplayResult = (image: string) => {
 const handleReuseCurrentRecipe = () => {
     applyGenerationRecipe(latestGenerationRecipe.value || undefined, textToImagePrompt.value)
     currentView.value = 'studio'
+    workspaceMode.value = 'quick'
 }
 
 const restoreTaskResult = (task: GenerationTask) => {
@@ -2586,6 +2797,7 @@ const restoreTaskResult = (task: GenerationTask) => {
         selectedStyle.value = task.recipe.selectedStyle || ''
         error.value = null
     }
+    workspaceMode.value = 'quick'
 }
 
 const handleDownloadResult = async (image: string) => {
@@ -2644,6 +2856,7 @@ const handleGenerate = async () => {
         latestResultSource.value = 'image'
         latestGenerationRecipe.value = recipe
         updateGenerationTask(task.id, { status: 'done', images: persisted.images })
+        syncImagesToCanvas(persisted.images, 'result', '参考图结果', recipe.mainPrompt || prompt)
         await addGenerationHistory('image', prompt, persisted.images, recipe, persisted)
     } catch (err) {
         const message = err instanceof Error ? err.message : '生成失败'

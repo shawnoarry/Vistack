@@ -26,25 +26,29 @@
             </div>
 
             <h3 class="text-sm font-semibold text-brand-ink">拖拽或点击上传参考图</h3>
-            <p class="mt-1 text-xs text-brand-muted">可一次上传多张。每张上传后可指定类型、分组名称和补充说明。</p>
+            <p class="mt-1 text-xs leading-5 text-brand-muted">上传后先给每张图标注用途。人物、服装、背景、产品会被写进最终提示词，帮助模型知道该参考哪里。</p>
         </div>
 
         <div v-if="thumbnails.length > 0" class="space-y-2">
             <div v-for="(thumbnail, index) in thumbnails" :key="`${thumbnail}-${index}`" class="rounded-lg border border-brand-line bg-white p-2">
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs font-semibold text-brand-ink">参考图 {{ index + 1 }} · {{ roleLabel(metaFor(index).role) }}</p>
+                    <p class="text-[11px] text-brand-muted">{{ usageHint(metaFor(index).role) }}</p>
+                </div>
                 <div class="flex gap-2">
                     <div class="group relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-brand-line bg-brand-surface">
                         <img :src="thumbnail" :alt="`Image ${index + 1}`" class="h-full w-full object-cover" />
                         <button
                             type="button"
                             @click.stop="previewImage = thumbnail"
-                            class="absolute bottom-1 left-1 rounded-md bg-brand-ink/90 px-1.5 py-1 text-[10px] font-semibold text-brand-surface opacity-0 transition hover:bg-brand-accent group-hover:opacity-100"
+                            class="absolute bottom-1 left-1 rounded-md bg-brand-ink/90 px-1.5 py-1 text-[10px] font-semibold text-brand-surface shadow-sm transition hover:bg-brand-accent sm:opacity-0 sm:group-hover:opacity-100"
                         >
                             预览
                         </button>
                         <button
                             type="button"
                             @click.stop="removeThumbnail(index)"
-                            class="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md bg-brand-ink/90 text-sm font-semibold text-brand-surface opacity-0 transition hover:bg-brand-accent group-hover:opacity-100"
+                            class="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md bg-brand-ink/90 text-sm font-semibold text-brand-surface shadow-sm transition hover:bg-brand-accent sm:opacity-0 sm:group-hover:opacity-100"
                         >
                             ×
                         </button>
@@ -52,7 +56,7 @@
                     <div class="min-w-0 flex-1 space-y-2">
                         <div class="grid grid-cols-[110px_minmax(0,1fr)] gap-2">
                             <label class="min-w-0">
-                                <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">类型</span>
+                                <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">用途类型</span>
                                 <select
                                     :value="metaFor(index).role"
                                     @change="updateMeta(index, { role: ($event.target as HTMLSelectElement).value as ReferenceImageRole })"
@@ -62,7 +66,7 @@
                                 </select>
                             </label>
                             <label class="min-w-0">
-                                <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">名称 / 分组</span>
+                                <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">名称 / 同人分组</span>
                                 <input
                                     :value="metaFor(index).label"
                                     @input="updateMeta(index, { label: ($event.target as HTMLInputElement).value })"
@@ -72,7 +76,7 @@
                             </label>
                         </div>
                         <label class="block">
-                            <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">说明</span>
+                            <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-muted">给模型的补充说明</span>
                             <input
                                 :value="metaFor(index).note || ''"
                                 @input="updateMeta(index, { note: ($event.target as HTMLInputElement).value })"
@@ -134,6 +138,17 @@ const roleOptions: Array<{ value: ReferenceImageRole; label: string }> = [
 ]
 
 const defaultLabel = (index: number) => `角色${index + 1}`
+
+const roleLabel = (role: ReferenceImageRole) => roleOptions.find(option => option.value === role)?.label || '其他'
+
+const usageHint = (role: ReferenceImageRole) => {
+    if (role === 'character') return '同一个人请填同一个名称'
+    if (role === 'outfit') return '主要参考衣服和造型'
+    if (role === 'background') return '主要参考环境和空间'
+    if (role === 'product') return '作为主体或产品参考'
+    if (role === 'style') return '只参考视觉风格'
+    return '按说明参与生成'
+}
 
 const defaultMeta = (index: number): ReferenceImageMeta => ({
     role: 'character',

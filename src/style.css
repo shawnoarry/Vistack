@@ -4,7 +4,7 @@
 
 @layer base {
     body {
-        @apply bg-brand-ink text-brand-ink font-sans antialiased;
+        @apply bg-brand-surface text-brand-ink font-sans antialiased;
     }
 
     ::selection {
@@ -14,19 +14,19 @@
 
 @layer components {
     .wb-shell {
-        @apply mx-auto w-full max-w-[2400px] px-4 2xl:px-6;
+        @apply mx-auto w-full max-w-[1920px] px-3 sm:px-4 2xl:px-6;
     }
 
     .wb-panel {
-        @apply rounded-lg border border-brand-line bg-brand-surface p-4 shadow-sm shadow-black/5;
+        @apply rounded-lg border border-brand-line bg-white p-4 shadow-sm shadow-black/5;
     }
 
     .wb-panel-dark {
-        @apply rounded-lg border border-brand-muted/30 bg-brand-ink p-4 text-brand-surface shadow-lg shadow-black/10;
+        @apply rounded-lg border border-brand-muted/30 bg-brand-ink p-4 text-brand-surface shadow-lg shadow-black/20;
     }
 
     .wb-label {
-        @apply text-xs font-semibold uppercase tracking-[0.16em] text-brand-muted;
+        @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-muted;
     }
 
     .wb-muted {
@@ -34,22 +34,22 @@
     }
 
     .wb-chip {
-        @apply rounded-md border border-brand-line bg-brand-line/60 px-2 py-1 text-xs text-brand-ink;
+        @apply inline-flex items-center rounded-md border border-brand-line bg-brand-surface px-2 py-1 text-xs font-medium text-brand-ink;
     }
 
     .wb-chip-dark {
-        @apply rounded-md border border-brand-surface/15 bg-brand-surface/10 px-2 py-1 text-xs text-brand-surface;
+        @apply inline-flex items-center rounded-md border border-brand-surface/15 bg-brand-surface/10 px-2 py-1 text-xs font-medium text-brand-surface;
     }
 
     .wb-input {
-        @apply rounded-lg border border-brand-line bg-brand-surface px-3 py-2 text-sm text-brand-ink outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10;
+        @apply min-h-10 rounded-lg border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/10 focus-visible:border-brand-accent focus-visible:ring-2 focus-visible:ring-brand-accent/10;
     }
 
     .wb-primary {
-        @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-accent px-4 text-sm font-semibold text-brand-surface transition hover:bg-brand-accent/90 disabled:cursor-not-allowed disabled:bg-brand-muted disabled:text-brand-line;
+        @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-accent px-4 text-sm font-semibold text-brand-surface shadow-sm shadow-black/5 transition hover:bg-brand-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-brand-muted disabled:text-brand-line;
     }
 
     .wb-secondary {
-        @apply inline-flex min-h-10 items-center justify-center rounded-lg border border-brand-line bg-brand-surface px-3 text-sm font-semibold text-brand-ink transition hover:border-brand-muted hover:bg-brand-line;
+        @apply inline-flex min-h-10 items-center justify-center rounded-lg border border-brand-line bg-white px-3 text-sm font-semibold text-brand-ink transition hover:border-brand-muted hover:bg-brand-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/20 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
     }
 }

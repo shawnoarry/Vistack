@@ -1,10 +1,10 @@
 <template>
-    <div class="flex min-h-[520px] flex-col rounded-lg border border-brand-line bg-brand-surface p-3">
-        <div v-if="tasks.length" class="mb-3 rounded-lg border border-brand-line bg-white p-3">
+    <div class="flex min-h-[520px] flex-col rounded-lg border border-brand-line bg-white p-3 shadow-sm shadow-black/5">
+        <div v-if="tasks.length" class="mb-3 rounded-lg border border-brand-line bg-brand-surface p-3">
             <div class="mb-3 flex items-center justify-between gap-3">
                 <div>
                     <p class="text-sm font-semibold text-brand-ink">任务队列</p>
-                    <p class="mt-1 text-xs text-brand-muted">可以连续提交任务，完成后点任务卡片可恢复到主预览。</p>
+                    <p class="mt-1 text-xs text-brand-muted">可以连续提交多个任务。每个完成任务都能恢复预览、复用提示词或继续作为参考图。</p>
                 </div>
                 <span class="wb-chip">{{ runningTasks.length }} 进行中</span>
             </div>
@@ -12,7 +12,7 @@
                 <article
                     v-for="task in tasks"
                     :key="task.id"
-                    class="mb-3 break-inside-avoid rounded-lg border border-brand-line bg-brand-surface p-3"
+                    class="mb-3 break-inside-avoid rounded-lg border border-brand-line bg-white p-3 shadow-sm shadow-black/5"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -53,6 +53,13 @@
                         </span>
                     </button>
 
+                    <div v-if="task.status === 'done' && task.images.length" class="mt-3 grid grid-cols-2 gap-2">
+                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="$emit('restore-task', task)">恢复预览</button>
+                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="$emit('reuse-task', task)">复用提示词</button>
+                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="$emit('push-task', task)">结果作参考</button>
+                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="$emit('canvas-task', task)">加入画布</button>
+                    </div>
+
                     <p v-else-if="task.error" class="mt-3 rounded-md border border-brand-accent/30 bg-brand-accent/10 p-2 text-xs leading-5 text-brand-accent">
                         {{ task.error }}
                     </p>
@@ -60,7 +67,7 @@
             </div>
         </div>
 
-        <div class="flex flex-1 items-center justify-center rounded-lg border border-brand-line bg-white p-4">
+        <div class="flex flex-1 items-center justify-center rounded-lg border border-brand-line bg-brand-surface p-4">
             <div v-if="error" class="max-w-xl text-center">
                 <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-brand-accent/30 bg-brand-accent/10 text-brand-accent">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,7 +80,7 @@
 
             <div v-else-if="results && results.length > 0" class="w-full">
                 <div class="grid gap-4" :class="gridClass">
-                    <div v-for="(img, index) in results" :key="`${img}-${index}`" class="group relative overflow-hidden rounded-lg border border-brand-line bg-brand-surface">
+                    <div v-for="(img, index) in results" :key="`${img}-${index}`" class="group relative overflow-hidden rounded-lg border border-brand-line bg-white shadow-sm shadow-black/5">
                         <button type="button" class="block h-full w-full" @click="previewImage = img">
                             <img :src="img" alt="生成结果" class="h-full max-h-[720px] w-full object-contain" @load="e => onImageLoad(e, img)" />
                         </button>
@@ -208,6 +215,9 @@ defineEmits<{
     push: [image: string]
     reuse: []
     'restore-task': [task: GenerationTask]
+    'reuse-task': [task: GenerationTask]
+    'push-task': [task: GenerationTask]
+    'canvas-task': [task: GenerationTask]
 }>()
 
 const taskStatusLabel = (status: GenerationTaskStatus) => {
