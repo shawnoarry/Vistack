@@ -98,7 +98,7 @@
             </div>
         </section>
 
-        <main v-if="currentView === 'studio'" class="wb-shell grid items-start gap-4 py-4 lg:pb-[260px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
+        <main v-if="currentView === 'studio'" class="wb-shell grid items-start gap-4 py-4 lg:pb-[168px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
             <aside class="space-y-4">
                 <section class="wb-panel">
                     <div class="mb-3 flex items-center justify-between gap-3">
@@ -417,191 +417,198 @@
                     />
                 </div>
 
-                <div class="grid items-start gap-2.5 lg:grid-cols-[minmax(0,1fr)_250px]">
-                    <div class="min-w-0 rounded-lg border border-brand-line bg-white p-2.5 shadow-sm shadow-black/10 dark:border-night-muted/35 dark:bg-night-surface">
-                        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <div class="min-w-0">
-                                <span class="wb-label">Prompt box</span>
-                                <p class="mt-0.5 text-xs text-brand-muted dark:text-night-muted">提示词会和参考图用途说明一起提交。</p>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-1.5">
-                                <button
-                                    type="button"
-                                    :disabled="!canUndoPromptPhrase"
-                                    class="wb-icon-button"
-                                    title="撤销上一次通过词组追加的内容"
-                                    aria-label="撤销词组"
-                                    @click="undoLastPromptPhrase"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-1" />
-                                    </svg>
-                                </button>
-                                <button
-                                    type="button"
-                                    :disabled="!textToImagePrompt.trim()"
-                                    class="wb-icon-button"
-                                    title="清空提示词框"
-                                    aria-label="清空提示词框"
-                                    @click="clearPromptText"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 7h12M10 7V5h4v2M8 7l1 13h6l1-13" />
-                                    </svg>
-                                </button>
-                                <button
-                                    type="button"
-                                    class="wb-icon-button"
-                                    :title="showPromptTools ? '收起词组' : '打开词组'"
-                                    :aria-label="showPromptTools ? '收起词组' : '打开词组'"
-                                    @click="showPromptTools = !showPromptTools"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h10M4 18h7" />
-                                    </svg>
-                                </button>
-                                <button
-                                    type="button"
-                                    :class="['wb-icon-button', activeSupplementLabel ? 'border-brand-accent text-brand-accent dark:border-night-muted dark:text-brand-surface' : '']"
-                                    :title="activeSupplementLabel ? `模板：${activeSupplementLabel}` : '打开模板'"
-                                    aria-label="打开模板"
-                                    @click="showTemplatePanel = true"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 4h14v16l-7-3-7 3V4z" />
-                                    </svg>
-                                </button>
-                                <button
-                                    type="button"
-                                    :disabled="!textToImagePrompt.trim() && !supplementPrompt"
-                                    class="wb-icon-button"
-                                    title="保存为模板"
-                                    aria-label="保存为模板"
-                                    @click="openTemplateEditorFromCurrentPrompt"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5h12l2 2v12H5V5zM8 5v5h7V5M8 19v-6h8v6" />
-                                    </svg>
-                                </button>
-                                <button
-                                    type="button"
-                                    :disabled="!canImprovePrompt"
-                                    :class="[
-                                        'wb-icon-button',
-                                        canImprovePrompt
-                                            ? 'border-brand-accent bg-brand-accent text-brand-surface hover:bg-brand-accent/90 dark:border-night-accent dark:bg-night-accent'
-                                            : 'cursor-not-allowed'
-                                    ]"
-                                    :title="isPromptAssistantLoading ? 'AI 优化中' : 'AI 优化提示词'"
-                                    aria-label="AI 优化提示词"
-                                    @click="handleImprovePrompt"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8L12 3zM6 14l.8 2.2L9 17l-2.2.8L6 20l-.8-2.2L3 17l2.2-.8L6 14zM18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z" />
-                                    </svg>
-                                </button>
-                            </div>
+                <div class="rounded-lg border border-brand-line bg-white p-2.5 shadow-sm shadow-black/10 dark:border-night-muted/35 dark:bg-night-surface">
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <span class="wb-label">Prompt box</span>
+                            <p class="mt-0.5 text-xs text-brand-muted dark:text-night-muted">提示词会和参考图用途说明一起提交。</p>
                         </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button
+                                type="button"
+                                :disabled="!canUndoPromptPhrase"
+                                class="wb-icon-button"
+                                title="撤销上一次通过词组追加的内容"
+                                aria-label="撤销词组"
+                                @click="undoLastPromptPhrase"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-1" />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                :disabled="!textToImagePrompt.trim()"
+                                class="wb-icon-button"
+                                title="清空提示词框"
+                                aria-label="清空提示词框"
+                                @click="clearPromptText"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 7h12M10 7V5h4v2M8 7l1 13h6l1-13" />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                class="wb-icon-button"
+                                :title="showPromptTools ? '收起词组' : '打开词组'"
+                                :aria-label="showPromptTools ? '收起词组' : '打开词组'"
+                                @click="showPromptTools = !showPromptTools"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h10M4 18h7" />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                :class="['wb-icon-button', activeSupplementLabel ? 'border-brand-accent text-brand-accent dark:border-night-muted dark:text-brand-surface' : '']"
+                                :title="activeSupplementLabel ? `模板：${activeSupplementLabel}` : '打开模板'"
+                                aria-label="打开模板"
+                                @click="showTemplatePanel = true"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 4h14v16l-7-3-7 3V4z" />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                :disabled="!textToImagePrompt.trim() && !supplementPrompt"
+                                class="wb-icon-button"
+                                title="保存为模板"
+                                aria-label="保存为模板"
+                                @click="openTemplateEditorFromCurrentPrompt"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5h12l2 2v12H5V5zM8 5v5h7V5M8 19v-6h8v6" />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                :disabled="!canImprovePrompt"
+                                :class="[
+                                    'wb-icon-button',
+                                    canImprovePrompt
+                                        ? 'border-brand-accent bg-brand-accent text-brand-surface hover:bg-brand-accent/90 dark:border-night-accent dark:bg-night-accent'
+                                        : 'cursor-not-allowed'
+                                ]"
+                                :title="isPromptAssistantLoading ? 'AI 优化中' : 'AI 优化提示词'"
+                                aria-label="AI 优化提示词"
+                                @click="handleImprovePrompt"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8L12 3zM6 14l.8 2.2L9 17l-2.2.8L6 20l-.8-2.2L3 17l2.2-.8L6 14zM18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
 
+                    <div class="grid items-start gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
                         <textarea
                             v-model="textToImagePrompt"
                             @input="handlePromptManualInput"
                             placeholder="描述你想生成或改动的画面。参考图会作为素材参与生成，可以写：让角色1穿着服装参考，在背景参考中拍摄产品级主视觉。"
-                            class="wb-input min-h-[72px] max-h-[118px] w-full resize-y py-2 text-sm leading-6"
+                            class="wb-input min-h-[72px] max-h-[112px] w-full resize-y py-2 text-sm leading-6"
                             rows="3"
                         />
 
-                        <p v-if="promptAssistantError" class="mt-2 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">
-                            {{ promptAssistantError }}
-                        </p>
-                        <p v-else-if="!promptAssistantReady" class="mt-2 text-xs text-brand-muted">
-                            配置提示词助手 URL / Key / Model 后，可用低费率文本模型先整理中文提示词。
-                        </p>
+                        <div class="flex min-w-0 flex-col gap-2 lg:w-[430px] xl:w-[520px]">
+                            <div class="grid grid-cols-2 gap-1.5 text-center text-[11px] sm:grid-cols-[76px_76px_76px_minmax(0,1fr)]">
+                                <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
+                                    <div class="text-brand-muted dark:text-night-muted">参考</div>
+                                    <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ selectedImages.length }}</div>
+                                </div>
+                                <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
+                                    <div class="text-brand-muted dark:text-night-muted">比例</div>
+                                    <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ showAspectRatioSelector ? selectedAspectRatio : '自动' }}</div>
+                                </div>
+                                <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
+                                    <div class="text-brand-muted dark:text-night-muted">尺寸</div>
+                                    <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ showImageSizeConfig ? gemini3ImageSize : '自动' }}</div>
+                                </div>
+                                <div
+                                    :class="[
+                                        'flex items-center justify-center rounded-md border px-2 py-1.5 text-xs font-semibold',
+                                        selectedImages.length
+                                            ? 'border-brand-ink/15 bg-brand-ink text-brand-surface dark:border-night-muted/45 dark:bg-night-panel'
+                                            : 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
+                                    ]"
+                                >
+                                    {{ selectedImages.length ? `参考图生成 · ${selectedImages.length} 张` : '无参考图 · 只发提示词' }}
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-[72px_minmax(86px,1fr)_minmax(72px,0.8fr)_minmax(130px,1.2fr)_minmax(130px,1.1fr)]">
+                                <label class="min-w-0">
+                                    <span class="sr-only">生成张数</span>
+                                    <select v-model.number="generationCount" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
+                                        <option v-for="count in generationCountOptions" :key="count" :value="count">{{ count }} 张</option>
+                                    </select>
+                                </label>
+                                <label v-if="showAspectRatioSelector" class="min-w-0">
+                                    <span class="sr-only">图像宽高比</span>
+                                    <select v-model="selectedAspectRatio" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
+                                        <option v-for="ratio in availableAspectRatios" :key="ratio.value" :value="ratio.value">{{ ratio.label }}</option>
+                                    </select>
+                                </label>
+                                <label v-else class="min-w-0">
+                                    <span class="sr-only">图像宽高比</span>
+                                    <div class="flex min-h-10 items-center justify-center rounded-lg border border-brand-line bg-brand-surface px-2 text-xs font-semibold text-brand-muted dark:border-night-muted/35 dark:bg-night-panel dark:text-night-muted">自动</div>
+                                </label>
+                                <label v-if="showImageSizeConfig" class="min-w-0">
+                                    <span class="sr-only">图像尺寸</span>
+                                    <select v-model="gemini3ImageSize" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
+                                        <option value="1K">1K</option>
+                                        <option value="2K">2K</option>
+                                        <option value="4K">4K</option>
+                                    </select>
+                                </label>
+                                <label v-else class="min-w-0">
+                                    <span class="sr-only">图像尺寸</span>
+                                    <div class="flex min-h-10 items-center justify-center rounded-lg border border-brand-line bg-brand-surface px-2 text-xs font-semibold text-brand-muted dark:border-night-muted/35 dark:bg-night-panel dark:text-night-muted">自动</div>
+                                </label>
+                                <button
+                                    type="button"
+                                    @click="handleGenerate"
+                                    :disabled="!canGenerate"
+                                    :title="selectedImages.length ? '使用当前参考图和提示词生成' : '左侧上传参考图后此按钮会启用'"
+                                    :class="[
+                                        'inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
+                                        canGenerate
+                                            ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90 dark:border-night-muted dark:bg-night-panel'
+                                            : 'cursor-not-allowed bg-brand-line text-brand-muted dark:bg-night-panel dark:text-night-muted'
+                                    ]"
+                                >
+                                    {{ selectedImages.length ? (isLoading ? '生成中...' : '参考图生成') : '先传参考图' }}
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="handleTextToImageGenerate"
+                                    :disabled="!canGenerateTextImage"
+                                    :title="selectedImages.length ? '已上传参考图，请使用参考图生成；移除参考图后可无参考图生成' : '不使用参考图，直接按提示词生成'"
+                                    :class="[
+                                        'inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
+                                        canGenerateTextImage
+                                            ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90 dark:bg-night-accent'
+                                            : 'cursor-not-allowed bg-brand-line text-brand-muted dark:bg-night-panel dark:text-night-muted'
+                                    ]"
+                                >
+                                    {{ selectedImages.length ? '移除参考图' : (isTextToImageLoading ? '生成中...' : '无参考图生成') }}
+                                </button>
+                            </div>
+
+                            <label v-if="supportsGoogleSearch" class="col-span-full flex min-h-8 items-center gap-2 rounded-md bg-brand-surface px-2 py-1.5 text-xs font-semibold text-brand-muted dark:bg-night-panel dark:text-night-muted">
+                                <input v-model="gemini3EnableGoogleSearch" type="checkbox" class="h-3.5 w-3.5 rounded border-brand-line text-brand-accent focus:ring-brand-accent" />
+                                Google Search
+                            </label>
+                        </div>
                     </div>
 
-                    <div class="flex min-w-0 flex-col gap-2 rounded-lg border border-brand-line bg-white p-2.5 shadow-sm shadow-black/10 dark:border-night-muted/35 dark:bg-night-surface">
-                        <div class="grid grid-cols-3 gap-1.5 text-center text-[11px]">
-                            <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
-                                <div class="text-brand-muted dark:text-night-muted">参考</div>
-                                <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ selectedImages.length }}</div>
-                            </div>
-                            <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
-                                <div class="text-brand-muted dark:text-night-muted">比例</div>
-                                <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ showAspectRatioSelector ? selectedAspectRatio : '自动' }}</div>
-                            </div>
-                            <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
-                                <div class="text-brand-muted dark:text-night-muted">尺寸</div>
-                                <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ showImageSizeConfig ? gemini3ImageSize : '自动' }}</div>
-                            </div>
-                        </div>
-
-                        <div
-                            :class="[
-                                'rounded-lg border px-2.5 py-1.5 text-xs leading-5',
-                                selectedImages.length
-                                    ? 'border-brand-ink/15 bg-brand-ink text-brand-surface dark:border-night-muted/45 dark:bg-night-panel'
-                                    : 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
-                            ]"
-                        >
-                            {{ selectedImages.length ? `参考图生成 · ${selectedImages.length} 张` : '无参考图 · 只发提示词' }}
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-1.5">
-                            <label class="min-w-0">
-                                <span class="sr-only">生成张数</span>
-                                <select v-model.number="generationCount" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
-                                    <option v-for="count in generationCountOptions" :key="count" :value="count">{{ count }} 张</option>
-                                </select>
-                            </label>
-                            <label v-if="showAspectRatioSelector" class="min-w-0">
-                                <span class="sr-only">图像宽高比</span>
-                                <select v-model="selectedAspectRatio" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
-                                    <option v-for="ratio in availableAspectRatios" :key="ratio.value" :value="ratio.value">{{ ratio.label }}</option>
-                                </select>
-                            </label>
-                            <label v-if="showImageSizeConfig" class="min-w-0">
-                                <span class="sr-only">图像尺寸</span>
-                                <select v-model="gemini3ImageSize" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
-                                    <option value="1K">1K - 标准</option>
-                                    <option value="2K">2K - 高清晰度</option>
-                                    <option value="4K">4K - 超高清</option>
-                                </select>
-                            </label>
-                        </div>
-
-                        <label v-if="supportsGoogleSearch" class="flex items-center gap-2 rounded-md bg-brand-surface px-2 py-1.5 text-xs font-semibold text-brand-muted dark:bg-night-panel dark:text-night-muted">
-                            <input v-model="gemini3EnableGoogleSearch" type="checkbox" class="h-3.5 w-3.5 rounded border-brand-line text-brand-accent focus:ring-brand-accent" />
-                            Google Search
-                        </label>
-                        <button
-                            type="button"
-                            @click="handleGenerate"
-                            :disabled="!canGenerate"
-                            :title="selectedImages.length ? '使用当前参考图和提示词生成' : '左侧上传参考图后此按钮会启用'"
-                            :class="[
-                                'inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
-                                canGenerate
-                                    ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90'
-                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
-                            ]"
-                        >
-                            {{ selectedImages.length ? (isLoading ? '参考图生成中...' : `使用 ${selectedImages.length} 张参考图生成`) : '先上传参考图' }}
-                        </button>
-                        <button
-                            type="button"
-                            @click="handleTextToImageGenerate"
-                            :disabled="!canGenerateTextImage"
-                            :title="selectedImages.length ? '已上传参考图，请使用参考图生成；移除参考图后可无参考图生成' : '不使用参考图，直接按提示词生成'"
-                            :class="[
-                                'inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition',
-                                canGenerateTextImage
-                                    ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90'
-                                    : 'cursor-not-allowed bg-brand-line text-brand-muted'
-                            ]"
-                        >
-                            {{ selectedImages.length ? '移除参考图后可用' : (isTextToImageLoading ? '无参考图生成中...' : '无参考图生成') }}
-                        </button>
-                    </div>
+                    <p v-if="promptAssistantError" class="mt-2 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">
+                        {{ promptAssistantError }}
+                    </p>
+                    <p v-else-if="!promptAssistantReady" class="mt-2 text-xs text-brand-muted">
+                        配置提示词助手 URL / Key / Model 后，可用低费率文本模型先整理中文提示词。
+                    </p>
                 </div>
             </div>
         </section>
