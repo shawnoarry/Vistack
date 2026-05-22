@@ -557,7 +557,7 @@
                     <div>
                         <p class="wb-label text-brand-accent">Prompt assist</p>
                         <h2 class="mt-1 text-lg font-semibold text-brand-ink">创作模板与补充提示词</h2>
-                        <p class="mt-1 text-sm text-brand-muted">模板只是快捷辅助，不占用主创作台。选择后会拼入底部提示词预览。</p>
+                        <p class="mt-1 text-sm text-brand-muted">点击模板会插入到底部主提示词框，之后可以直接为本次生成微调。</p>
                     </div>
                     <button type="button" class="wb-secondary min-h-9 px-3 text-xs" @click="showTemplatePanel = false">关闭</button>
                 </div>
@@ -572,6 +572,7 @@
                         @new-template="openBlankTemplateEditor"
                         @edit-template="openTemplateEditor"
                         @delete-template="deleteCustomTemplate"
+                        @insert-template="insertTemplatePrompt"
                         @new-phrase="openPhraseEditor"
                         @edit-phrase="openPhraseEditor"
                         @new-phrase-group="openBlankPhraseGroupEditor"
@@ -2081,6 +2082,17 @@ const clearPromptText = () => {
 
     promptPhraseUndoStack.value = []
     setTextToImagePromptFromHistory('')
+}
+
+const insertTemplatePrompt = (templatePrompt: string) => {
+    const nextPrompt = templatePrompt.trim()
+    if (!nextPrompt) return
+
+    const current = textToImagePrompt.value.trim()
+    promptPhraseUndoStack.value = [...promptPhraseUndoStack.value, textToImagePrompt.value]
+    setTextToImagePromptFromHistory(current ? `${current}\n\n${nextPrompt}` : nextPrompt)
+    selectedStyle.value = ''
+    showTemplatePanel.value = false
 }
 
 const handlePromptManualInput = () => {

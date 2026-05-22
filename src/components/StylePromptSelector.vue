@@ -35,7 +35,7 @@
 
         <div v-if="activeTab === 'style'" class="flex flex-1 flex-col gap-3">
             <div class="rounded-lg border border-brand-line bg-brand-surface px-3 py-2 text-xs leading-5 text-brand-muted">
-                模板是一整套生成方案。选择模板会替换当前“自定义补充”，适合从一个完整方向开始。
+                点模板会把模板文本插入底部主提示词框，方便本次直接修改；模板库本身不会被改动。
             </div>
             <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand-line bg-white px-3 py-2">
                 <div>
@@ -84,7 +84,7 @@
                     v-for="template in filteredTemplates"
                     :key="template.id"
                     type="button"
-                    @click="selectStyle(template.id)"
+                    @click="applyTemplateToPrompt(template)"
                     :class="[
                         'w-full rounded-lg border p-3 text-left transition',
                         selectedStyle === template.id ? 'border-brand-accent bg-brand-accent/10' : 'border-brand-line bg-white hover:border-brand-muted hover:bg-brand-surface'
@@ -109,6 +109,13 @@
                             </div>
 
                             <div class="mt-2 flex flex-wrap gap-1.5">
+                                <button
+                                    type="button"
+                                    class="rounded bg-brand-ink px-1.5 py-0.5 text-[11px] font-semibold text-brand-surface transition hover:bg-brand-accent"
+                                    @click.stop="applyTemplateToPrompt(template)"
+                                >
+                                    插入主提示词
+                                </button>
                                 <span v-if="template.source === 'custom'" class="rounded bg-brand-accent/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand-accent">自定义</span>
                                 <button
                                     v-if="template.source === 'custom'"
@@ -254,6 +261,7 @@ const emit = defineEmits<{
     'update:selectedStyle': [value: string]
     'update:customPrompt': [value: string]
     'update:templateLanguage': [value: 'zh' | 'en' | 'bilingual']
+    'insert-template': [prompt: string]
     'new-template': []
     'edit-template': [template: StyleTemplate]
     'delete-template': [templateId: string]
@@ -372,10 +380,9 @@ watch(
     { deep: true }
 )
 
-const selectStyle = (styleId: string) => {
-    // 选择风格时清空自定义提示词
-    emit('update:customPrompt', '')
-    emit('update:selectedStyle', props.selectedStyle === styleId ? '' : styleId)
+const applyTemplateToPrompt = (template: StyleTemplate) => {
+    emit('update:selectedStyle', '')
+    emit('insert-template', templatePrompt(template))
 }
 
 const updateCustomPrompt = (value: string) => {
