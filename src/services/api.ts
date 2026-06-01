@@ -3,6 +3,7 @@ import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from '../config/api'
 import {
     getEndpointPath,
     isGrsaiEndpoint,
+    isOpenAiImageModelId,
     resolveChatCompletionsEndpoint,
     resolveImageGenerationEndpoint,
     resolveModelEndpointCandidates,
@@ -345,7 +346,7 @@ async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateReq
     const payload: Record<string, unknown> = {
         model: request.model?.trim() || 'gpt-image-2',
         prompt: request.prompt,
-        size: aspectRatioToSize(request.aspectRatio || '1:1'),
+        size: aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize),
         response_format: 'url',
         n: normalizeImageCount(request.count)
     }
@@ -366,6 +367,7 @@ async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateReq
 
 async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
     const modelId = request.model?.trim() || 'nano-banana-2'
+    const isGptImage = isOpenAiImageModelId(modelId)
     const payload: Record<string, unknown> = {
         model: modelId,
         prompt: request.prompt,
@@ -374,15 +376,15 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest):
         count: normalizeImageCount(request.count)
     }
 
-    if (request.aspectRatio) {
-        payload.aspectRatio = modelId.toLowerCase().includes('gpt-image')
-            ? aspectRatioToSize(request.aspectRatio)
-            : request.aspectRatio
+    if (isGptImage) {
+        const size = aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize)
+        payload.aspectRatio = size
+        payload.size = size
+    } else if (request.aspectRatio) {
+        payload.aspectRatio = request.aspectRatio
     }
 
-    if (!modelId.toLowerCase().includes('gpt-image')) {
-        payload.imageSize = request.imageSize || '1K'
-    }
+    payload.imageSize = request.imageSize || '1K'
 
     const data = await postJson(apiEndpoint, request.apikey, payload)
     const directUrls = extractImageUrls(data)
@@ -401,7 +403,7 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest):
 
 async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
     const modelId = request.model?.trim() || 'nano-banana-pro'
-    const isGptImage = modelId.toLowerCase().includes('gpt-image') || getEndpointPath(apiEndpoint).endsWith('/draw/completions')
+    const isGptImage = isOpenAiImageModelId(modelId) || getEndpointPath(apiEndpoint).endsWith('/draw/completions')
     const payload: Record<string, unknown> = {
         model: modelId,
         prompt: request.prompt,
@@ -416,11 +418,12 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
     }
 
     if (request.aspectRatio) {
-        payload.aspectRatio = isGptImage ? aspectRatioToSize(request.aspectRatio) : request.aspectRatio
+        payload.aspectRatio = isGptImage ? aspectRatioToSize(request.aspectRatio, request.imageSize) : request.aspectRatio
     }
 
     if (isGptImage) {
-        payload.size = aspectRatioToSize(request.aspectRatio || '1:1')
+        payload.size = aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize)
+        payload.imageSize = request.imageSize || '1K'
     } else {
         payload.imageSize = request.imageSize || '1K'
     }
@@ -598,7 +601,7 @@ function resolveGrsaiResultEndpoint(endpoint: string): string {
     return endpoint.replace(/\/generate\/?$/, '/result')
 }
 
-function aspectRatioToSize(aspectRatio: string): string {
+function aspectRatioToSize(aspectRatio: string, imageSize = '1K'): string {
     if (/^\d+x\d+$/i.test(aspectRatio)) {
         return aspectRatio
     }
@@ -616,7 +619,25 @@ function aspectRatioToSize(aspectRatio: string): string {
         '21:9': '1536x672'
     }
 
-    return sizeMap[aspectRatio] || '1024x1024'
+    const baseSize = sizeMap[aspectRatio] || '1024x1024'
+    return scaleSize(baseSize, imageSize)
+}
+
+function scaleSize(size: string, imageSize = '1K'): string {
+    const match = size.match(/^(\d+)x(\d+)$/i)
+    if (!match) return size
+
+    const multiplier = imageSize.toUpperCase() === '4K'
+        ? 4
+        : imageSize.toUpperCase() === '2K'
+          ? 2
+          : 1
+
+    if (multiplier === 1) return size
+
+    const width = Number(match[1])
+    const height = Number(match[2])
+    return `${width * multiplier}x${height * multiplier}`
 }
 
 function normalizeModels(data: ModelListResponse): ApiModel[] {

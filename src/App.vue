@@ -1048,7 +1048,7 @@
                     <div class="rounded-lg border border-brand-surface/15 bg-brand-surface/5 p-3">
                         <div class="mb-1 font-semibold text-brand-surface">批次信息</div>
                         <p>生成组：{{ historyPreviewItem.images.length }} 张</p>
-                        <p>比例：{{ historyPreviewItem.aspectRatio }} · 尺寸：{{ historyPreviewItem.imageSize }}</p>
+                        <p>比例：{{ historyPreviewItem.aspectRatio }} · 分辨率：{{ historyPreviewItem.imageSize }}</p>
                         <p>模型：{{ historyPreviewItem.model }}</p>
                     </div>
                 </div>
@@ -1107,7 +1107,7 @@ import { styleTemplates } from './data/templates'
 import { promptPoolGroups } from './data/promptPool'
 import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
 import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
-import { resolveChatCompletionsEndpoint } from './utils/apiEndpoint'
+import { isGrsaiEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint } from './utils/apiEndpoint'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
 import {
     deleteGenerationHistoryItem,
@@ -2604,42 +2604,90 @@ const composeImagePrompt = () => {
 
 const promptPreview = computed(() => selectedImages.value.length ? composeImagePrompt() : composeTextPrompt())
 
+const selectedModelOption = computed(() => {
+    const currentId = selectedModel.value.trim()
+    return modelOptions.value.find(option => option.id === currentId)
+})
+
+const selectedModelProfileText = computed(() => [
+    selectedModel.value,
+    selectedModelOption.value?.label,
+    selectedModelOption.value?.description
+].filter(Boolean).join(' ').toLowerCase())
+
+const isCurrentGrsaiEndpoint = computed(() => isGrsaiEndpoint(apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT))
+const isCurrentGptImageModel = computed(() => isOpenAiImageModelId(selectedModelProfileText.value))
+
 // Show ratio controls for image models that accept aspect ratio or mapped sizes.
 const showAspectRatioSelector = computed(() => {
-    const modelId = selectedModel.value.toLowerCase().trim()
-    if (!modelId) return false
+    const modelText = selectedModelProfileText.value
+    if (!modelText) return false
 
-    const segments = modelId.split('/')
+    const segments = selectedModel.value.toLowerCase().trim().split('/')
     const normalizedId = segments[segments.length - 1]
     return normalizedId === 'gemini-2.5-flash-image' ||
            normalizedId === 'gemini-2.5-flash-image-preview' ||
-           modelId.includes('gemini-3-pro-image') ||
-           modelId.includes('nano-banana') ||
-           modelId.includes('gpt-image') ||
-           modelId.includes('gemini-3.1-pro')
+           modelText.includes('gemini-3-pro-image') ||
+           modelText.includes('gemini-3-pro') ||
+           modelText.includes('gemini-3.1-pro') ||
+           modelText.includes('nano-banana') ||
+           isCurrentGptImageModel.value ||
+           isCurrentGrsaiEndpoint.value
 })
 
 
 const selectedImageModelType = computed(() => {
-    const modelId = selectedModel.value.toLowerCase().trim()
-    if (modelId.includes('nano-banana')) return 'nano-banana'
-    if (modelId.includes('gpt-image')) return 'gpt-image'
-    if (modelId.includes('gemini-3-pro-image') || modelId.includes('gemini-3.1-pro')) return 'gemini-3-pro-image'
+    const modelText = selectedModelProfileText.value
+    if (modelText.includes('nano-banana')) return 'nano-banana'
+    if (isCurrentGptImageModel.value) return 'gpt-image'
+    if (modelText.includes('gemini-3-pro-image') || modelText.includes('gemini-3-pro') || modelText.includes('gemini-3.1-pro')) return 'gemini-3-pro-image'
     return 'default'
 })
 
+const supportsImageSizeConfig = computed(() => {
+    const modelText = selectedModelProfileText.value
+    if (!modelText) return false
+    if (isCurrentGptImageModel.value) return true
+    if (selectedImageModelType.value === 'nano-banana' || selectedImageModelType.value === 'gemini-3-pro-image') return true
+    if (/\b[24]k\b/i.test(modelText)) return true
+    return isCurrentGrsaiEndpoint.value
+})
+
+const scaleResolutionMap = (map: Record<string, string>, multiplier: number) => Object.fromEntries(
+    Object.entries(map).map(([ratio, resolution]) => {
+        const [width, height] = resolution.split('x').map(Number)
+        return [ratio, `${width * multiplier}x${height * multiplier}`]
+    })
+)
+
+const aspectRatioOptionsFromResolutionMap = (map: Record<string, string>) =>
+    Object.entries(map).map(([ratio, resolution]) => ({
+        value: ratio,
+        label: `${ratio} - ${resolution}`
+    }))
+
+const baseAspectRatioResolutionMap: Record<string, string> = {
+    '1:1': '1024x1024',
+    '2:3': '832x1248',
+    '3:2': '1248x832',
+    '3:4': '864x1184',
+    '4:3': '1184x864',
+    '4:5': '896x1152',
+    '5:4': '1152x896',
+    '9:16': '768x1344',
+    '16:9': '1344x768',
+    '21:9': '1536x672'
+}
+
 const baseAspectRatioOptions = [
-    { value: '1:1', label: '1:1 - 1024x1024' },
-    { value: '2:3', label: '2:3 - 832x1248' },
-    { value: '3:2', label: '3:2 - 1248x832' },
-    { value: '3:4', label: '3:4 - 864x1184' },
-    { value: '4:3', label: '4:3 - 1184x864' },
-    { value: '4:5', label: '4:5 - 896x1152' },
-    { value: '5:4', label: '5:4 - 1152x896' },
-    { value: '9:16', label: '9:16 - 768x1344' },
-    { value: '16:9', label: '16:9 - 1344x768' },
-    { value: '21:9', label: '21:9 - 1536x672' }
+    ...aspectRatioOptionsFromResolutionMap(baseAspectRatioResolutionMap)
 ]
+
+const gptImageAspectRatioData: Record<string, Record<string, string>> = {
+    '1K': baseAspectRatioResolutionMap,
+    '2K': scaleResolutionMap(baseAspectRatioResolutionMap, 2),
+    '4K': scaleResolutionMap(baseAspectRatioResolutionMap, 4)
+}
 
 const gemini3AspectRatioData: Record<string, Record<string, string>> = {
     '1K': {
@@ -2681,22 +2729,17 @@ const gemini3AspectRatioData: Record<string, Record<string, string>> = {
 }
 
 const availableAspectRatios = computed(() => {
-    if (selectedImageModelType.value !== 'gemini-3-pro-image') {
-        return baseAspectRatioOptions
-    }
+    const sizeData = selectedImageModelType.value === 'gemini-3-pro-image'
+        ? gemini3AspectRatioData[gemini3ImageSize.value]
+        : selectedImageModelType.value === 'gpt-image'
+          ? gptImageAspectRatioData[gemini3ImageSize.value]
+          : null
 
-    const sizeData = gemini3AspectRatioData[gemini3ImageSize.value]
-    if (!sizeData) return baseAspectRatioOptions
-
-    return Object.entries(sizeData).map(([ratio, resolution]) => ({
-        value: ratio,
-        label: `${ratio} - ${resolution}`
-    }))
+    return sizeData ? aspectRatioOptionsFromResolutionMap(sizeData) : baseAspectRatioOptions
 })
 
 const showImageSizeConfig = computed(() => {
-    return selectedImageModelType.value === 'nano-banana' ||
-           selectedImageModelType.value === 'gemini-3-pro-image'
+    return supportsImageSizeConfig.value
 })
 
 const supportsGoogleSearch = computed(() => {

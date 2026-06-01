@@ -65,6 +65,11 @@ export function isGrsaiEndpoint(endpoint: string): boolean {
     }
 }
 
+export function isOpenAiImageModelId(model?: string): boolean {
+    const normalized = model?.trim().toLowerCase() || ''
+    return /gpt[\s_-]*image|gptimage|dall[\s_-]*e/.test(normalized)
+}
+
 export function normalizeEndpointPath(pathname: string): string {
     return normalizePath(pathname)
 }
@@ -100,8 +105,7 @@ function getPurposeSuffix(purpose: EndpointPurpose): string[] {
 }
 
 function shouldUseOpenAiImageEndpoint(model?: string): boolean {
-    const normalized = model?.trim().toLowerCase() || ''
-    return normalized.includes('gpt-image') || normalized.includes('dall-e')
+    return isOpenAiImageModelId(model)
 }
 
 function resolveGrsaiGenerateEndpoint(endpoint: string): string {
