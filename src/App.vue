@@ -522,7 +522,7 @@
                                     <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ showAspectRatioSelector ? selectedAspectRatio : '自动' }}</div>
                                 </div>
                                 <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
-                                    <div class="text-brand-muted dark:text-night-muted">尺寸</div>
+                                    <div class="text-brand-muted dark:text-night-muted">分辨率</div>
                                     <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ showImageSizeConfig ? gemini3ImageSize : '自动' }}</div>
                                 </div>
                                 <div
@@ -537,34 +537,34 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-[72px_minmax(86px,1fr)_minmax(72px,0.8fr)_minmax(130px,1.2fr)_minmax(130px,1.1fr)]">
-                                <label class="min-w-0">
-                                    <span class="sr-only">生成张数</span>
-                                    <select v-model.number="generationCount" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
+                            <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-[76px_minmax(92px,1fr)_minmax(86px,0.9fr)_minmax(130px,1.2fr)_minmax(130px,1.1fr)]">
+                                <label class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
+                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">张数</span>
+                                    <select v-model.number="generationCount" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
                                         <option v-for="count in generationCountOptions" :key="count" :value="count">{{ count }} 张</option>
                                     </select>
                                 </label>
-                                <label v-if="showAspectRatioSelector" class="min-w-0">
-                                    <span class="sr-only">图像宽高比</span>
-                                    <select v-model="selectedAspectRatio" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
+                                <label v-if="showAspectRatioSelector" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
+                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">比例</span>
+                                    <select v-model="selectedAspectRatio" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
                                         <option v-for="ratio in availableAspectRatios" :key="ratio.value" :value="ratio.value">{{ ratio.label }}</option>
                                     </select>
                                 </label>
-                                <label v-else class="min-w-0">
-                                    <span class="sr-only">图像宽高比</span>
-                                    <div class="flex min-h-10 items-center justify-center rounded-lg border border-brand-line bg-brand-surface px-2 text-xs font-semibold text-brand-muted dark:border-night-muted/35 dark:bg-night-panel dark:text-night-muted">自动</div>
+                                <label v-else class="min-w-0 rounded-lg border border-brand-line bg-brand-surface px-2 py-1 dark:border-night-muted/35 dark:bg-night-panel">
+                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">比例</span>
+                                    <div class="mt-0.5 truncate text-xs font-semibold text-brand-muted dark:text-night-muted">自动</div>
                                 </label>
-                                <label v-if="showImageSizeConfig" class="min-w-0">
-                                    <span class="sr-only">图像尺寸</span>
-                                    <select v-model="gemini3ImageSize" class="wb-input min-h-10 w-full py-2 text-xs font-semibold">
-                                        <option value="1K">1K</option>
-                                        <option value="2K">2K</option>
-                                        <option value="4K">4K</option>
+                                <label v-if="showImageSizeConfig" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
+                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">分辨率</span>
+                                    <select v-model="gemini3ImageSize" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
+                                        <option value="1K">1K 标准</option>
+                                        <option value="2K">2K 高清</option>
+                                        <option value="4K">4K 超清</option>
                                     </select>
                                 </label>
-                                <label v-else class="min-w-0">
-                                    <span class="sr-only">图像尺寸</span>
-                                    <div class="flex min-h-10 items-center justify-center rounded-lg border border-brand-line bg-brand-surface px-2 text-xs font-semibold text-brand-muted dark:border-night-muted/35 dark:bg-night-panel dark:text-night-muted">自动</div>
+                                <label v-else class="min-w-0 rounded-lg border border-brand-line bg-brand-surface px-2 py-1 dark:border-night-muted/35 dark:bg-night-panel">
+                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">分辨率</span>
+                                    <div class="mt-0.5 truncate text-xs font-semibold text-brand-muted dark:text-night-muted">自动</div>
                                 </label>
                                 <button
                                     type="button"
@@ -572,7 +572,7 @@
                                     :disabled="!canGenerate"
                                     :title="selectedImages.length ? '使用当前参考图和提示词生成' : '左侧上传参考图后此按钮会启用'"
                                     :class="[
-                                        'inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
+                                        'inline-flex min-h-[50px] items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
                                         canGenerate
                                             ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90 dark:border-night-muted dark:bg-night-panel'
                                             : 'cursor-not-allowed bg-brand-line text-brand-muted dark:bg-night-panel dark:text-night-muted'
@@ -586,7 +586,7 @@
                                     :disabled="!canGenerateTextImage"
                                     :title="selectedImages.length ? '已上传参考图，请使用参考图生成；移除参考图后可无参考图生成' : '不使用参考图，直接按提示词生成'"
                                     :class="[
-                                        'inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
+                                        'inline-flex min-h-[50px] items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
                                         canGenerateTextImage
                                             ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90 dark:bg-night-accent'
                                             : 'cursor-not-allowed bg-brand-line text-brand-muted dark:bg-night-panel dark:text-night-muted'
