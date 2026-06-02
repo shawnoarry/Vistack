@@ -1,4 +1,4 @@
-import type { GenerationRecipe } from '../types'
+import type { GenerateRequest, GenerationRecipe, GenerationTask, GenerationTaskHandle } from '../types'
 
 export type GenerationHistorySource = 'text' | 'image'
 
@@ -29,11 +29,21 @@ export interface StoredImage {
     source: 'generated' | 'reference'
 }
 
+export interface PendingGenerationTaskItem {
+    id: string
+    task: GenerationTask
+    request: Omit<GenerateRequest, 'apikey'>
+    handles: GenerationTaskHandle[]
+    createdAt: number
+    updatedAt: number
+}
+
 const DB_NAME = 'vistack'
 const LEGACY_DB_NAME = 'nano-banana-workbench'
-const DB_VERSION = 2
+const DB_VERSION = 3
 const STORE_HISTORY = 'generation-history'
 const STORE_IMAGES = 'stored-images'
+const STORE_PENDING_TASKS = 'pending-generation-tasks'
 
 const isIndexedDbAvailable = () => typeof indexedDB !== 'undefined'
 
@@ -52,6 +62,9 @@ function openHistoryDb(dbName = DB_NAME): Promise<IDBDatabase> {
             }
             if (dbName === DB_NAME && !db.objectStoreNames.contains(STORE_IMAGES)) {
                 db.createObjectStore(STORE_IMAGES, { keyPath: 'id' })
+            }
+            if (dbName === DB_NAME && !db.objectStoreNames.contains(STORE_PENDING_TASKS)) {
+                db.createObjectStore(STORE_PENDING_TASKS, { keyPath: 'id' })
             }
         }
         request.onsuccess = () => resolve(request.result)
@@ -85,6 +98,22 @@ function imageTransaction<T>(
             new Promise((resolve, reject) => {
                 const transaction = db.transaction(STORE_IMAGES, mode)
                 const store = transaction.objectStore(STORE_IMAGES)
+                const request = handler(store)
+                request.onsuccess = () => resolve(request.result)
+                request.onerror = () => reject(request.error)
+            })
+    )
+}
+
+function pendingTaskTransaction<T>(
+    mode: IDBTransactionMode,
+    handler: (store: IDBObjectStore) => IDBRequest<T>
+): Promise<T> {
+    return openHistoryDb(DB_NAME).then(
+        db =>
+            new Promise((resolve, reject) => {
+                const transaction = db.transaction(STORE_PENDING_TASKS, mode)
+                const store = transaction.objectStore(STORE_PENDING_TASKS)
                 const request = handler(store)
                 request.onsuccess = () => resolve(request.result)
                 request.onerror = () => reject(request.error)
@@ -140,6 +169,24 @@ export function putStoredImage(image: StoredImage): Promise<IDBValidKey> {
 
 export function deleteStoredImage(id: string): Promise<undefined> {
     return imageTransaction<undefined>('readwrite', store => store.delete(id))
+}
+
+export async function getPendingGenerationTaskItems(): Promise<PendingGenerationTaskItem[]> {
+    try {
+        const items = await pendingTaskTransaction<PendingGenerationTaskItem[]>('readonly', store => store.getAll())
+        return items.sort((a, b) => b.createdAt - a.createdAt)
+    } catch (error) {
+        console.warn('无法读取待恢复生成任务:', error)
+        return []
+    }
+}
+
+export function putPendingGenerationTaskItem(item: PendingGenerationTaskItem): Promise<IDBValidKey> {
+    return pendingTaskTransaction<IDBValidKey>('readwrite', store => store.put(item))
+}
+
+export function deletePendingGenerationTaskItem(id: string): Promise<undefined> {
+    return pendingTaskTransaction<undefined>('readwrite', store => store.delete(id))
 }
 
 export async function persistGeneratedImages(images: string[]): Promise<{

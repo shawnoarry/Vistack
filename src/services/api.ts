@@ -1,4 +1,4 @@
-import type { ApiModel, GenerateRequest, GenerateResponse, ModelListResponse, PromptAssistantRequest, PromptAssistantResponse } from '../types'
+import type { ApiModel, GenerateImageOptions, GenerateRequest, GenerateResponse, GenerationTaskHandle, GenerationTaskProvider, ModelListResponse, PromptAssistantRequest, PromptAssistantResponse } from '../types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from '../config/api'
 import {
     getEndpointPath,
@@ -132,10 +132,10 @@ const GRS_AI_FALLBACK_MODELS: ApiModel[] = [
     }
 ]
 
-export async function generateImage(request: GenerateRequest, maxRetries: number = 5): Promise<GenerateResponse> {
+export async function generateImage(request: GenerateRequest, maxRetries: number = 5, options: GenerateImageOptions = {}): Promise<GenerateResponse> {
     const targetCount = normalizeImageCount(request.count)
     if (targetCount > 1) {
-        const tasks = Array.from({ length: targetCount }, () => generateImage({ ...request, count: 1 }, maxRetries))
+        const tasks = Array.from({ length: targetCount }, () => generateImage({ ...request, count: 1 }, maxRetries, options))
         const settled = await Promise.allSettled(tasks)
         const imageUrls = settled.flatMap(item => item.status === 'fulfilled' ? item.value.imageUrls : [])
         if (imageUrls.length > 0) {
@@ -154,7 +154,7 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
             console.log(`Attempting image generation (${attempt}/${maxRetries})...`)
 
             const profile = getApiProfile(request.endpoint, request.model)
-            const response = await generateWithProfile(profile, { ...request, count: targetCount - collectedUrls.length })
+            const response = await generateWithProfile(profile, { ...request, count: targetCount - collectedUrls.length }, options)
 
             if (response.imageUrls.length > 0) {
                 for (const imageUrl of response.imageUrls) {
@@ -269,13 +269,13 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
     return { prompt: content }
 }
 
-async function generateWithProfile(profile: ApiProfile, request: GenerateRequest): Promise<GenerateResponse> {
+async function generateWithProfile(profile: ApiProfile, request: GenerateRequest, options: GenerateImageOptions): Promise<GenerateResponse> {
     if (profile.provider === 'grsai') {
-        return generateWithGrsai(profile.endpoint, request)
+        return generateWithGrsai(profile.endpoint, request, options)
     }
 
     if (profile.provider === 'grsai-draw') {
-        return generateWithGrsaiDraw(profile.endpoint, request)
+        return generateWithGrsaiDraw(profile.endpoint, request, options)
     }
 
     if (profile.provider === 'openai-image') {
@@ -387,7 +387,7 @@ async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateReq
     throw new TerminalGenerationError(`The image generation API did not return an image: ${summarizeResponse(data)}`)
 }
 
-async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
+async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest, options: GenerateImageOptions): Promise<GenerateResponse> {
     const modelId = request.model?.trim() || 'nano-banana-2'
     const isGptImage = isOpenAiImageModelId(modelId)
     const payload: Record<string, unknown> = {
@@ -422,10 +422,12 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest):
         throw new TerminalGenerationError(`Grsai API did not return an image or task ID: ${summarizeResponse(data)}`)
     }
 
-    return pollGrsaiResult(apiEndpoint, request.apikey, taskId)
+    const handle = createGenerationTaskHandle('grsai', apiEndpoint, modelId, taskId)
+    await options.onTaskCreated?.(handle)
+    return pollGeneratedTask(handle, request.apikey)
 }
 
-async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
+async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateRequest, options: GenerateImageOptions): Promise<GenerateResponse> {
     const modelId = request.model?.trim() || 'nano-banana-pro'
     const isGptImage = isOpenAiImageModelId(modelId) || getEndpointPath(apiEndpoint).endsWith('/draw/completions')
     const payload: Record<string, unknown> = {
@@ -466,11 +468,28 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
         throw new TerminalGenerationError(`Grsai draw API did not return an image or task ID: ${summarizeResponse(data)}`)
     }
 
-    return pollGrsaiResult(apiEndpoint, request.apikey, taskId)
+    const handle = createGenerationTaskHandle('grsai-draw', apiEndpoint, modelId, taskId)
+    await options.onTaskCreated?.(handle)
+    return pollGeneratedTask(handle, request.apikey)
 }
 
-async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: string): Promise<GenerateResponse> {
-    const resultEndpoint = resolveGrsaiResultEndpoint(apiEndpoint)
+export async function pollGeneratedTask(handle: GenerationTaskHandle, apikey: string): Promise<GenerateResponse> {
+    return pollGrsaiResult(handle.apiEndpoint, apikey, handle.taskId, handle.resultEndpoint)
+}
+
+function createGenerationTaskHandle(provider: GenerationTaskProvider, apiEndpoint: string, model: string, taskId: string): GenerationTaskHandle {
+    return {
+        provider,
+        taskId,
+        apiEndpoint,
+        resultEndpoint: resolveGrsaiResultEndpoint(apiEndpoint),
+        model,
+        createdAt: Date.now()
+    }
+}
+
+async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: string, resultEndpointOverride?: string): Promise<GenerateResponse> {
+    const resultEndpoint = resultEndpointOverride || resolveGrsaiResultEndpoint(apiEndpoint)
     const maxPolls = 36
     const delayMs = 5000
 

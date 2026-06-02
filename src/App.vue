@@ -1102,7 +1102,7 @@ import ResultDisplay from './components/ResultDisplay.vue'
 import CanvasWorkbench from './components/CanvasWorkbench.vue'
 import Footer from './components/Footer.vue'
 import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
-import { fetchModels, generateImage, improvePrompt } from './services/api'
+import { fetchModels, generateImage, improvePrompt, pollGeneratedTask } from './services/api'
 import { styleTemplates } from './data/templates'
 import { promptPoolGroups } from './data/promptPool'
 import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
@@ -1111,15 +1111,19 @@ import { isGrsaiEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint }
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
 import {
     deleteGenerationHistoryItem,
+    deletePendingGenerationTaskItem,
     deleteStoredImage,
     getGenerationHistoryItems,
+    getPendingGenerationTaskItems,
     persistGeneratedImages,
+    putPendingGenerationTaskItem,
     putGenerationHistoryItem,
     resolveHistoryItemImages,
     type GenerationHistoryItem,
+    type PendingGenerationTaskItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationRecipe, GenerationTask, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, WorkspaceMode } from './types'
+import type { ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 type ThemeMode = 'light' | 'dark'
@@ -1144,6 +1148,8 @@ const isTextToImageLoading = ref(false)
 const latestResultSource = ref<'text' | 'image' | null>(null)
 const latestGenerationRecipe = ref<GenerationRecipe | null>(null)
 const generationTasks = ref<GenerationTask[]>([])
+const pendingTaskHandles = new Map<string, GenerationTaskHandle[]>()
+const pendingResumeIds = new Set<string>()
 const currentView = ref<'studio' | 'assets'>('studio')
 const themeMode = ref<ThemeMode>('light')
 const workspaceMode = ref<WorkspaceMode>('quick')
@@ -1285,6 +1291,7 @@ onMounted(() => {
 
     // Mark initialization complete so later watcher updates are treated as user edits.
     hasSyncedInitialEndpoint = true
+    restorePendingGenerationTasks()
 })
 
 // 监听API密钥变化，自动保存到本地存储
@@ -1651,6 +1658,7 @@ const createGenerationTask = (source: GenerationTask['source'], prompt: string, 
         status: 'running',
         createdAt,
         model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
+        endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
         aspectRatio: selectedAspectRatio.value,
         imageSize: gemini3ImageSize.value,
         count: recipe.count,
@@ -2770,20 +2778,21 @@ const addGenerationHistory = async (
     prompt: string,
     images: string[],
     recipe: GenerationRecipe,
-    persistence?: Awaited<ReturnType<typeof persistGeneratedImages>>
+    persistence?: Awaited<ReturnType<typeof persistGeneratedImages>>,
+    task?: GenerationTask
 ) => {
     if (!images.length) return
 
     const createdAt = Date.now()
     const item: GenerationHistoryItem = {
-        id: `${source}-${createdAt}`,
+        id: task ? `history-${task.id}` : `${source}-${createdAt}`,
         source,
         prompt,
-        model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
-        endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
-        aspectRatio: selectedAspectRatio.value,
-        imageSize: gemini3ImageSize.value,
-        count: recipe.count,
+        model: task?.model || selectedModel.value.trim() || DEFAULT_MODEL_ID,
+        endpoint: task?.endpoint || apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
+        aspectRatio: task?.aspectRatio || selectedAspectRatio.value,
+        imageSize: task?.imageSize || gemini3ImageSize.value,
+        count: task?.count || recipe.count,
         createdAt,
         images,
         imageIds: persistence?.imageIds,
@@ -2792,12 +2801,174 @@ const addGenerationHistory = async (
         recipe
     }
 
-    generationHistory.value = [item, ...generationHistory.value]
+    generationHistory.value = [item, ...generationHistory.value.filter(existing => existing.id !== item.id)]
 
     try {
         await putGenerationHistoryItem(item)
     } catch (historyError) {
         console.warn('无法保存生成历史:', historyError)
+    }
+}
+
+const stripApiKeyFromRequest = (request: GenerateRequest): Omit<GenerateRequest, 'apikey'> => {
+    const { apikey, ...requestWithoutKey } = request
+    void apikey
+    return requestWithoutKey
+}
+
+const uniqueTaskHandles = (handles: GenerationTaskHandle[]) => {
+    const seen = new Set<string>()
+    return handles.filter(handle => {
+        const key = `${handle.provider}:${handle.resultEndpoint}:${handle.taskId}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+    })
+}
+
+const savePendingGenerationTask = async (task: GenerationTask, request: GenerateRequest, handles = pendingTaskHandles.get(task.id) || []) => {
+    const nextHandles = uniqueTaskHandles(handles)
+    pendingTaskHandles.set(task.id, nextHandles)
+
+    const currentTask = generationTasks.value.find(item => item.id === task.id) || task
+    const item: PendingGenerationTaskItem = {
+        id: task.id,
+        task: {
+            ...currentTask,
+            status: 'running',
+            error: undefined
+        },
+        request: stripApiKeyFromRequest(request),
+        handles: nextHandles,
+        createdAt: task.createdAt,
+        updatedAt: Date.now()
+    }
+
+    try {
+        await putPendingGenerationTaskItem(item)
+    } catch (pendingError) {
+        console.warn('无法保存待恢复生成任务:', pendingError)
+    }
+}
+
+const removePendingGenerationTask = async (taskId: string) => {
+    pendingTaskHandles.delete(taskId)
+    try {
+        await deletePendingGenerationTaskItem(taskId)
+    } catch (pendingError) {
+        console.warn('无法清理待恢复生成任务:', pendingError)
+    }
+}
+
+const trackGenerationTaskHandle = async (task: GenerationTask, request: GenerateRequest, handle: GenerationTaskHandle) => {
+    const nextHandles = uniqueTaskHandles([...(pendingTaskHandles.get(task.id) || []), handle])
+    pendingTaskHandles.set(task.id, nextHandles)
+    await savePendingGenerationTask(task, request, nextHandles)
+}
+
+const completeGenerationTask = async (task: GenerationTask, imageUrls: string[]) => {
+    const persisted = await persistGeneratedImages(imageUrls)
+    const warningMessage = persisted.warnings.length
+        ? `生成成功，但有 ${persisted.warnings.length} 张图片未能保存为本地副本，远端链接可能会过期。`
+        : null
+
+    if (task.source === 'text') {
+        textToImageResult.value = persisted.images
+        textToImageError.value = warningMessage
+        syncImagesToCanvas(persisted.images, 'result', '文生图结果', task.recipe.mainPrompt || task.prompt)
+    } else {
+        result.value = persisted.images
+        error.value = warningMessage
+        syncImagesToCanvas(persisted.images, 'result', '参考图结果', task.recipe.mainPrompt || task.prompt)
+    }
+
+    latestResultSource.value = task.source
+    latestGenerationRecipe.value = task.recipe
+    updateGenerationTask(task.id, { status: 'done', images: persisted.images, error: undefined })
+    await addGenerationHistory(task.source, task.prompt, persisted.images, task.recipe, persisted, task)
+    await removePendingGenerationTask(task.id)
+}
+
+const failGenerationTask = async (task: GenerationTask, message: string) => {
+    if (task.source === 'text') {
+        textToImageError.value = message
+    } else {
+        error.value = message
+    }
+
+    updateGenerationTask(task.id, { status: 'error', error: message })
+    await removePendingGenerationTask(task.id)
+}
+
+const restorePendingGenerationTasks = async () => {
+    const pendingItems = await getPendingGenerationTaskItems()
+    if (!pendingItems.length) return
+
+    const existingIds = new Set(generationTasks.value.map(task => task.id))
+    const restoredTasks = pendingItems
+        .filter(item => !existingIds.has(item.task.id))
+        .map(item => ({
+            ...item.task,
+            status: 'running' as const,
+            error: undefined
+        }))
+
+    if (restoredTasks.length) {
+        generationTasks.value = [...restoredTasks, ...generationTasks.value]
+    }
+
+    for (const item of pendingItems) {
+        pendingTaskHandles.set(item.id, uniqueTaskHandles(item.handles || []))
+        void resumePendingGenerationTask(item)
+    }
+
+    syncGenerationLoadingState()
+}
+
+const resumePendingGenerationTask = async (item: PendingGenerationTaskItem) => {
+    if (pendingResumeIds.has(item.id)) return
+    pendingResumeIds.add(item.id)
+
+    const task = {
+        ...item.task,
+        status: 'running' as const,
+        error: undefined
+    }
+
+    const handles = uniqueTaskHandles(item.handles || [])
+    if (!handles.length) {
+        await failGenerationTask(task, '刷新发生在平台任务 ID 返回前，Vistack 无法自动找回这次任务。可以在中转后台查看结果。')
+        pendingResumeIds.delete(item.id)
+        syncGenerationLoadingState()
+        return
+    }
+
+    const savedApiKey = apiKey.value.trim() || LocalStorage.getApiKey().trim()
+    if (!savedApiKey) {
+        updateGenerationTask(task.id, { status: 'error', error: '需要先填写 API Key，才能恢复查询刷新前的生成任务。' })
+        pendingResumeIds.delete(item.id)
+        syncGenerationLoadingState()
+        return
+    }
+
+    try {
+        const settled = await Promise.allSettled(handles.map(handle => pollGeneratedTask(handle, savedApiKey)))
+        const imageUrls = settled.flatMap(result => result.status === 'fulfilled' ? result.value.imageUrls : [])
+
+        if (imageUrls.length > 0) {
+            await completeGenerationTask(task, imageUrls.slice(0, task.count || imageUrls.length))
+            return
+        }
+
+        const firstError = settled.find((result): result is PromiseRejectedResult => result.status === 'rejected')?.reason
+        const message = firstError instanceof Error ? firstError.message : '刷新前的生成任务没有返回图片。'
+        await failGenerationTask(task, message)
+    } catch (resumeError) {
+        const message = resumeError instanceof Error ? resumeError.message : '刷新前的生成任务恢复失败。'
+        await failGenerationTask(task, message)
+    } finally {
+        pendingResumeIds.delete(item.id)
+        syncGenerationLoadingState()
     }
 }
 
@@ -3033,21 +3204,14 @@ const handleTextToImageGenerate = async () => {
 
     try {
         const request = buildGenerateRequest(prompt, [], generationCount.value)
-        const response = await generateImage(request)
-        const persisted = await persistGeneratedImages(response.imageUrls)
-        textToImageResult.value = persisted.images
-        if (persisted.warnings.length) {
-            textToImageError.value = `生成成功，但有 ${persisted.warnings.length} 张图片未能保存为本地副本，远端链接可能会过期。`
-        }
-        latestResultSource.value = 'text'
-        latestGenerationRecipe.value = recipe
-        updateGenerationTask(task.id, { status: 'done', images: persisted.images })
-        syncImagesToCanvas(persisted.images, 'result', '文生图结果', recipe.mainPrompt || prompt)
-        await addGenerationHistory('text', prompt, persisted.images, recipe, persisted)
+        await savePendingGenerationTask(task, request)
+        const response = await generateImage(request, 5, {
+            onTaskCreated: handle => trackGenerationTaskHandle(task, request, handle)
+        })
+        await completeGenerationTask(task, response.imageUrls)
     } catch (err) {
         const message = err instanceof Error ? err.message : '生成失败'
-        textToImageError.value = message
-        updateGenerationTask(task.id, { status: 'error', error: message })
+        await failGenerationTask(task, message)
     } finally {
         syncGenerationLoadingState()
     }
@@ -3129,21 +3293,14 @@ const handleGenerate = async () => {
 
     try {
         const request = buildGenerateRequest(prompt, [...selectedImages.value], generationCount.value)
-        const response = await generateImage(request)
-        const persisted = await persistGeneratedImages(response.imageUrls)
-        result.value = persisted.images
-        if (persisted.warnings.length) {
-            error.value = `生成成功，但有 ${persisted.warnings.length} 张图片未能保存为本地副本，远端链接可能会过期。`
-        }
-        latestResultSource.value = 'image'
-        latestGenerationRecipe.value = recipe
-        updateGenerationTask(task.id, { status: 'done', images: persisted.images })
-        syncImagesToCanvas(persisted.images, 'result', '参考图结果', recipe.mainPrompt || prompt)
-        await addGenerationHistory('image', prompt, persisted.images, recipe, persisted)
+        await savePendingGenerationTask(task, request)
+        const response = await generateImage(request, 5, {
+            onTaskCreated: handle => trackGenerationTaskHandle(task, request, handle)
+        })
+        await completeGenerationTask(task, response.imageUrls)
     } catch (err) {
         const message = err instanceof Error ? err.message : '生成失败'
-        error.value = message
-        updateGenerationTask(task.id, { status: 'error', error: message })
+        await failGenerationTask(task, message)
     } finally {
         syncGenerationLoadingState()
     }

@@ -14,6 +14,21 @@ export interface GenerateResponse {
     imageUrls: string[]
 }
 
+export type GenerationTaskProvider = 'grsai' | 'grsai-draw'
+
+export interface GenerationTaskHandle {
+    provider: GenerationTaskProvider
+    taskId: string
+    apiEndpoint: string
+    resultEndpoint: string
+    model: string
+    createdAt: number
+}
+
+export interface GenerateImageOptions {
+    onTaskCreated?: (task: GenerationTaskHandle) => void | Promise<void>
+}
+
 export interface PromptAssistantRequest {
     prompt: string
     context: string
@@ -109,6 +124,7 @@ export interface GenerationTask {
     status: GenerationTaskStatus
     createdAt: number
     model: string
+    endpoint: string
     aspectRatio: string
     imageSize: string
     count: number
