@@ -19,8 +19,8 @@ interface ApiProfile {
 }
 
 interface GrsaiResultResponse {
-    status?: string
-    state?: string
+    status?: unknown
+    state?: unknown
     data?: unknown
     result?: unknown
     results?: unknown
@@ -30,6 +30,13 @@ interface GrsaiResultResponse {
     urls?: unknown
     message?: unknown
     error?: unknown
+}
+
+class TerminalGenerationError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = 'TerminalGenerationError'
+    }
 }
 
 const GRS_AI_FALLBACK_MODELS: ApiModel[] = [
@@ -174,7 +181,7 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
             lastError = err instanceof Error ? err : new Error(String(err))
             console.error(`Attempt ${attempt} failed`, lastError.message)
 
-            if (attempt >= maxRetries) {
+            if (isTerminalGenerationError(lastError) || attempt >= maxRetries) {
                 break
             }
 
@@ -186,7 +193,12 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
         return { imageUrls: collectedUrls }
     }
 
-    throw new Error(`Unable to generate an image after ${maxRetries} attempts. Last error: ${lastError?.message || 'unknown error'}`)
+    if (isTerminalGenerationError(lastError)) {
+        throw lastError
+    }
+
+    const lastErrorMessage = lastError ? (lastError as Error).message : 'unknown error'
+    throw new Error(`Unable to generate an image after ${maxRetries} attempts. Last error: ${lastErrorMessage}`)
 }
 
 export async function fetchModels(apikey: string, endpoint: string): Promise<ApiModel[]> {
@@ -322,10 +334,16 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
     }
 
     const data = await postJson(apiEndpoint, request.apikey, payload)
+    const directImageUrls = extractImageUrls(data)
+    if (directImageUrls.length > 0) {
+        return { imageUrls: directImageUrls }
+    }
+
     const message = getObject(getArray(getObject(data)?.choices)?.[0])?.message
 
     if (!isRecord(message)) {
-        throw new Error(`Invalid response from API: ${summarizeResponse(data)}`)
+        throwIfTerminalTaskResponse(data, 'Image generation request')
+        throw new TerminalGenerationError(`Invalid response from API: ${summarizeResponse(data)}`)
     }
 
     const imageUrls = extractImageUrls(message)
@@ -334,12 +352,14 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
         return { imageUrls }
     }
 
+    throwIfTerminalTaskResponse(data, 'Image generation request')
+
     const textContent = typeof message.content === 'string' ? message.content : ''
     if (textContent.trim()) {
-        throw new Error(`The model returned text instead of an image: ${textContent}`)
+        throw new TerminalGenerationError(`The model returned text instead of an image: ${textContent}`)
     }
 
-    throw new Error('The model did not return a valid image')
+    throw new TerminalGenerationError('The model did not return a valid image')
 }
 
 async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateRequest, includeInputImages: boolean): Promise<GenerateResponse> {
@@ -362,7 +382,9 @@ async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateReq
         return { imageUrls }
     }
 
-    throw new Error(`The image generation API did not return an image: ${summarizeResponse(data)}`)
+    throwIfTerminalTaskResponse(data, 'Image generation request')
+
+    throw new TerminalGenerationError(`The image generation API did not return an image: ${summarizeResponse(data)}`)
 }
 
 async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
@@ -393,9 +415,11 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest):
         return { imageUrls: directUrls }
     }
 
+    throwIfTerminalTaskResponse(data, 'Grsai image generation request')
+
     const taskId = extractTaskId(data)
     if (!taskId) {
-        throw new Error(`Grsai API did not return an image or task ID: ${summarizeResponse(data)}`)
+        throw new TerminalGenerationError(`Grsai API did not return an image or task ID: ${summarizeResponse(data)}`)
     }
 
     return pollGrsaiResult(apiEndpoint, request.apikey, taskId)
@@ -435,9 +459,11 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
         return { imageUrls: directUrls }
     }
 
+    throwIfTerminalTaskResponse(data, 'Grsai draw request')
+
     const taskId = extractTaskId(data)
     if (!taskId) {
-        throw new Error(`Grsai draw API did not return an image or task ID: ${summarizeResponse(data)}`)
+        throw new TerminalGenerationError(`Grsai draw API did not return an image or task ID: ${summarizeResponse(data)}`)
     }
 
     return pollGrsaiResult(apiEndpoint, request.apikey, taskId)
@@ -460,13 +486,10 @@ async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: stri
             return { imageUrls }
         }
 
-        const status = getStatus(data)
-        if (status && ['failed', 'fail', 'error', 'canceled', 'cancelled'].includes(status)) {
-            throw new Error(`Grsai task failed: ${summarizeResponse(data)}`)
-        }
+        throwIfTerminalTaskResponse(data, 'Grsai task')
     }
 
-    throw new Error('Grsai task timed out. Please try again later or check the task in the provider dashboard.')
+    throw new TerminalGenerationError('Grsai task timed out. Please try again later or check the task in the provider dashboard.')
 }
 
 async function fetchGrsaiResult(resultEndpoint: string, apikey: string, taskId: string): Promise<unknown> {
@@ -522,7 +545,12 @@ async function readJsonResponse(response: Response): Promise<unknown> {
     const responseText = await response.text()
 
     if (!response.ok) {
-        throw new Error(`API error ${response.status}: ${responseText}`)
+        const message = formatHttpErrorMessage(response.status, responseText)
+        if (response.status >= 400 && response.status < 500) {
+            throw new TerminalGenerationError(message)
+        }
+
+        throw new Error(message)
     }
 
     if (!responseText.trim()) {
@@ -533,6 +561,20 @@ async function readJsonResponse(response: Response): Promise<unknown> {
         return JSON.parse(responseText)
     } catch {
         throw new Error(`API did not return valid JSON: ${responseText}`)
+    }
+}
+
+function formatHttpErrorMessage(status: number, responseText: string): string {
+    const trimmed = responseText.trim()
+    if (!trimmed) {
+        return `API request failed (HTTP ${status})`
+    }
+
+    try {
+        const parsed = JSON.parse(trimmed)
+        return `API request failed (HTTP ${status}): ${extractFailureReason(parsed)}`
+    } catch {
+        return `API request failed (HTTP ${status}): ${trimmed}`
     }
 }
 
@@ -814,20 +856,214 @@ function extractTaskId(value: unknown): string | null {
     return null
 }
 
-function getStatus(value: unknown): string | null {
-    if (!isRecord(value)) {
+const FAILURE_STATUSES = new Set([
+    'failed',
+    'fail',
+    'failure',
+    'error',
+    'errored',
+    'cancel',
+    'canceled',
+    'cancelled',
+    'abort',
+    'aborted',
+    'reject',
+    'rejected',
+    'denied',
+    'blocked',
+    'invalid',
+    'expired',
+    'timeout',
+    'timed_out',
+    'terminated',
+    'unsafe',
+    'safety',
+    'content_filter',
+    'content_policy_violation'
+])
+
+const SUCCESS_STATUSES = new Set([
+    'success',
+    'succeeded',
+    'complete',
+    'completed',
+    'done',
+    'finished'
+])
+
+function throwIfTerminalTaskResponse(value: unknown, context: string): void {
+    const failedStatus = findStatus(value, isFailureStatus)
+    if (failedStatus) {
+        throw new TerminalGenerationError(`${context} failed (${failedStatus}): ${extractFailureReason(value)}`)
+    }
+
+    if (hasExplicitFailureSignal(value)) {
+        throw new TerminalGenerationError(`${context} failed: ${extractFailureReason(value)}`)
+    }
+
+    const successStatus = findStatus(value, isSuccessStatus)
+    if (successStatus) {
+        throw new TerminalGenerationError(`${context} completed but did not return an image: ${summarizeResponse(value)}`)
+    }
+}
+
+function isTerminalGenerationError(error: unknown): error is TerminalGenerationError {
+    return error instanceof TerminalGenerationError ||
+        (isRecord(error) && getString(error.name) === 'TerminalGenerationError')
+}
+
+function findStatus(value: unknown, matcher: (status: string) => boolean, depth = 0): string | null {
+    if (depth > 6) return null
+
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            const nested = findStatus(item, matcher, depth + 1)
+            if (nested) return nested
+        }
         return null
     }
 
-    const direct = getString(value.status) || getString(value.state)
-    if (direct) {
-        return direct.toLowerCase()
+    if (!isRecord(value)) return null
+
+    for (const key of ['status', 'state', 'taskStatus', 'task_status', 'jobStatus', 'job_status', 'phase']) {
+        const status = normalizeStatus(value[key])
+        if (status && matcher(status)) return status
     }
 
-    if (isRecord(value.data)) {
-        return getStatus(value.data)
+    for (const key of ['data', 'result', 'results', 'output', 'task', 'job']) {
+        if (key in value) {
+            const nested = findStatus(value[key], matcher, depth + 1)
+            if (nested) return nested
+        }
     }
 
+    return null
+}
+
+function isFailureStatus(status: string): boolean {
+    return FAILURE_STATUSES.has(status) ||
+        status.includes('fail') ||
+        status.includes('error') ||
+        status.includes('cancel') ||
+        status.includes('abort') ||
+        status.includes('reject') ||
+        status.includes('block') ||
+        status.includes('denied') ||
+        status.includes('safety') ||
+        status.includes('violation') ||
+        status.includes('expired') ||
+        status.includes('timeout')
+}
+
+function isSuccessStatus(status: string): boolean {
+    return SUCCESS_STATUSES.has(status)
+}
+
+function hasExplicitFailureSignal(value: unknown, depth = 0): boolean {
+    if (depth > 6) return false
+
+    if (Array.isArray(value)) {
+        return value.some(item => hasExplicitFailureSignal(item, depth + 1))
+    }
+
+    if (!isRecord(value)) return false
+
+    if (value.success === false || value.ok === false) return true
+
+    for (const key of ['error', 'errors', 'errorMessage', 'error_message', 'errorCode', 'error_code']) {
+        if (hasMeaningfulErrorValue(value[key])) return true
+    }
+
+    if (hasFailureCode(value) && Boolean(findFailureMessage(value))) {
+        return true
+    }
+
+    for (const key of ['data', 'result', 'results', 'output', 'task', 'job']) {
+        if (key in value && hasExplicitFailureSignal(value[key], depth + 1)) return true
+    }
+
+    return false
+}
+
+function hasMeaningfulErrorValue(value: unknown): boolean {
+    if (value === null || value === undefined || value === false) return false
+
+    if (typeof value === 'string') {
+        const numeric = getNumber(value)
+        if (numeric !== null) return numeric !== 0
+
+        const normalized = normalizeStatus(value)
+        return Boolean(normalized) && !['ok', 'none', 'null', 'success', 'succeeded'].includes(normalized)
+    }
+
+    if (typeof value === 'number') {
+        return value !== 0
+    }
+
+    if (Array.isArray(value)) {
+        return value.some(hasMeaningfulErrorValue)
+    }
+
+    if (isRecord(value)) {
+        const message = findFailureMessage(value)
+        const keys = Object.keys(value)
+        if (!message && keys.length === 1 && getNumber(value.code) === 0) return false
+        return Boolean(message) || Object.keys(value).length > 0
+    }
+
+    return Boolean(value)
+}
+
+function hasFailureCode(value: Record<string, unknown>): boolean {
+    for (const key of ['code', 'statusCode', 'status_code', 'errno']) {
+        const code = getNumber(value[key])
+        if (code !== null && (code < 0 || code >= 400)) {
+            return true
+        }
+    }
+
+    return false
+}
+
+function extractFailureReason(value: unknown): string {
+    return findFailureMessage(value) || summarizeResponse(value)
+}
+
+function findFailureMessage(value: unknown, depth = 0): string {
+    if (depth > 6) return ''
+
+    if (typeof value === 'string') return value.trim()
+
+    if (Array.isArray(value)) {
+        return value.map(item => findFailureMessage(item, depth + 1)).find(Boolean) || ''
+    }
+
+    if (!isRecord(value)) return ''
+
+    for (const key of ['message', 'msg', 'detail', 'reason', 'description', 'error_description', 'errorMessage', 'error_message']) {
+        const direct = getString(value[key])
+        if (direct) return direct
+    }
+
+    for (const key of ['error', 'errors', 'data', 'result', 'output']) {
+        if (key in value) {
+            const nested = findFailureMessage(value[key], depth + 1)
+            if (nested) return nested
+        }
+    }
+
+    return ''
+}
+
+function normalizeStatus(value: unknown): string {
+    if (typeof value === 'number') return String(value)
+    if (typeof value === 'boolean') return value ? 'true' : 'false'
+    return getString(value).toLowerCase().replace(/[\s-]+/g, '_')
+}
+
+function getNumber(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) return Number(value)
     return null
 }
 
