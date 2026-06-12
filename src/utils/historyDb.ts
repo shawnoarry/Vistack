@@ -1,4 +1,4 @@
-import type { GenerateRequest, GenerationRecipe, GenerationTask, GenerationTaskHandle } from '../types'
+import type { GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle } from '../types'
 
 export type GenerationHistorySource = 'text' | 'image'
 
@@ -13,6 +13,7 @@ export interface GenerationHistoryItem {
     aspectRatio: string
     imageSize: string
     count?: number
+    batchMode?: GenerationBatchMode
     useProxy?: boolean
     createdAt: number
     images: string[]

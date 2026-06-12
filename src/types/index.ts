@@ -1,3 +1,5 @@
+export type GenerationBatchMode = 'single' | 'fill'
+
 export interface GenerateRequest {
     prompt: string
     images: string[]
@@ -9,6 +11,7 @@ export interface GenerateRequest {
     count?: number
     enableGoogleSearch?: boolean
     useProxy?: boolean
+    batchMode?: GenerationBatchMode
 }
 
 export interface GenerateResponse {
@@ -115,6 +118,7 @@ export interface GenerationRecipe {
     referenceImageLabels: string[]
     referenceImageMetadata: ReferenceImageMeta[]
     count: number
+    batchMode?: GenerationBatchMode
 }
 
 export type GenerationTaskStatus = 'running' | 'done' | 'error'
@@ -131,6 +135,7 @@ export interface GenerationTask {
     aspectRatio: string
     imageSize: string
     count: number
+    batchMode?: GenerationBatchMode
     images: string[]
     error?: string
     recipe: GenerationRecipe

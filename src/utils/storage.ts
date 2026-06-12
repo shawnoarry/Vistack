@@ -1,4 +1,4 @@
-import type { ModelOption, StyleTemplate } from '../types'
+import type { GenerationBatchMode, ModelOption, StyleTemplate } from '../types'
 
 export interface StoredPromptPhrase {
     id: string
@@ -34,6 +34,7 @@ export class LocalStorage {
     private static readonly CUSTOM_PROMPT_PHRASE_GROUPS = 'vistack-custom-prompt-phrase-groups'
     private static readonly PROMPT_PHRASE_OVERRIDES = 'vistack-prompt-phrase-overrides'
     private static readonly CUSTOM_STYLE_TEMPLATES = 'vistack-custom-style-templates'
+    private static readonly GENERATION_BATCH_MODE = 'vistack-generation-batch-mode'
     private static readonly THEME_MODE = 'vistack-theme-mode'
     private static readonly LEGACY_KEYS = {
         API_KEY: 'nano-banana-api-key',
@@ -232,6 +233,23 @@ export class LocalStorage {
         } catch (error) {
             console.warn('无法读取主题模式:', error)
             return 'light'
+        }
+    }
+
+    static saveGenerationBatchMode(mode: GenerationBatchMode): void {
+        try {
+            localStorage.setItem(this.GENERATION_BATCH_MODE, mode)
+        } catch (error) {
+            console.warn('鏃犳硶淇濆瓨鐢熸垚鎵规妯″紡:', error)
+        }
+    }
+
+    static getGenerationBatchMode(): GenerationBatchMode {
+        try {
+            return localStorage.getItem(this.GENERATION_BATCH_MODE) === 'single' ? 'single' : 'fill'
+        } catch (error) {
+            console.warn('鏃犳硶璇诲彇鐢熸垚鎵规妯″紡:', error)
+            return 'fill'
         }
     }
 

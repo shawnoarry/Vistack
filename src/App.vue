@@ -550,11 +550,17 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-[76px_minmax(92px,1fr)_minmax(86px,0.9fr)_minmax(130px,1.2fr)_minmax(130px,1.1fr)]">
+                            <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                                 <label class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
                                     <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">张数</span>
                                     <select v-model.number="generationCount" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
                                         <option v-for="count in generationCountOptions" :key="count" :value="count">{{ count }} 张</option>
+                                    </select>
+                                </label>
+                                <label class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
+                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">生成策略</span>
+                                    <select v-model="generationBatchMode" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
+                                        <option v-for="option in generationBatchModeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                                     </select>
                                 </label>
                                 <label v-if="showAspectRatioSelector" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
@@ -1138,7 +1144,7 @@ import {
     type PendingGenerationTaskItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, WorkspaceMode } from './types'
+import type { ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 type ThemeMode = 'light' | 'dark'
@@ -1210,6 +1216,7 @@ const isPromptAssistantLoading = ref(false)
 const promptAssistantError = ref<string | null>(null)
 const selectedAspectRatio = ref('1:1')
 const generationCount = ref(1)
+const generationBatchMode = ref<GenerationBatchMode>('fill')
 const portraitAssistEnabled = ref(false)
 const portraitPose = ref('standing side by side')
 const portraitRelation = ref('natural friendly group portrait')
@@ -1282,6 +1289,7 @@ onMounted(() => {
     customStyleTemplates.value = LocalStorage.getCustomStyleTemplates()
     canvasItems.value = getCanvasWorkbenchItems()
     themeMode.value = LocalStorage.getThemeMode()
+    generationBatchMode.value = LocalStorage.getGenerationBatchMode()
 
     if (savedApiKey) {
         apiKey.value = savedApiKey
@@ -1364,6 +1372,10 @@ watch(
     },
     { immediate: false }
 )
+
+watch(generationBatchMode, mode => {
+    LocalStorage.saveGenerationBatchMode(mode)
+})
 
 watch(
     apiUseProxy,
@@ -1646,7 +1658,8 @@ const buildGenerationRecipe = (compiledPrompt: string): GenerationRecipe => ({
     referenceImages: [...selectedImages.value],
     referenceImageLabels: selectedImages.value.map((_, index) => referenceImageLabels.value[index] || `角色${index + 1}`),
     referenceImageMetadata: selectedImages.value.map((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index)),
-    count: generationCount.value
+    count: generationCount.value,
+    batchMode: generationBatchMode.value
 })
 
 const buildGenerateRequest = (prompt: string, images: string[], count = generationCount.value): GenerateRequest => {
@@ -1657,6 +1670,7 @@ const buildGenerateRequest = (prompt: string, images: string[], count = generati
         endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
         model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
         count,
+        batchMode: generationBatchMode.value,
         useProxy: apiUseProxy.value
     }
 
@@ -1692,6 +1706,7 @@ const createGenerationTask = (source: GenerationTask['source'], prompt: string, 
         aspectRatio: selectedAspectRatio.value,
         imageSize: gemini3ImageSize.value,
         count: recipe.count,
+        batchMode: recipe.batchMode,
         images: [],
         recipe,
         useProxy: apiUseProxy.value
@@ -1857,6 +1872,7 @@ const reuseTaskPrompt = (task: GenerationTask) => {
     customPrompt.value = task.recipe.customPrompt || ''
     selectedStyle.value = task.recipe.selectedStyle || ''
     generationCount.value = task.count || task.recipe.count || 1
+    generationBatchMode.value = task.batchMode || task.recipe.batchMode || 'fill'
     selectedAspectRatio.value = task.aspectRatio
     workspaceMode.value = 'quick'
     currentView.value = 'studio'
@@ -2153,6 +2169,10 @@ const selectedTemplatePrompt = computed(() => {
     return template ? resolveTemplatePrompt(template) : ''
 })
 const generationCountOptions = [1, 2, 3, 4]
+const generationBatchModeOptions: Array<{ label: string; value: GenerationBatchMode }> = [
+    { label: '补齐多张', value: 'fill' },
+    { label: '单次请求', value: 'single' }
+]
 const activeSupplementLabel = computed(() => {
     if (selectedStyle.value) {
         return allStyleTemplates.value.find(template => template.id === selectedStyle.value)?.title || '模板'
@@ -2643,6 +2663,18 @@ const getReferencePayloadField = (provider: string, referenceCount: number) => {
     return '未发送'
 }
 
+const generationRequestLimit = computed(() =>
+    generationBatchMode.value === 'fill' ? generationCount.value : 1
+)
+
+const generationRequestSummary = computed(() => {
+    if (generationBatchMode.value === 'single') {
+        return `单次请求，n=${generationCount.value}`
+    }
+
+    return `补齐多张，最多 ${generationRequestLimit.value} 次请求，首请求 n=${generationCount.value}`
+})
+
 const buildRequestDiagnosticText = () => {
     const diagnostic = requestDiagnostic.value
     const references = selectedImages.value.map((_, index) => {
@@ -2658,7 +2690,8 @@ const buildRequestDiagnosticText = () => {
         `model: ${selectedModel.value.trim() || DEFAULT_MODEL_ID}`,
         `referenceCount: ${selectedImages.value.length}`,
         `referencePayloadField: ${diagnostic.payloadField}`,
-        `generationRequests: 1`,
+        `batchMode: ${generationBatchMode.value}`,
+        `generationRequests: ${generationRequestLimit.value}`,
         `n: ${generationCount.value}`,
         `aspectRatio: ${showAspectRatioSelector.value ? selectedAspectRatio.value : 'not sent'}`,
         `imageSize: ${showImageSizeConfig.value ? gemini3ImageSize.value : 'not sent'}`,
@@ -2732,7 +2765,7 @@ const requestDiagnostic = computed(() => {
         referenceSummary: referenceCount
             ? `${referenceCount} 张，将进入 ${field}`
             : '0 张，当前是文生图',
-        requestSummary: `1 次生成请求，n=${generationCount.value}`,
+        requestSummary: generationRequestSummary.value,
         payloadField: field,
         warning: referenceCount && field === '未发送'
             ? '当前路由不会发送参考图。'
@@ -2923,6 +2956,7 @@ const addGenerationHistory = async (
         aspectRatio: task?.aspectRatio || selectedAspectRatio.value,
         imageSize: task?.imageSize || gemini3ImageSize.value,
         count: task?.count || recipe.count,
+        batchMode: task?.batchMode || recipe.batchMode,
         useProxy: task?.useProxy,
         createdAt,
         images,
@@ -3185,6 +3219,7 @@ const applyGenerationRecipe = (recipe: GenerationRecipe | undefined, fallbackPro
     customPrompt.value = recipe?.customPrompt || ''
     selectedStyle.value = recipe?.selectedStyle || ''
     generationCount.value = recipe?.count || 1
+    generationBatchMode.value = recipe?.batchMode || 'fill'
 
     if (recipe?.referenceImages?.length) {
         selectedImages.value = [...recipe.referenceImages]
@@ -3199,6 +3234,7 @@ const reuseHistoryRecipe = (item: GenerationHistoryItem) => {
     selectedAspectRatio.value = item.aspectRatio
     gemini3ImageSize.value = item.imageSize
     generationCount.value = item.count || item.recipe?.count || 1
+    generationBatchMode.value = item.batchMode || item.recipe?.batchMode || 'fill'
     currentView.value = 'studio'
     workspaceMode.value = 'quick'
 }
@@ -3220,6 +3256,7 @@ const restoreHistoryItem = (item: GenerationHistoryItem) => {
     selectedAspectRatio.value = item.aspectRatio
     gemini3ImageSize.value = item.imageSize
     generationCount.value = item.count || item.recipe?.count || 1
+    generationBatchMode.value = item.batchMode || item.recipe?.batchMode || 'fill'
     currentView.value = 'studio'
     workspaceMode.value = 'quick'
 }
@@ -3249,6 +3286,7 @@ const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string)
         `aspectRatio: ${item.aspectRatio}`,
         `imageSize: ${item.imageSize}`,
         `count: ${item.count || item.images.length}`,
+        `batchMode: ${item.batchMode || item.recipe?.batchMode || 'fill'}`,
         `referenceCount: ${item.recipe?.referenceImages?.length || 0}`,
         references.length ? `references:\n${references.join('\n')}` : 'references: none',
         item.imagePersistenceWarnings?.length ? `saveWarnings:\n${item.imagePersistenceWarnings.join('\n')}` : '',

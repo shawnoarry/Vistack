@@ -136,19 +136,23 @@ const REFERENCE_IMAGE_MAX_SIDE = 1600
 const REFERENCE_IMAGE_COMPRESSION_THRESHOLD = 1_000_000
 const REFERENCE_IMAGE_JPEG_QUALITY = 0.88
 
-export async function generateImage(request: GenerateRequest, maxRetries: number = 1, options: GenerateImageOptions = {}): Promise<GenerateResponse> {
+export async function generateImage(request: GenerateRequest, _maxRetries: number = 1, options: GenerateImageOptions = {}): Promise<GenerateResponse> {
     const targetCount = normalizeImageCount(request.count)
-    const attemptLimit = Math.max(1, maxRetries)
+    const batchMode = request.batchMode === 'single' ? 'single' : 'fill'
+    const requestLimit = batchMode === 'fill' ? targetCount : 1
 
     const collectedUrls: string[] = []
     let lastError: Error | null = null
 
-    for (let attempt = 1; attempt <= attemptLimit && collectedUrls.length < targetCount; attempt++) {
+    for (let requestIndex = 1; requestIndex <= requestLimit && collectedUrls.length < targetCount; requestIndex += 1) {
+        const remainingCount = targetCount - collectedUrls.length
+        const countForRequest = requestIndex === 1 ? targetCount : remainingCount
+
         try {
-            console.log(`Attempting image generation (${attempt}/${attemptLimit})...`)
+            console.log(`Attempting image generation request ${requestIndex}/${requestLimit} with n=${countForRequest}...`)
 
             const profile = getApiProfile(request.endpoint, request.model, request.images.length > 0)
-            const response = await generateWithProfile(profile, { ...request, count: targetCount - collectedUrls.length }, options)
+            const response = await generateWithProfile(profile, { ...request, count: countForRequest }, options)
 
             if (response.imageUrls.length > 0) {
                 for (const imageUrl of response.imageUrls) {
@@ -157,34 +161,28 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
                     }
                     if (collectedUrls.length >= targetCount) break
                 }
-                console.log(`Generated ${collectedUrls.length}/${targetCount} image(s) on attempt ${attempt}`)
-                if (collectedUrls.length >= targetCount) {
-                    return { imageUrls: collectedUrls }
+
+                console.log(`Generated ${collectedUrls.length}/${targetCount} image(s) after request ${requestIndex}`)
+
+                if (batchMode === 'single' || collectedUrls.length >= targetCount) {
+                    return { imageUrls: collectedUrls.slice(0, targetCount) }
                 }
+
                 continue
             }
 
             lastError = new Error('The model did not return a valid image')
-            console.warn(`Attempt ${attempt} failed`, lastError.message)
-
-            if (attempt < attemptLimit) {
-                console.log(`Preparing retry ${attempt + 1}...`)
-                continue
-            }
+            console.warn(`Generation request ${requestIndex} returned no image`, lastError.message)
+            break
         } catch (err) {
             lastError = err instanceof Error ? err : new Error(String(err))
-            console.error(`Attempt ${attempt} failed`, lastError.message)
-
-            if (isTerminalGenerationError(lastError) || attempt >= attemptLimit) {
-                break
-            }
-
-            console.log(`Preparing retry ${attempt + 1}...`)
+            console.error(`Generation request ${requestIndex} failed`, lastError.message)
+            break
         }
     }
 
     if (collectedUrls.length > 0) {
-        return { imageUrls: collectedUrls }
+        return { imageUrls: collectedUrls.slice(0, targetCount) }
     }
 
     if (isTerminalGenerationError(lastError)) {
@@ -192,7 +190,7 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
     }
 
     const lastErrorMessage = lastError ? (lastError as Error).message : 'unknown error'
-    throw new Error(`Unable to generate an image after ${attemptLimit} attempts. Last error: ${lastErrorMessage}`)
+    throw new Error(`Unable to generate ${targetCount} image(s). Last error: ${lastErrorMessage}`)
 }
 
 export async function fetchModels(apikey: string, endpoint: string, useProxy = false): Promise<ApiModel[]> {
