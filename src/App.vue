@@ -309,6 +309,7 @@
                             <dd class="mt-1 space-y-1 text-xs leading-5 text-brand-muted">
                                 <p>路由：{{ requestDiagnostic.providerLabel }} · {{ apiUseProxy ? '代理' : '直连' }}</p>
                                 <p>参考图：{{ requestDiagnostic.referenceSummary }}</p>
+                                <p>请求：{{ requestDiagnostic.requestSummary }}</p>
                                 <p class="break-all">端点：{{ requestDiagnostic.endpoint }}</p>
                                 <button type="button" class="wb-secondary mt-2 min-h-8 px-2 text-xs" @click="copyRequestDiagnostic">
                                     {{ diagnosticCopyStatus || '复制诊断信息' }}
@@ -1897,7 +1898,8 @@ const canGenerateTextImage = computed(
         apiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         textToImagePrompt.value.trim() &&
-        selectedImages.value.length === 0
+        selectedImages.value.length === 0 &&
+        !isTextToImageLoading.value
 )
 
 const canGenerate = computed(
@@ -1906,7 +1908,8 @@ const canGenerate = computed(
         apiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         selectedImages.value.length > 0 &&
-        (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim())
+        (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim()) &&
+        !isLoading.value
 )
 
 const promptAssistantReady = computed(
@@ -2655,6 +2658,8 @@ const buildRequestDiagnosticText = () => {
         `model: ${selectedModel.value.trim() || DEFAULT_MODEL_ID}`,
         `referenceCount: ${selectedImages.value.length}`,
         `referencePayloadField: ${diagnostic.payloadField}`,
+        `generationRequests: 1`,
+        `n: ${generationCount.value}`,
         `aspectRatio: ${showAspectRatioSelector.value ? selectedAspectRatio.value : 'not sent'}`,
         `imageSize: ${showImageSizeConfig.value ? gemini3ImageSize.value : 'not sent'}`,
         diagnostic.warning ? `warning: ${diagnostic.warning}` : '',
@@ -2727,6 +2732,7 @@ const requestDiagnostic = computed(() => {
         referenceSummary: referenceCount
             ? `${referenceCount} 张，将进入 ${field}`
             : '0 张，当前是文生图',
+        requestSummary: `1 次生成请求，n=${generationCount.value}`,
         payloadField: field,
         warning: referenceCount && field === '未发送'
             ? '当前路由不会发送参考图。'
@@ -3368,7 +3374,7 @@ const handleTextToImageGenerate = async () => {
     try {
         const request = buildGenerateRequest(prompt, [], generationCount.value)
         await savePendingGenerationTask(task, request)
-        const response = await generateImage(request, 5, {
+        const response = await generateImage(request, 1, {
             onTaskCreated: handle => trackGenerationTaskHandle(task, request, handle)
         })
         await completeGenerationTask(task, response.imageUrls)
@@ -3477,7 +3483,7 @@ const handleGenerate = async () => {
     try {
         const request = buildGenerateRequest(prompt, [...selectedImages.value], generationCount.value)
         await savePendingGenerationTask(task, request)
-        const response = await generateImage(request, 5, {
+        const response = await generateImage(request, 1, {
             onTaskCreated: handle => trackGenerationTaskHandle(task, request, handle)
         })
         await completeGenerationTask(task, response.imageUrls)

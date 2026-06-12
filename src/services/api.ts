@@ -136,26 +136,16 @@ const REFERENCE_IMAGE_MAX_SIDE = 1600
 const REFERENCE_IMAGE_COMPRESSION_THRESHOLD = 1_000_000
 const REFERENCE_IMAGE_JPEG_QUALITY = 0.88
 
-export async function generateImage(request: GenerateRequest, maxRetries: number = 5, options: GenerateImageOptions = {}): Promise<GenerateResponse> {
+export async function generateImage(request: GenerateRequest, maxRetries: number = 1, options: GenerateImageOptions = {}): Promise<GenerateResponse> {
     const targetCount = normalizeImageCount(request.count)
-    if (targetCount > 1) {
-        const tasks = Array.from({ length: targetCount }, () => generateImage({ ...request, count: 1 }, maxRetries, options))
-        const settled = await Promise.allSettled(tasks)
-        const imageUrls = settled.flatMap(item => item.status === 'fulfilled' ? item.value.imageUrls : [])
-        if (imageUrls.length > 0) {
-            return { imageUrls: imageUrls.slice(0, targetCount) }
-        }
-
-        const firstError = settled.find((item): item is PromiseRejectedResult => item.status === 'rejected')?.reason
-        throw firstError instanceof Error ? firstError : new Error('多图生成失败，请稍后重试')
-    }
+    const attemptLimit = Math.max(1, maxRetries)
 
     const collectedUrls: string[] = []
     let lastError: Error | null = null
 
-    for (let attempt = 1; attempt <= maxRetries && collectedUrls.length < targetCount; attempt++) {
+    for (let attempt = 1; attempt <= attemptLimit && collectedUrls.length < targetCount; attempt++) {
         try {
-            console.log(`Attempting image generation (${attempt}/${maxRetries})...`)
+            console.log(`Attempting image generation (${attempt}/${attemptLimit})...`)
 
             const profile = getApiProfile(request.endpoint, request.model, request.images.length > 0)
             const response = await generateWithProfile(profile, { ...request, count: targetCount - collectedUrls.length }, options)
@@ -177,7 +167,7 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
             lastError = new Error('The model did not return a valid image')
             console.warn(`Attempt ${attempt} failed`, lastError.message)
 
-            if (attempt < maxRetries) {
+            if (attempt < attemptLimit) {
                 console.log(`Preparing retry ${attempt + 1}...`)
                 continue
             }
@@ -185,7 +175,7 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
             lastError = err instanceof Error ? err : new Error(String(err))
             console.error(`Attempt ${attempt} failed`, lastError.message)
 
-            if (isTerminalGenerationError(lastError) || attempt >= maxRetries) {
+            if (isTerminalGenerationError(lastError) || attempt >= attemptLimit) {
                 break
             }
 
@@ -202,7 +192,7 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
     }
 
     const lastErrorMessage = lastError ? (lastError as Error).message : 'unknown error'
-    throw new Error(`Unable to generate an image after ${maxRetries} attempts. Last error: ${lastErrorMessage}`)
+    throw new Error(`Unable to generate an image after ${attemptLimit} attempts. Last error: ${lastErrorMessage}`)
 }
 
 export async function fetchModels(apikey: string, endpoint: string, useProxy = false): Promise<ApiModel[]> {
