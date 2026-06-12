@@ -24,6 +24,7 @@ export interface StoredPromptPhraseOverride {
 export class LocalStorage {
     private static readonly API_KEY = 'vistack-api-key'
     private static readonly API_ENDPOINT = 'vistack-api-endpoint'
+    private static readonly API_USE_PROXY = 'vistack-api-use-proxy'
     private static readonly MODEL_ID = 'vistack-model-id'
     private static readonly MODEL_CACHE = 'vistack-model-cache'
     private static readonly PROMPT_ASSISTANT_API_KEY = 'vistack-prompt-assistant-api-key'
@@ -94,6 +95,23 @@ export class LocalStorage {
             localStorage.removeItem(this.API_ENDPOINT)
         } catch (error) {
             console.warn('无法清除本地存储的API端点:', error)
+        }
+    }
+
+    static saveApiUseProxy(useProxy: boolean): void {
+        try {
+            localStorage.setItem(this.API_USE_PROXY, useProxy ? 'true' : 'false')
+        } catch (error) {
+            console.warn('无法保存 API 代理设置:', error)
+        }
+    }
+
+    static getApiUseProxy(): boolean {
+        try {
+            return localStorage.getItem(this.API_USE_PROXY) === 'true'
+        } catch (error) {
+            console.warn('无法读取 API 代理设置:', error)
+            return false
         }
     }
 

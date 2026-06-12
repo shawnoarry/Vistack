@@ -10,7 +10,7 @@ import {
     resolveSiblingEndpoint
 } from '../utils/apiEndpoint'
 
-type ApiProvider = 'openai-chat' | 'openai-image' | 'grsai' | 'grsai-draw'
+type ApiProvider = 'openai-chat' | 'openai-image' | 'openai-image-edit' | 'grsai' | 'grsai-draw'
 
 interface ApiProfile {
     provider: ApiProvider
@@ -132,6 +132,10 @@ const GRS_AI_FALLBACK_MODELS: ApiModel[] = [
     }
 ]
 
+const REFERENCE_IMAGE_MAX_SIDE = 1600
+const REFERENCE_IMAGE_COMPRESSION_THRESHOLD = 1_000_000
+const REFERENCE_IMAGE_JPEG_QUALITY = 0.88
+
 export async function generateImage(request: GenerateRequest, maxRetries: number = 5, options: GenerateImageOptions = {}): Promise<GenerateResponse> {
     const targetCount = normalizeImageCount(request.count)
     if (targetCount > 1) {
@@ -153,7 +157,7 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
         try {
             console.log(`Attempting image generation (${attempt}/${maxRetries})...`)
 
-            const profile = getApiProfile(request.endpoint, request.model)
+            const profile = getApiProfile(request.endpoint, request.model, request.images.length > 0)
             const response = await generateWithProfile(profile, { ...request, count: targetCount - collectedUrls.length }, options)
 
             if (response.imageUrls.length > 0) {
@@ -201,19 +205,19 @@ export async function generateImage(request: GenerateRequest, maxRetries: number
     throw new Error(`Unable to generate an image after ${maxRetries} attempts. Last error: ${lastErrorMessage}`)
 }
 
-export async function fetchModels(apikey: string, endpoint: string): Promise<ApiModel[]> {
+export async function fetchModels(apikey: string, endpoint: string, useProxy = false): Promise<ApiModel[]> {
     const profile = getApiProfile(endpoint)
 
     if (profile.provider === 'grsai' || profile.provider === 'grsai-draw' || profile.isGrsaiHost) {
         try {
-            return await fetchModelsFromKnownEndpoints(apikey, profile.endpoint)
+            return await fetchModelsFromKnownEndpoints(apikey, profile.endpoint, useProxy)
         } catch (error) {
             console.warn('Unable to fetch Grsai models; using built-in model choices:', error)
             return GRS_AI_FALLBACK_MODELS
         }
     }
 
-    return fetchModelsFromKnownEndpoints(apikey, profile.endpoint)
+    return fetchModelsFromKnownEndpoints(apikey, profile.endpoint, useProxy)
 }
 
 export async function improvePrompt(request: PromptAssistantRequest): Promise<PromptAssistantResponse> {
@@ -259,7 +263,7 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
         temperature: 0.4
     }
 
-    const data = await postJson(resolveChatCompletionsEndpoint(request.endpoint), request.apikey, payload)
+    const data = await postJson(resolveChatCompletionsEndpoint(request.endpoint), request.apikey, payload, request.useProxy)
     const content = extractTextContent(data).trim()
 
     if (!content) {
@@ -270,24 +274,33 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
 }
 
 async function generateWithProfile(profile: ApiProfile, request: GenerateRequest, options: GenerateImageOptions): Promise<GenerateResponse> {
+    const requestToSend = request.images.length
+        ? { ...request, images: await prepareReferenceImages(request.images) }
+        : request
+
     if (profile.provider === 'grsai') {
-        return generateWithGrsai(profile.endpoint, request, options)
+        return generateWithGrsai(profile.endpoint, requestToSend, options)
     }
 
     if (profile.provider === 'grsai-draw') {
-        return generateWithGrsaiDraw(profile.endpoint, request, options)
+        return generateWithGrsaiDraw(profile.endpoint, requestToSend, options)
+    }
+
+    if (profile.provider === 'openai-image-edit') {
+        return generateWithOpenAiImageEdit(profile.endpoint, requestToSend)
     }
 
     if (profile.provider === 'openai-image') {
-        return generateWithOpenAiImage(profile.endpoint, request, profile.isGrsaiHost)
+        return generateWithOpenAiImage(profile.endpoint, requestToSend)
     }
 
-    return generateWithOpenAiChat(profile.endpoint, request)
+    return generateWithOpenAiChat(profile.endpoint, requestToSend)
 }
 
 async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
     const modelId = request.model?.trim() || DEFAULT_MODEL_ID
     const isGemini3ProImage = modelId.toLowerCase().includes('gemini-3-pro-image')
+    const isOpenAiImageModel = isOpenAiImageModelId(modelId)
 
     const messageContent = request.images.length === 0
         ? request.prompt
@@ -320,10 +333,14 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
         imageConfig.aspect_ratio = request.aspectRatio
     }
 
-    if (isGemini3ProImage) {
+    if (isGemini3ProImage || isOpenAiImageModel) {
         if (request.imageSize) {
             imageConfig.image_size = request.imageSize
         }
+        imageConfig.size = aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize)
+    }
+
+    if (isGemini3ProImage) {
         if (request.enableGoogleSearch) {
             payload.tools = [{ google_search: {} }]
         }
@@ -333,7 +350,7 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
         payload.image_config = imageConfig
     }
 
-    const data = await postJson(apiEndpoint, request.apikey, payload)
+    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
     const directImageUrls = extractImageUrls(data)
     if (directImageUrls.length > 0) {
         return { imageUrls: directImageUrls }
@@ -362,20 +379,24 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
     throw new TerminalGenerationError('The model did not return a valid image')
 }
 
-async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateRequest, includeInputImages: boolean): Promise<GenerateResponse> {
+async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
+    const modelId = request.model?.trim() || 'gpt-image-2'
     const payload: Record<string, unknown> = {
-        model: request.model?.trim() || 'gpt-image-2',
+        model: modelId,
         prompt: request.prompt,
         size: aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize),
-        response_format: 'url',
         n: normalizeImageCount(request.count)
     }
 
-    if (includeInputImages && request.images.length > 0) {
+    if (isDallEModelId(modelId)) {
+        payload.response_format = 'url'
+    }
+
+    if (request.images.length > 0) {
         payload.image = request.images
     }
 
-    const data = await postJson(apiEndpoint, request.apikey, payload)
+    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
     const imageUrls = extractImageUrls(data)
 
     if (imageUrls.length > 0) {
@@ -408,7 +429,7 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest, 
 
     payload.imageSize = request.imageSize || '1K'
 
-    const data = await postJson(apiEndpoint, request.apikey, payload)
+    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
     const directUrls = extractImageUrls(data)
 
     if (directUrls.length > 0) {
@@ -422,9 +443,37 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest, 
         throw new TerminalGenerationError(`Grsai API did not return an image or task ID: ${summarizeResponse(data)}`)
     }
 
-    const handle = createGenerationTaskHandle('grsai', apiEndpoint, modelId, taskId)
+    const handle = createGenerationTaskHandle('grsai', apiEndpoint, modelId, taskId, request.useProxy)
     await options.onTaskCreated?.(handle)
     return pollGeneratedTask(handle, request.apikey)
+}
+
+async function generateWithOpenAiImageEdit(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
+    const modelId = request.model?.trim() || 'gpt-image-2'
+    const formData = new FormData()
+    formData.append('model', modelId)
+    formData.append('prompt', request.prompt)
+    formData.append('size', aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize))
+    formData.append('n', String(normalizeImageCount(request.count)))
+    if (isDallEModelId(modelId)) {
+        formData.append('response_format', 'url')
+    }
+
+    for (let index = 0; index < request.images.length; index += 1) {
+        const blob = await imageReferenceToBlob(request.images[index])
+        formData.append('image[]', blob, `reference-${index + 1}.${mimeToExtension(blob.type)}`)
+    }
+
+    const data = await postFormData(apiEndpoint, request.apikey, formData, request.useProxy)
+    const imageUrls = extractImageUrls(data)
+
+    if (imageUrls.length > 0) {
+        return { imageUrls }
+    }
+
+    throwIfTerminalTaskResponse(data, 'Image edit request')
+
+    throw new TerminalGenerationError(`The image edit API did not return an image: ${summarizeResponse(data)}`)
 }
 
 async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateRequest, options: GenerateImageOptions): Promise<GenerateResponse> {
@@ -454,7 +503,7 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
         payload.imageSize = request.imageSize || '1K'
     }
 
-    const data = await postJson(apiEndpoint, request.apikey, payload)
+    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
     const directUrls = extractImageUrls(data)
 
     if (directUrls.length > 0) {
@@ -468,27 +517,28 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
         throw new TerminalGenerationError(`Grsai draw API did not return an image or task ID: ${summarizeResponse(data)}`)
     }
 
-    const handle = createGenerationTaskHandle('grsai-draw', apiEndpoint, modelId, taskId)
+    const handle = createGenerationTaskHandle('grsai-draw', apiEndpoint, modelId, taskId, request.useProxy)
     await options.onTaskCreated?.(handle)
     return pollGeneratedTask(handle, request.apikey)
 }
 
 export async function pollGeneratedTask(handle: GenerationTaskHandle, apikey: string): Promise<GenerateResponse> {
-    return pollGrsaiResult(handle.apiEndpoint, apikey, handle.taskId, handle.resultEndpoint)
+    return pollGrsaiResult(handle.apiEndpoint, apikey, handle.taskId, handle.resultEndpoint, handle.useProxy)
 }
 
-function createGenerationTaskHandle(provider: GenerationTaskProvider, apiEndpoint: string, model: string, taskId: string): GenerationTaskHandle {
+function createGenerationTaskHandle(provider: GenerationTaskProvider, apiEndpoint: string, model: string, taskId: string, useProxy?: boolean): GenerationTaskHandle {
     return {
         provider,
         taskId,
         apiEndpoint,
         resultEndpoint: resolveGrsaiResultEndpoint(apiEndpoint),
         model,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        useProxy
     }
 }
 
-async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: string, resultEndpointOverride?: string): Promise<GenerateResponse> {
+async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: string, resultEndpointOverride?: string, useProxy = false): Promise<GenerateResponse> {
     const resultEndpoint = resultEndpointOverride || resolveGrsaiResultEndpoint(apiEndpoint)
     const maxPolls = 36
     const delayMs = 5000
@@ -498,7 +548,7 @@ async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: stri
             await delay(delayMs)
         }
 
-        const data = await fetchGrsaiResult(resultEndpoint, apikey, taskId) as GrsaiResultResponse
+        const data = await fetchGrsaiResult(resultEndpoint, apikey, taskId, useProxy) as GrsaiResultResponse
         const imageUrls = extractImageUrls(data)
 
         if (imageUrls.length > 0) {
@@ -511,21 +561,21 @@ async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: stri
     throw new TerminalGenerationError('Grsai task timed out. Please try again later or check the task in the provider dashboard.')
 }
 
-async function fetchGrsaiResult(resultEndpoint: string, apikey: string, taskId: string): Promise<unknown> {
+async function fetchGrsaiResult(resultEndpoint: string, apikey: string, taskId: string, useProxy = false): Promise<unknown> {
     if (getEndpointPath(resultEndpoint).endsWith('/draw/result')) {
-        return postJson(resultEndpoint, apikey, { id: taskId })
+        return postJson(resultEndpoint, apikey, { id: taskId }, useProxy)
     }
 
-    return getJson(`${resultEndpoint}?id=${encodeURIComponent(taskId)}`, apikey)
+    return getJson(`${resultEndpoint}?id=${encodeURIComponent(taskId)}`, apikey, useProxy)
 }
 
-async function fetchModelsFromKnownEndpoints(apikey: string, endpoint: string): Promise<ApiModel[]> {
+async function fetchModelsFromKnownEndpoints(apikey: string, endpoint: string, useProxy = false): Promise<ApiModel[]> {
     const modelUrls = resolveModelEndpoints(endpoint)
     let lastError: Error | null = null
 
     for (const modelUrl of modelUrls) {
         try {
-            const data = await getJson(modelUrl, apikey) as ModelListResponse
+            const data = await getJson(modelUrl, apikey, useProxy) as ModelListResponse
             const models = normalizeModels(data)
 
             if (models.length > 0) {
@@ -541,23 +591,75 @@ async function fetchModelsFromKnownEndpoints(apikey: string, endpoint: string): 
     throw lastError || new Error('Unable to fetch model list')
 }
 
-async function postJson(endpoint: string, apikey: string, payload: Record<string, unknown>): Promise<unknown> {
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: buildHeaders(apikey),
-        body: JSON.stringify(payload)
-    })
+async function postJson(endpoint: string, apikey: string, payload: Record<string, unknown>, useProxy = false): Promise<unknown> {
+    const response = await fetchEndpoint(endpoint, apikey, 'POST', payload, useProxy)
 
     return readJsonResponse(response)
 }
 
-async function getJson(endpoint: string, apikey: string): Promise<unknown> {
-    const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: buildHeaders(apikey)
-    })
+async function postFormData(endpoint: string, apikey: string, formData: FormData, useProxy = false): Promise<unknown> {
+    const response = await fetchFormEndpoint(endpoint, apikey, formData, useProxy)
 
     return readJsonResponse(response)
+}
+
+async function getJson(endpoint: string, apikey: string, useProxy = false): Promise<unknown> {
+    const response = await fetchEndpoint(endpoint, apikey, 'GET', undefined, useProxy)
+
+    return readJsonResponse(response)
+}
+
+async function fetchFormEndpoint(endpoint: string, apikey: string, formData: FormData, useProxy = false): Promise<Response> {
+    if (!useProxy) {
+        return fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${apikey}`
+            },
+            body: formData
+        })
+    }
+
+    formData.append('_vistack_target', endpoint)
+    return fetch('/api/proxy', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${apikey}`
+        },
+        body: formData
+    })
+}
+
+
+async function fetchEndpoint(
+    endpoint: string,
+    apikey: string,
+    method: 'GET' | 'POST',
+    payload?: Record<string, unknown>,
+    useProxy = false
+): Promise<Response> {
+    const headers = buildHeaders(apikey)
+
+    if (!useProxy) {
+        return fetch(endpoint, {
+            method,
+            headers,
+            body: method === 'POST' ? JSON.stringify(payload || {}) : undefined
+        })
+    }
+
+    return fetch('/api/proxy', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            target: endpoint,
+            method,
+            headers,
+            body: method === 'POST' ? payload || {} : undefined
+        })
+    })
 }
 
 async function readJsonResponse(response: Response): Promise<unknown> {
@@ -604,8 +706,77 @@ function buildHeaders(apikey: string): Record<string, string> {
     }
 }
 
-function getApiProfile(endpoint?: string, model?: string): ApiProfile {
-    const apiEndpoint = resolveImageGenerationEndpoint(endpoint?.trim() || DEFAULT_API_ENDPOINT, model)
+async function imageReferenceToBlob(image: string): Promise<Blob> {
+    if (image.startsWith('data:')) {
+        const response = await fetch(image)
+        return response.blob()
+    }
+
+    const response = await fetch(image)
+    if (!response.ok) {
+        throw new TerminalGenerationError(`Unable to load reference image for edit request: HTTP ${response.status}`)
+    }
+    return response.blob()
+}
+
+function mimeToExtension(mime: string): string {
+    if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg'
+    if (mime.includes('webp')) return 'webp'
+    if (mime.includes('gif')) return 'gif'
+    return 'png'
+}
+
+function isDallEModelId(modelId: string): boolean {
+    return /dall[\s_-]*e/i.test(modelId)
+}
+
+async function prepareReferenceImages(images: string[]): Promise<string[]> {
+    return Promise.all(images.map(image => compressReferenceImageIfNeeded(image)))
+}
+
+async function compressReferenceImageIfNeeded(image: string): Promise<string> {
+    if (!image.startsWith('data:image/') || image.length < REFERENCE_IMAGE_COMPRESSION_THRESHOLD) {
+        return image
+    }
+
+    if (typeof document === 'undefined') {
+        return image
+    }
+
+    try {
+        const loadedImage = await loadHtmlImage(image)
+        const scale = Math.min(1, REFERENCE_IMAGE_MAX_SIDE / Math.max(loadedImage.naturalWidth, loadedImage.naturalHeight))
+        const width = Math.max(1, Math.round(loadedImage.naturalWidth * scale))
+        const height = Math.max(1, Math.round(loadedImage.naturalHeight * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+
+        const context = canvas.getContext('2d')
+        if (!context) {
+            return image
+        }
+
+        context.drawImage(loadedImage, 0, 0, width, height)
+        const compressed = canvas.toDataURL('image/jpeg', REFERENCE_IMAGE_JPEG_QUALITY)
+        return compressed.length < image.length ? compressed : image
+    } catch (error) {
+        console.warn('Unable to compress reference image before sending:', error)
+        return image
+    }
+}
+
+function loadHtmlImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+        const image = new Image()
+        image.onload = () => resolve(image)
+        image.onerror = () => reject(new Error('Reference image failed to load for compression.'))
+        image.src = src
+    })
+}
+
+function getApiProfile(endpoint?: string, model?: string, hasReferenceImages = false): ApiProfile {
+    const apiEndpoint = resolveImageGenerationEndpoint(endpoint?.trim() || DEFAULT_API_ENDPOINT, model, hasReferenceImages)
     const path = getEndpointPath(apiEndpoint)
     const isGrsai = isGrsaiEndpoint(apiEndpoint)
 
@@ -619,6 +790,10 @@ function getApiProfile(endpoint?: string, model?: string): ApiProfile {
 function getApiProvider(path: string): ApiProvider {
     if (path.endsWith('/images/generations')) {
         return 'openai-image'
+    }
+
+    if (path.endsWith('/images/edits')) {
+        return 'openai-image-edit'
     }
 
     if (path.endsWith('/v1/api/generate') || path.endsWith('/api/generate')) {

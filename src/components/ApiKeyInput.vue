@@ -64,6 +64,20 @@
                     <span class="rounded-md border border-brand-line bg-brand-surface px-2 py-0.5 font-semibold text-brand-muted">{{ endpointModeLabel }}</span>
                     <span class="text-brand-muted">Base URL 会自动补全后缀；完整接口会保持原样。</span>
                 </div>
+                <label class="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-brand-line bg-brand-surface px-3 py-2 transition hover:border-brand-accent/40">
+                    <input
+                        type="checkbox"
+                        :checked="useProxy"
+                        @change="$emit('update:useProxy', ($event.target as HTMLInputElement).checked)"
+                        class="mt-1 h-4 w-4 rounded border-brand-line text-brand-accent focus:ring-brand-accent"
+                    />
+                    <span class="min-w-0">
+                        <span class="block text-sm font-semibold text-brand-ink">使用同源代理</span>
+                        <span class="mt-1 block text-xs leading-5 text-brand-muted">
+                            Cherry Studio 可用但浏览器请求失败时开启。模型列表、生图、任务轮询和图片保存会先走 /api/proxy。
+                        </span>
+                    </span>
+                </label>
             </div>
 
             <div>
@@ -169,6 +183,7 @@ const props = defineProps<{
     model: string
     modelLoading: boolean
     modelError: string | null
+    useProxy: boolean
     promptAssistantApiKey: string
     promptAssistantEndpoint: string
     promptAssistantModel: string
@@ -178,6 +193,7 @@ const emit = defineEmits<{
     'update:modelValue': [value: string]
     'update:endpoint': [value: string]
     'update:model': [value: string]
+    'update:useProxy': [value: boolean]
     'update:promptAssistantApiKey': [value: string]
     'update:promptAssistantEndpoint': [value: string]
     'update:promptAssistantModel': [value: string]

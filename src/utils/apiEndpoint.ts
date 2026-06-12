@@ -1,16 +1,17 @@
 import { DEFAULT_API_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_ENDPOINT } from '../config/api'
 
-type EndpointPurpose = 'chat' | 'image-generation' | 'models'
+type EndpointPurpose = 'chat' | 'image-generation' | 'image-edit' | 'models'
 
 const CHAT_COMPLETIONS_SUFFIX = ['chat', 'completions']
 const IMAGE_GENERATIONS_SUFFIX = ['images', 'generations']
+const IMAGE_EDITS_SUFFIX = ['images', 'edits']
 const MODELS_SUFFIX = ['models']
 
 export function resolveChatCompletionsEndpoint(endpoint: string, fallback = DEFAULT_PROMPT_ASSISTANT_ENDPOINT): string {
     return resolveEndpoint(endpoint, 'chat', fallback)
 }
 
-export function resolveImageGenerationEndpoint(endpoint: string, model?: string): string {
+export function resolveImageGenerationEndpoint(endpoint: string, model?: string, hasReferenceImages = false): string {
     const trimmed = endpoint.trim() || DEFAULT_API_ENDPOINT
 
     if (isCompleteEndpoint(trimmed)) {
@@ -19,6 +20,10 @@ export function resolveImageGenerationEndpoint(endpoint: string, model?: string)
 
     if (isGrsaiEndpoint(trimmed)) {
         return resolveGrsaiGenerateEndpoint(trimmed)
+    }
+
+    if (hasReferenceImages && shouldUseOpenAiImageEndpoint(model)) {
+        return resolveEndpoint(trimmed, 'image-edit', DEFAULT_API_ENDPOINT)
     }
 
     if (shouldUseOpenAiImageEndpoint(model)) {
@@ -93,6 +98,10 @@ function resolveEndpoint(endpoint: string, purpose: EndpointPurpose, fallback: s
 }
 
 function getPurposeSuffix(purpose: EndpointPurpose): string[] {
+    if (purpose === 'image-edit') {
+        return IMAGE_EDITS_SUFFIX
+    }
+
     if (purpose === 'image-generation') {
         return IMAGE_GENERATIONS_SUFFIX
     }

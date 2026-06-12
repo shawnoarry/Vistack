@@ -8,9 +8,12 @@ export interface GenerationHistoryItem {
     prompt: string
     model: string
     endpoint: string
+    resolvedEndpoint?: string
+    requestProvider?: string
     aspectRatio: string
     imageSize: string
     count?: number
+    useProxy?: boolean
     createdAt: number
     images: string[]
     imageIds?: string[]
@@ -189,7 +192,7 @@ export function deletePendingGenerationTaskItem(id: string): Promise<undefined> 
     return pendingTaskTransaction<undefined>('readwrite', store => store.delete(id))
 }
 
-export async function persistGeneratedImages(images: string[]): Promise<{
+export async function persistGeneratedImages(images: string[], useProxy = false): Promise<{
     images: string[]
     imageIds: string[]
     rawImageUrls: string[]
@@ -205,7 +208,7 @@ export async function persistGeneratedImages(images: string[]): Promise<{
         rawImageUrls.push(rawImageUrl)
 
         try {
-            const dataUrl = await imageToDataUrl(image)
+            const dataUrl = await imageToDataUrl(image, useProxy)
             const id = await hashText(dataUrl)
             await putStoredImage({
                 id,
@@ -261,13 +264,27 @@ function isDataUrl(value: string): boolean {
     return value.startsWith('data:')
 }
 
-async function imageToDataUrl(image: string): Promise<string> {
+async function imageToDataUrl(image: string, useProxy = false): Promise<string> {
     if (isDataUrl(image)) return image
     if (!isHttpUrl(image)) return image
 
     let response: Response
     try {
-        response = await fetch(image, { cache: 'no-store' })
+        response = useProxy
+            ? await fetch('/api/proxy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    target: image,
+                    method: 'GET',
+                    headers: {
+                        Accept: 'image/*,*/*'
+                    }
+                })
+            })
+            : await fetch(image, { cache: 'no-store' })
     } catch (error) {
         throw new Error('图片已生成，但浏览器无法下载到本地保存。可能是跨域限制、链接过期或网络异常。')
     }

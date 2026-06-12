@@ -86,6 +86,7 @@
                     v-model="apiKey"
                     v-model:endpoint="apiEndpoint"
                     v-model:model="selectedModel"
+                    v-model:use-proxy="apiUseProxy"
                     v-model:prompt-assistant-api-key="promptAssistantApiKey"
                     v-model:prompt-assistant-endpoint="promptAssistantEndpoint"
                     v-model:prompt-assistant-model="promptAssistantModel"
@@ -302,6 +303,17 @@
                         <div>
                             <dt class="wb-label">Google Search</dt>
                             <dd class="mt-1 text-brand-ink">{{ supportsGoogleSearch ? (gemini3EnableGoogleSearch ? '已启用' : '可启用') : '当前模型不支持' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="wb-label">请求诊断</dt>
+                            <dd class="mt-1 space-y-1 text-xs leading-5 text-brand-muted">
+                                <p>路由：{{ requestDiagnostic.providerLabel }} · {{ apiUseProxy ? '代理' : '直连' }}</p>
+                                <p>参考图：{{ requestDiagnostic.referenceSummary }}</p>
+                                <p class="break-all">端点：{{ requestDiagnostic.endpoint }}</p>
+                                <button type="button" class="wb-secondary mt-2 min-h-8 px-2 text-xs" @click="copyRequestDiagnostic">
+                                    {{ diagnosticCopyStatus || '复制诊断信息' }}
+                                </button>
+                            </dd>
                         </div>
                     </dl>
                 </section>
@@ -1015,6 +1027,7 @@
                     <div class="flex flex-wrap gap-2">
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="openOriginalImage(historyPreviewImage)">原图查看</button>
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="handleDownloadResult(historyPreviewImage)">下载</button>
+                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="copyHistoryDiagnostic(historyPreviewItem, historyPreviewImage)">复制生成信息</button>
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="pushHistoryImages(historyPreviewItem)">结果作参考</button>
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="addHistoryItemToCanvas(historyPreviewItem, historyPreviewImage)">加入画布</button>
                         <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="reuseHistoryRecipe(historyPreviewItem)">一键复用</button>
@@ -1050,6 +1063,7 @@
                         <p>生成组：{{ historyPreviewItem.images.length }} 张</p>
                         <p>比例：{{ historyPreviewItem.aspectRatio }} · 分辨率：{{ historyPreviewItem.imageSize }}</p>
                         <p>模型：{{ historyPreviewItem.model }}</p>
+                        <p>代理：{{ historyPreviewItem.useProxy ? '开启' : '关闭' }}</p>
                     </div>
                 </div>
             </div>
@@ -1107,7 +1121,7 @@ import { styleTemplates } from './data/templates'
 import { promptPoolGroups } from './data/promptPool'
 import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
 import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
-import { isGrsaiEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint } from './utils/apiEndpoint'
+import { getEndpointPath, isGrsaiEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint, resolveImageGenerationEndpoint } from './utils/apiEndpoint'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
 import {
     deleteGenerationHistoryItem,
@@ -1130,6 +1144,7 @@ type ThemeMode = 'light' | 'dark'
 
 const apiKey = ref('')
 const apiEndpoint = ref('')
+const apiUseProxy = ref(false)
 const selectedImages = ref<string[]>([])
 const referenceImageLabels = ref<string[]>([])
 const referenceImageMetadata = ref<ReferenceImageMeta[]>([])
@@ -1171,6 +1186,7 @@ const editingPromptPhraseGroupId = ref('')
 const phraseGroupFormTitle = ref('')
 const phraseGroupFormDescription = ref('')
 const showTemplateEditor = ref(false)
+const diagnosticCopyStatus = ref('')
 const editingTemplateId = ref('')
 const templateFormTitle = ref('')
 const templateFormCategory = ref('我的模板')
@@ -1254,6 +1270,7 @@ onMounted(() => {
 
     const savedApiKey = LocalStorage.getApiKey()
     const savedEndpoint = LocalStorage.getApiEndpoint()
+    const savedApiUseProxy = LocalStorage.getApiUseProxy()
     const savedModelId = LocalStorage.getModelId()
     const savedPromptAssistantApiKey = LocalStorage.getPromptAssistantApiKey()
     const savedPromptAssistantEndpoint = LocalStorage.getPromptAssistantEndpoint()
@@ -1283,6 +1300,7 @@ onMounted(() => {
     // Restore values before endpoint watchers begin syncing user edits.
     selectedModel.value = modelIdToUse
     apiEndpoint.value = endpointToUse
+    apiUseProxy.value = savedApiUseProxy
     promptAssistantApiKey.value = savedPromptAssistantApiKey
     promptAssistantEndpoint.value = savedPromptAssistantEndpoint.trim() || DEFAULT_PROMPT_ASSISTANT_ENDPOINT
     promptAssistantModel.value = savedPromptAssistantModel.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID
@@ -1342,6 +1360,14 @@ watch(
             }
             showApiSettings.value = true
         }
+    },
+    { immediate: false }
+)
+
+watch(
+    apiUseProxy,
+    (newUseProxy: boolean) => {
+        LocalStorage.saveApiUseProxy(newUseProxy)
     },
     { immediate: false }
 )
@@ -1449,7 +1475,7 @@ const handleFetchModels = async () => {
     modelsError.value = null
 
     try {
-        const rawModels = await fetchModels(apiKey.value, apiEndpoint.value)
+        const rawModels = await fetchModels(apiKey.value, apiEndpoint.value, apiUseProxy.value)
         const options = mapModelsToOptions(rawModels)
 
         if (!options.length) {
@@ -1629,7 +1655,8 @@ const buildGenerateRequest = (prompt: string, images: string[], count = generati
         apikey: apiKey.value,
         endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
         model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
-        count
+        count,
+        useProxy: apiUseProxy.value
     }
 
     if (showAspectRatioSelector.value) {
@@ -1659,11 +1686,14 @@ const createGenerationTask = (source: GenerationTask['source'], prompt: string, 
         createdAt,
         model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
         endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
+        resolvedEndpoint: resolvedGenerationEndpoint.value,
+        requestProvider: requestProviderType.value,
         aspectRatio: selectedAspectRatio.value,
         imageSize: gemini3ImageSize.value,
         count: recipe.count,
         images: [],
-        recipe
+        recipe,
+        useProxy: apiUseProxy.value
     }
 }
 
@@ -2505,7 +2535,8 @@ const translateTemplatePrompt = async (targetLanguage: 'zh' | 'en') => {
             endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
             model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID,
             task: 'translate-template',
-            targetLanguage
+            targetLanguage,
+            useProxy: apiUseProxy.value
         })
 
         if (targetLanguage === 'en') {
@@ -2587,7 +2618,8 @@ const handleImprovePrompt = async () => {
             context: buildPromptAssistantContext(),
             apikey: promptAssistantApiKey.value.trim(),
             endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
-            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID
+            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID,
+            useProxy: apiUseProxy.value
         }
         const response = await improvePrompt(request)
         textToImagePrompt.value = response.prompt
@@ -2596,6 +2628,53 @@ const handleImprovePrompt = async () => {
     } finally {
         isPromptAssistantLoading.value = false
     }
+}
+
+const getReferencePayloadField = (provider: string, referenceCount: number) => {
+    if (!referenceCount) return '无'
+    if (provider === 'openai-chat') return 'messages[].content[].image_url'
+    if (provider === 'openai-image') return 'image'
+    if (provider === 'openai-image-edit') return 'multipart image[]'
+    if (provider === 'grsai') return 'images'
+    if (provider === 'grsai-draw') return 'images + urls'
+    return '未发送'
+}
+
+const buildRequestDiagnosticText = () => {
+    const diagnostic = requestDiagnostic.value
+    const references = selectedImages.value.map((_, index) => {
+        const meta = normalizeReferenceMeta(referenceImageMetadata.value[index], index)
+        return `${index + 1}. ${roleLabel(meta.role)} / ${meta.label}${meta.note ? ` / ${meta.note}` : ''}`
+    })
+
+    return [
+        'Vistack 请求诊断',
+        `endpoint: ${diagnostic.endpoint}`,
+        `provider: ${diagnostic.provider}`,
+        `proxy: ${apiUseProxy.value ? 'on' : 'off'}`,
+        `model: ${selectedModel.value.trim() || DEFAULT_MODEL_ID}`,
+        `referenceCount: ${selectedImages.value.length}`,
+        `referencePayloadField: ${diagnostic.payloadField}`,
+        `aspectRatio: ${showAspectRatioSelector.value ? selectedAspectRatio.value : 'not sent'}`,
+        `imageSize: ${showImageSizeConfig.value ? gemini3ImageSize.value : 'not sent'}`,
+        diagnostic.warning ? `warning: ${diagnostic.warning}` : '',
+        references.length ? `references:\n${references.join('\n')}` : 'references: none',
+        `promptPreview:\n${promptPreview.value || ''}`
+    ].filter(Boolean).join('\n')
+}
+
+const copyRequestDiagnostic = async () => {
+    const text = buildRequestDiagnosticText()
+    try {
+        await navigator.clipboard.writeText(text)
+        diagnosticCopyStatus.value = '已复制'
+    } catch {
+        diagnosticCopyStatus.value = '复制失败'
+    }
+
+    window.setTimeout(() => {
+        diagnosticCopyStatus.value = ''
+    }, 1800)
 }
 
 const composeTextPrompt = () => {
@@ -2611,6 +2690,49 @@ const composeImagePrompt = () => {
 }
 
 const promptPreview = computed(() => selectedImages.value.length ? composeImagePrompt() : composeTextPrompt())
+
+const resolvedGenerationEndpoint = computed(() =>
+    resolveImageGenerationEndpoint(
+        apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
+        selectedModel.value.trim() || DEFAULT_MODEL_ID,
+        selectedImages.value.length > 0
+    )
+)
+
+const requestProviderType = computed(() => {
+    const path = getEndpointPath(resolvedGenerationEndpoint.value)
+    if (path.endsWith('/images/generations')) return 'openai-image'
+    if (path.endsWith('/images/edits')) return 'openai-image-edit'
+    if (path.endsWith('/v1/api/generate') || path.endsWith('/api/generate')) return 'grsai'
+    if (path.includes('/draw/') && !path.endsWith('/draw/result')) return 'grsai-draw'
+    return 'openai-chat'
+})
+
+const requestDiagnostic = computed(() => {
+    const provider = requestProviderType.value
+    const referenceCount = selectedImages.value.length
+    const field = getReferencePayloadField(provider, referenceCount)
+    const providerLabelMap: Record<string, string> = {
+        'openai-chat': 'Chat multimodal',
+        'openai-image': 'Images API',
+        'openai-image-edit': 'Images Edit',
+        grsai: 'Grsai generate',
+        'grsai-draw': 'Grsai draw'
+    }
+
+    return {
+        endpoint: resolvedGenerationEndpoint.value,
+        provider,
+        providerLabel: providerLabelMap[provider] || provider,
+        referenceSummary: referenceCount
+            ? `${referenceCount} 张，将进入 ${field}`
+            : '0 张，当前是文生图',
+        payloadField: field,
+        warning: referenceCount && field === '未发送'
+            ? '当前路由不会发送参考图。'
+            : ''
+    }
+})
 
 const selectedModelOption = computed(() => {
     const currentId = selectedModel.value.trim()
@@ -2790,9 +2912,12 @@ const addGenerationHistory = async (
         prompt,
         model: task?.model || selectedModel.value.trim() || DEFAULT_MODEL_ID,
         endpoint: task?.endpoint || apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
+        resolvedEndpoint: task?.resolvedEndpoint,
+        requestProvider: task?.requestProvider,
         aspectRatio: task?.aspectRatio || selectedAspectRatio.value,
         imageSize: task?.imageSize || gemini3ImageSize.value,
         count: task?.count || recipe.count,
+        useProxy: task?.useProxy,
         createdAt,
         images,
         imageIds: persistence?.imageIds,
@@ -2867,7 +2992,7 @@ const trackGenerationTaskHandle = async (task: GenerationTask, request: Generate
 }
 
 const completeGenerationTask = async (task: GenerationTask, imageUrls: string[]) => {
-    const persisted = await persistGeneratedImages(imageUrls)
+    const persisted = await persistGeneratedImages(imageUrls, task.useProxy)
     const warningMessage = persisted.warnings.length
         ? `生成成功，但有 ${persisted.warnings.length} 张图片未能保存为本地副本，远端链接可能会过期。`
         : null
@@ -3098,6 +3223,44 @@ const openHistoryPreview = (item: GenerationHistoryItem, image = item.images[0] 
     historyPreviewImage.value = image
 }
 
+const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string) => {
+    const imageIndex = Math.max(item.images.indexOf(image), 0)
+    const references = item.recipe?.referenceImages?.map((_, index) => {
+        const meta = normalizeReferenceRecipeMeta(item.recipe?.referenceImageMetadata?.[index], index)
+        return `${index + 1}. ${roleLabel(meta.role)} / ${meta.label}${meta.note ? ` / ${meta.note}` : ''}`
+    }) || []
+
+    const text = [
+        'Vistack 历史生成信息',
+        `historyId: ${item.id}`,
+        `selectedImageIndex: ${imageIndex + 1}`,
+        `source: ${item.source}`,
+        `configuredEndpoint: ${item.endpoint}`,
+        `resolvedEndpoint: ${item.resolvedEndpoint || item.endpoint}`,
+        `provider: ${item.requestProvider || 'unknown'}`,
+        `model: ${item.model}`,
+        `proxy: ${item.useProxy ? 'on' : 'off'}`,
+        `aspectRatio: ${item.aspectRatio}`,
+        `imageSize: ${item.imageSize}`,
+        `count: ${item.count || item.images.length}`,
+        `referenceCount: ${item.recipe?.referenceImages?.length || 0}`,
+        references.length ? `references:\n${references.join('\n')}` : 'references: none',
+        item.imagePersistenceWarnings?.length ? `saveWarnings:\n${item.imagePersistenceWarnings.join('\n')}` : '',
+        `prompt:\n${item.prompt}`
+    ].filter(Boolean).join('\n')
+
+    try {
+        await navigator.clipboard.writeText(text)
+        diagnosticCopyStatus.value = '已复制'
+    } catch {
+        diagnosticCopyStatus.value = '复制失败'
+    }
+
+    window.setTimeout(() => {
+        diagnosticCopyStatus.value = ''
+    }, 1800)
+}
+
 const deleteHistoryItem = async (item: GenerationHistoryItem) => {
     generationHistory.value = generationHistory.value.filter(historyItem => historyItem.id !== item.id)
     if (historyPreviewItem.value?.id === item.id) {
@@ -3255,7 +3418,7 @@ const handleDownloadResult = async (image: string) => {
 
     try {
         if (!image.startsWith('data:')) {
-            const response = await fetch(image)
+            const response = await fetchImageForDownload(image)
             const blob = await response.blob()
             downloadUrl = URL.createObjectURL(blob)
             revokeUrl = downloadUrl
@@ -3278,6 +3441,26 @@ const handleDownloadResult = async (image: string) => {
     } catch (downloadError) {
         window.open(image, '_blank', 'noopener')
     }
+}
+
+const fetchImageForDownload = (image: string) => {
+    if (!apiUseProxy.value) {
+        return fetch(image)
+    }
+
+    return fetch('/api/proxy', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            target: image,
+            method: 'GET',
+            headers: {
+                Accept: 'image/*,*/*'
+            }
+        })
+    })
 }
 
 const handleGenerate = async () => {

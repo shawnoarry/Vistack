@@ -8,6 +8,7 @@ export interface GenerateRequest {
     imageSize?: string
     count?: number
     enableGoogleSearch?: boolean
+    useProxy?: boolean
 }
 
 export interface GenerateResponse {
@@ -23,6 +24,7 @@ export interface GenerationTaskHandle {
     resultEndpoint: string
     model: string
     createdAt: number
+    useProxy?: boolean
 }
 
 export interface GenerateImageOptions {
@@ -37,6 +39,7 @@ export interface PromptAssistantRequest {
     model: string
     task?: 'optimize' | 'translate-template'
     targetLanguage?: 'zh' | 'en'
+    useProxy?: boolean
 }
 
 export interface PromptAssistantResponse {
@@ -131,6 +134,9 @@ export interface GenerationTask {
     images: string[]
     error?: string
     recipe: GenerationRecipe
+    useProxy?: boolean
+    resolvedEndpoint?: string
+    requestProvider?: string
 }
 
 export type WorkspaceMode = 'quick' | 'canvas'
