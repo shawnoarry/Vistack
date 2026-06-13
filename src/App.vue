@@ -90,9 +90,15 @@
                     v-model:prompt-assistant-api-key="promptAssistantApiKey"
                     v-model:prompt-assistant-endpoint="promptAssistantEndpoint"
                     v-model:prompt-assistant-model="promptAssistantModel"
+                    :api-presets="apiConnectionPresets"
+                    :selected-preset-id="selectedApiConnectionPresetId"
                     :models="modelOptions"
                     :model-loading="isFetchingModels"
                     :model-error="modelsError"
+                    @save-preset="handleSaveApiPreset"
+                    @update-preset="handleUpdateApiPreset"
+                    @delete-preset="handleDeleteApiPreset"
+                    @select-preset="handleSelectApiPreset"
                     @fetch-models="handleFetchModels"
                     @model-picked="handleModelPicked"
                 />
@@ -1144,7 +1150,7 @@ import {
     type PendingGenerationTaskItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, WorkspaceMode } from './types'
+import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 type ThemeMode = 'light' | 'dark'
@@ -1152,6 +1158,9 @@ type ThemeMode = 'light' | 'dark'
 const apiKey = ref('')
 const apiEndpoint = ref('')
 const apiUseProxy = ref(false)
+const apiConnectionPresets = ref<ApiConnectionPreset[]>([])
+const selectedApiConnectionPresetId = ref('')
+const isApplyingApiConnectionPreset = ref(false)
 const selectedImages = ref<string[]>([])
 const referenceImageLabels = ref<string[]>([])
 const referenceImageMetadata = ref<ReferenceImageMeta[]>([])
@@ -1284,6 +1293,7 @@ onMounted(() => {
     const savedPromptAssistantEndpoint = LocalStorage.getPromptAssistantEndpoint()
     const savedPromptAssistantModel = LocalStorage.getPromptAssistantModelId()
     assetCollections.value = LocalStorage.getAssetCollections()
+    apiConnectionPresets.value = LocalStorage.getApiConnectionPresets()
     customPromptPhraseGroups.value = LocalStorage.getCustomPromptPhraseGroups()
     promptPhraseOverrides.value = LocalStorage.getPromptPhraseOverrides()
     customStyleTemplates.value = LocalStorage.getCustomStyleTemplates()
@@ -1310,6 +1320,12 @@ onMounted(() => {
     selectedModel.value = modelIdToUse
     apiEndpoint.value = endpointToUse
     apiUseProxy.value = savedApiUseProxy
+    selectedApiConnectionPresetId.value = findMatchingApiPresetId(apiConnectionPresets.value, {
+        apiKey: savedApiKey,
+        endpoint: endpointToUse,
+        model: modelIdToUse,
+        useProxy: savedApiUseProxy
+    })
     promptAssistantApiKey.value = savedPromptAssistantApiKey
     promptAssistantEndpoint.value = savedPromptAssistantEndpoint.trim() || DEFAULT_PROMPT_ASSISTANT_ENDPOINT
     promptAssistantModel.value = savedPromptAssistantModel.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID
@@ -1338,6 +1354,7 @@ watch(
             }
             showApiSettings.value = true
         }
+        syncSelectedApiPreset()
     },
     { immediate: false }
 )
@@ -1355,7 +1372,7 @@ watch(
         }
 
         // 如果是初始化阶段（在 onMounted 中），直接返回，不做任何处理
-        if (!hasSyncedInitialEndpoint) {
+        if (!hasSyncedInitialEndpoint || isApplyingApiConnectionPreset.value) {
             return
         }
 
@@ -1369,6 +1386,7 @@ watch(
             }
             showApiSettings.value = true
         }
+        syncSelectedApiPreset()
     },
     { immediate: false }
 )
@@ -1381,6 +1399,7 @@ watch(
     apiUseProxy,
     (newUseProxy: boolean) => {
         LocalStorage.saveApiUseProxy(newUseProxy)
+        syncSelectedApiPreset()
     },
     { immediate: false }
 )
@@ -1404,6 +1423,7 @@ watch(
         if (hasSyncedInitialEndpoint) {
             ensureSelectedOptionPresent()
         }
+        syncSelectedApiPreset()
     },
     { immediate: false }
 )
@@ -1513,6 +1533,125 @@ const handleFetchModels = async () => {
     } finally {
         isFetchingModels.value = false
     }
+}
+
+const buildApiPresetName = (endpoint: string, model: string) => {
+    try {
+        const host = new URL(endpoint).host
+        return model.trim() ? `${host} / ${model.trim()}` : host
+    } catch {
+        return model.trim() ? `${endpoint.trim()} / ${model.trim()}` : endpoint.trim() || '未命名配置'
+    }
+}
+
+const normalizeApiPresetEndpoint = (endpoint: string) => endpoint.trim().replace(/\/+$/, '').toLowerCase()
+
+const findMatchingApiPresetId = (
+    presets: ApiConnectionPreset[],
+    config: { apiKey: string; endpoint: string; model: string; useProxy: boolean }
+) => {
+    const endpoint = normalizeApiPresetEndpoint(config.endpoint)
+    const model = config.model.trim()
+    const apiKeyValue = config.apiKey.trim()
+
+    return presets.find(preset =>
+        normalizeApiPresetEndpoint(preset.endpoint) === endpoint &&
+        preset.model.trim() === model &&
+        preset.apiKey.trim() === apiKeyValue &&
+        preset.useProxy === config.useProxy
+    )?.id || ''
+}
+
+const syncSelectedApiPreset = () => {
+    if (isApplyingApiConnectionPreset.value) return
+    selectedApiConnectionPresetId.value = findMatchingApiPresetId(apiConnectionPresets.value, {
+        apiKey: apiKey.value,
+        endpoint: apiEndpoint.value,
+        model: selectedModel.value,
+        useProxy: apiUseProxy.value
+    })
+}
+
+const persistApiConnectionPresets = (presets: ApiConnectionPreset[]) => {
+    apiConnectionPresets.value = presets
+    LocalStorage.saveApiConnectionPresets(presets)
+}
+
+const createApiPresetFromCurrentConfig = (name?: string): ApiConnectionPreset => {
+    const now = Date.now()
+    const endpoint = apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT
+    const model = selectedModel.value.trim() || DEFAULT_MODEL_ID
+
+    return {
+        id: `api-preset-${now}-${Math.random().toString(36).slice(2, 8)}`,
+        name: name?.trim() || buildApiPresetName(endpoint, model),
+        apiKey: apiKey.value.trim(),
+        endpoint,
+        model,
+        useProxy: apiUseProxy.value,
+        createdAt: now,
+        updatedAt: now
+    }
+}
+
+const handleSaveApiPreset = (name?: string) => {
+    const preset = createApiPresetFromCurrentConfig(name)
+    persistApiConnectionPresets([preset, ...apiConnectionPresets.value])
+    selectedApiConnectionPresetId.value = preset.id
+}
+
+const handleUpdateApiPreset = (presetId: string) => {
+    const existing = apiConnectionPresets.value.find(preset => preset.id === presetId)
+    if (!existing) {
+        handleSaveApiPreset()
+        return
+    }
+
+    const endpoint = apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT
+    const model = selectedModel.value.trim() || DEFAULT_MODEL_ID
+    const nextPreset: ApiConnectionPreset = {
+        ...existing,
+        name: existing.name.trim() || buildApiPresetName(endpoint, model),
+        apiKey: apiKey.value.trim(),
+        endpoint,
+        model,
+        useProxy: apiUseProxy.value,
+        updatedAt: Date.now()
+    }
+
+    persistApiConnectionPresets(apiConnectionPresets.value.map(preset => preset.id === presetId ? nextPreset : preset))
+    selectedApiConnectionPresetId.value = nextPreset.id
+}
+
+const handleDeleteApiPreset = (presetId: string) => {
+    persistApiConnectionPresets(apiConnectionPresets.value.filter(preset => preset.id !== presetId))
+    if (selectedApiConnectionPresetId.value === presetId) {
+        selectedApiConnectionPresetId.value = ''
+    }
+}
+
+const handleSelectApiPreset = (presetId: string) => {
+    if (!presetId) {
+        selectedApiConnectionPresetId.value = ''
+        return
+    }
+
+    const preset = apiConnectionPresets.value.find(item => item.id === presetId)
+    if (!preset) return
+
+    isApplyingApiConnectionPreset.value = true
+    selectedApiConnectionPresetId.value = preset.id
+    apiKey.value = preset.apiKey
+    apiEndpoint.value = preset.endpoint
+    apiUseProxy.value = preset.useProxy
+    restoreModelOptionsFromCache(preset.endpoint)
+    selectedModel.value = preset.model || DEFAULT_MODEL_ID
+    ensureSelectedOptionPresent()
+    showApiSettings.value = false
+    queueMicrotask(() => {
+        isApplyingApiConnectionPreset.value = false
+        syncSelectedApiPreset()
+    })
 }
 
 const mapModelsToOptions = (models: ApiModel[]): ModelOption[] => {

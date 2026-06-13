@@ -72,6 +72,17 @@ export interface ModelOption {
     supportsImages: boolean
 }
 
+export interface ApiConnectionPreset {
+    id: string
+    name: string
+    apiKey: string
+    endpoint: string
+    model: string
+    useProxy: boolean
+    createdAt: number
+    updatedAt: number
+}
+
 export interface StyleTemplate {
     id: string
     title: string

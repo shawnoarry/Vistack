@@ -1,4 +1,4 @@
-import type { GenerationBatchMode, ModelOption, StyleTemplate } from '../types'
+import type { ApiConnectionPreset, GenerationBatchMode, ModelOption, StyleTemplate } from '../types'
 
 export interface StoredPromptPhrase {
     id: string
@@ -25,6 +25,7 @@ export class LocalStorage {
     private static readonly API_KEY = 'vistack-api-key'
     private static readonly API_ENDPOINT = 'vistack-api-endpoint'
     private static readonly API_USE_PROXY = 'vistack-api-use-proxy'
+    private static readonly API_CONNECTION_PRESETS = 'vistack-api-connection-presets'
     private static readonly MODEL_ID = 'vistack-model-id'
     private static readonly MODEL_CACHE = 'vistack-model-cache'
     private static readonly PROMPT_ASSISTANT_API_KEY = 'vistack-prompt-assistant-api-key'
@@ -113,6 +114,39 @@ export class LocalStorage {
         } catch (error) {
             console.warn('无法读取 API 代理设置:', error)
             return false
+        }
+    }
+
+    static saveApiConnectionPresets(presets: ApiConnectionPreset[]): void {
+        try {
+            localStorage.setItem(this.API_CONNECTION_PRESETS, JSON.stringify(presets))
+        } catch (error) {
+            console.warn('无法保存 API 配置预设:', error)
+        }
+    }
+
+    static getApiConnectionPresets(): ApiConnectionPreset[] {
+        try {
+            const raw = localStorage.getItem(this.API_CONNECTION_PRESETS)
+            if (!raw) return []
+            const parsed = JSON.parse(raw)
+            if (!Array.isArray(parsed)) return []
+
+            return parsed
+                .map(item => ({
+                    id: typeof item?.id === 'string' ? item.id : '',
+                    name: typeof item?.name === 'string' ? item.name : '',
+                    apiKey: typeof item?.apiKey === 'string' ? item.apiKey : '',
+                    endpoint: typeof item?.endpoint === 'string' ? item.endpoint : '',
+                    model: typeof item?.model === 'string' ? item.model : '',
+                    useProxy: item?.useProxy === true,
+                    createdAt: typeof item?.createdAt === 'number' ? item.createdAt : Date.now(),
+                    updatedAt: typeof item?.updatedAt === 'number' ? item.updatedAt : Date.now()
+                }))
+                .filter(item => item.id && item.name.trim() && item.endpoint.trim())
+        } catch (error) {
+            console.warn('无法读取 API 配置预设:', error)
+            return []
         }
     }
 

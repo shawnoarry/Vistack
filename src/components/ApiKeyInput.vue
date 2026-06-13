@@ -11,6 +11,62 @@
             </div>
         </div>
 
+        <div class="mb-4 rounded-lg border border-brand-line bg-brand-surface p-3">
+            <div class="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="wb-label">生图配置预设</p>
+                    <p class="mt-1 text-xs text-brand-muted">保存常用 URL / Key / Model / 代理设置，切换时会一起恢复。</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        class="wb-secondary min-h-9 px-3 text-xs"
+                        :disabled="!canSavePreset"
+                        @click="savePreset"
+                    >
+                        保存为新配置
+                    </button>
+                    <button
+                        type="button"
+                        class="wb-secondary min-h-9 px-3 text-xs"
+                        :disabled="!selectedPresetId || !canSavePreset"
+                        @click="$emit('update-preset', selectedPresetId)"
+                    >
+                        更新当前
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg border border-brand-accent/30 bg-brand-accent/10 px-3 py-2 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/15 disabled:cursor-not-allowed disabled:border-brand-line disabled:bg-brand-line disabled:text-brand-muted"
+                        :disabled="!selectedPresetId"
+                        @click="$emit('delete-preset', selectedPresetId)"
+                    >
+                        删除
+                    </button>
+                </div>
+            </div>
+            <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px]">
+                <select
+                    :value="selectedPresetId"
+                    class="wb-input w-full"
+                    @change="$emit('select-preset', ($event.target as HTMLSelectElement).value)"
+                >
+                    <option value="">未选择预设 / 使用当前填写</option>
+                    <option v-for="preset in apiPresets" :key="preset.id" :value="preset.id">
+                        {{ preset.name }} · {{ preset.model || '未指定模型' }}
+                    </option>
+                </select>
+                <input
+                    v-model="presetNameDraft"
+                    type="text"
+                    class="wb-input w-full"
+                    placeholder="新配置名称，可不填"
+                />
+            </div>
+            <p v-if="selectedPreset" class="mt-2 truncate text-xs text-brand-muted">
+                当前预设：{{ selectedPreset.endpoint }} · {{ selectedPreset.useProxy ? '代理开启' : '直连' }}
+            </p>
+        </div>
+
         <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px]">
             <div>
                 <label class="mb-1 block wb-label">生图 API 密钥</label>
@@ -171,10 +227,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, toRefs } from 'vue'
+import { computed, ref, toRefs, watch } from 'vue'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from '../config/api'
 import { LocalStorage } from '../utils/storage'
-import type { ModelOption } from '../types'
+import type { ApiConnectionPreset, ModelOption } from '../types'
 
 const props = defineProps<{
     modelValue: string
@@ -187,6 +243,8 @@ const props = defineProps<{
     promptAssistantApiKey: string
     promptAssistantEndpoint: string
     promptAssistantModel: string
+    apiPresets: ApiConnectionPreset[]
+    selectedPresetId: string
 }>()
 
 const emit = defineEmits<{
@@ -197,11 +255,16 @@ const emit = defineEmits<{
     'update:promptAssistantApiKey': [value: string]
     'update:promptAssistantEndpoint': [value: string]
     'update:promptAssistantModel': [value: string]
+    'save-preset': [name?: string]
+    'update-preset': [presetId: string]
+    'delete-preset': [presetId: string]
+    'select-preset': [presetId: string]
     'fetch-models': []
     'model-picked': []
 }>()
 
 const { modelValue, endpoint, models, model } = toRefs(props)
+const presetNameDraft = ref('')
 
 const clearApiKey = () => {
     LocalStorage.clearApiKey()
@@ -217,6 +280,8 @@ const resetEndpoint = () => {
 
 const isCustomEndpoint = computed(() => endpoint.value !== '' && endpoint.value !== DEFAULT_API_ENDPOINT)
 const canFetchModels = computed(() => modelValue.value.trim() !== '' && endpoint.value.trim() !== '')
+const canSavePreset = computed(() => modelValue.value.trim() !== '' && endpoint.value.trim() !== '')
+const selectedPreset = computed(() => props.apiPresets.find(preset => preset.id === props.selectedPresetId))
 const endpointModeLabel = computed(() => {
     const value = endpoint.value.trim().toLowerCase()
     if (!value) return '使用默认端点'
@@ -227,6 +292,19 @@ const endpointModeLabel = computed(() => {
     if (value.endsWith('/v1')) return 'Base URL'
     return '自动识别'
 })
+
+watch(
+    () => props.selectedPresetId,
+    () => {
+        presetNameDraft.value = ''
+    }
+)
+
+const savePreset = () => {
+    emit('save-preset', presetNameDraft.value.trim() || undefined)
+    presetNameDraft.value = ''
+}
+
 const optionList = computed<ModelOption[]>(() => {
     if (models.value.length) {
         return models.value
