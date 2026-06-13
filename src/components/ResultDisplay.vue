@@ -3,8 +3,8 @@
         <div v-if="tasks.length" class="mb-3 rounded-lg border border-brand-line bg-brand-surface p-3">
             <div class="mb-3 flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-sm font-semibold text-brand-ink">任务队列</p>
-                    <p class="mt-1 text-xs text-brand-muted">可以连续提交多个任务。每个完成任务都能恢复预览、复用提示词或继续作为参考图。</p>
+                    <p class="text-sm font-semibold text-brand-ink">{{ queueTitleText }}</p>
+                    <p class="mt-1 text-xs text-brand-muted">{{ queueDescriptionText }}</p>
                 </div>
                 <span class="wb-chip">{{ runningTasks.length }} 进行中</span>
             </div>
@@ -129,8 +129,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4-4a3 3 0 014 0l8 8M14 14l1-1a3 3 0 014 0l1 1M5 8h.01M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
                     </svg>
                 </div>
-                <h3 class="text-base font-semibold text-brand-ink">等待生成结果</h3>
-                <p class="mt-2 text-sm leading-6 text-brand-muted">配置 API、选择模型与参数后，从底部输入栏开始生成。</p>
+                <h3 class="text-base font-semibold text-brand-ink">{{ emptyTitleText }}</h3>
+                <p class="mt-2 text-sm leading-6 text-brand-muted">{{ emptyDescriptionText }}</p>
             </div>
         </div>
 
@@ -180,11 +180,19 @@ const props = defineProps<{
     error: string | null
     canPush: boolean
     canReuse: boolean
+    emptyTitle?: string
+    emptyDescription?: string
+    queueTitle?: string
+    queueDescription?: string
 }>()
 
 const imageSizes = ref<Record<string, string>>({})
 const previewImage = ref('')
 const runningTasks = computed(() => props.tasks.filter(task => task.status === 'running'))
+const emptyTitleText = computed(() => props.emptyTitle || '等待生成结果')
+const emptyDescriptionText = computed(() => props.emptyDescription || '配置 API、选择模型与参数后，从底部输入栏开始生成。')
+const queueTitleText = computed(() => props.queueTitle || '任务队列')
+const queueDescriptionText = computed(() => props.queueDescription || '可以连续提交多个任务。每个完成任务都能恢复预览、复用提示词或继续作为参考图。')
 
 watch(
     () => props.results,

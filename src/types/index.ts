@@ -40,9 +40,10 @@ export interface PromptAssistantRequest {
     apikey: string
     endpoint: string
     model: string
-    task?: 'optimize' | 'translate-template'
+    task?: 'optimize' | 'translate-template' | 'image-to-prompt'
     targetLanguage?: 'zh' | 'en'
     useProxy?: boolean
+    images?: string[]
 }
 
 export interface PromptAssistantResponse {
@@ -119,6 +120,16 @@ export interface ReferenceImageMeta {
     note?: string
 }
 
+export interface ToolboxReference extends ReferenceImageMeta {
+    image: string
+}
+
+export interface ToolboxGeneratePayload {
+    prompt: string
+    references: ToolboxReference[]
+    title: string
+}
+
 export interface GenerationRecipe {
     mainPrompt: string
     compiledPrompt: string
@@ -137,6 +148,7 @@ export type GenerationTaskStatus = 'running' | 'done' | 'error'
 export interface GenerationTask {
     id: string
     source: 'text' | 'image'
+    origin?: 'studio' | 'toolbox'
     title: string
     prompt: string
     status: GenerationTaskStatus

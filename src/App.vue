@@ -31,7 +31,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20.2 14.6A7.8 7.8 0 019.4 3.8 8.5 8.5 0 1019.9 14c.3.1.4.4.3.6z" />
                         </svg>
                     </button>
-                    <div class="grid grid-cols-2 rounded-lg border border-brand-line bg-white p-1 text-sm font-semibold dark:border-night-muted/40 dark:bg-night-panel">
+                    <div class="grid grid-cols-3 rounded-lg border border-brand-line bg-white p-1 text-sm font-semibold dark:border-night-muted/40 dark:bg-night-panel">
                         <button
                             type="button"
                             @click="currentView = 'studio'"
@@ -55,6 +55,18 @@
                             ]"
                         >
                             资产库
+                        </button>
+                        <button
+                            type="button"
+                            @click="currentView = 'toolbox'"
+                            :class="[
+                                'rounded-md px-3 py-2 transition',
+                                currentView === 'toolbox'
+                                    ? (themeMode === 'dark' ? 'bg-night-accent text-white' : 'bg-brand-ink text-brand-surface')
+                                    : (themeMode === 'dark' ? 'text-night-muted hover:text-brand-surface' : 'text-brand-muted hover:text-brand-ink')
+                            ]"
+                        >
+                            工具箱
                         </button>
                     </div>
                     <div class="max-w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink shadow-sm sm:max-w-[440px] dark:border-night-muted/40 dark:bg-night-panel dark:text-brand-surface">
@@ -864,6 +876,28 @@
             </form>
         </div>
 
+        <ToolboxPanel
+            v-if="currentView === 'toolbox'"
+            ref="toolboxPanelRef"
+            :assistant-ready="promptAssistantReady"
+            :assistant-loading="isToolboxAssistantLoading"
+            :current-prompt="textToImagePrompt"
+            :generation-tasks="generationTasks"
+            :generation-results="toolboxGenerationResults"
+            :generation-error="toolboxGenerationError"
+            @analyze="handleToolboxImageToPrompt"
+            @send-to-studio="sendToolboxPromptToStudio"
+            @save-template="openTemplateEditorFromToolboxPrompt"
+            @apply-references="applyToolboxReferencesToStudio"
+            @generate="handleToolboxGenerate"
+            @download="handleDownloadResult"
+            @restore-task="restoreTaskResult"
+            @reuse-task="reuseTaskPrompt"
+            @push-task="pushTaskImages"
+            @canvas-task="addTaskToCanvas"
+            @back-to-studio="currentView = 'studio'"
+        />
+
         <main v-if="currentView === 'assets'" class="wb-shell py-4 pb-10">
             <section class="min-h-[calc(100vh-170px)] rounded-lg border border-brand-line bg-brand-surface p-4 shadow-sm shadow-black/5">
                 <div class="mb-4 flex flex-col gap-3 border-b border-brand-line pb-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1129,6 +1163,7 @@ import ResultDisplay from './components/ResultDisplay.vue'
 import CanvasWorkbench from './components/CanvasWorkbench.vue'
 import Footer from './components/Footer.vue'
 import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
+import ToolboxPanel from './components/ToolboxPanel.vue'
 import { fetchModels, generateImage, improvePrompt, pollGeneratedTask } from './services/api'
 import { styleTemplates } from './data/templates'
 import { promptPoolGroups } from './data/promptPool'
@@ -1150,7 +1185,7 @@ import {
     type PendingGenerationTaskItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, WorkspaceMode } from './types'
+import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, ToolboxGeneratePayload, ToolboxReference, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 type ThemeMode = 'light' | 'dark'
@@ -1179,9 +1214,12 @@ const isTextToImageLoading = ref(false)
 const latestResultSource = ref<'text' | 'image' | null>(null)
 const latestGenerationRecipe = ref<GenerationRecipe | null>(null)
 const generationTasks = ref<GenerationTask[]>([])
+const toolboxGenerationResults = ref<string[]>([])
+const toolboxGenerationError = ref<string | null>(null)
 const pendingTaskHandles = new Map<string, GenerationTaskHandle[]>()
 const pendingResumeIds = new Set<string>()
-const currentView = ref<'studio' | 'assets'>('studio')
+const currentView = ref<'studio' | 'assets' | 'toolbox'>('studio')
+const toolboxPanelRef = ref<InstanceType<typeof ToolboxPanel> | null>(null)
 const themeMode = ref<ThemeMode>('light')
 const workspaceMode = ref<WorkspaceMode>('quick')
 const canvasItems = ref<CanvasWorkbenchItem[]>([])
@@ -1222,6 +1260,7 @@ const promptAssistantApiKey = ref('')
 const promptAssistantEndpoint = ref('')
 const promptAssistantModel = ref('')
 const isPromptAssistantLoading = ref(false)
+const isToolboxAssistantLoading = ref(false)
 const promptAssistantError = ref<string | null>(null)
 const selectedAspectRatio = ref('1:1')
 const generationCount = ref(1)
@@ -1788,15 +1827,15 @@ const getReferenceLabelByImage = (image: string): string | undefined => {
     return referenceImageLabels.value[index] || normalizeReferenceMeta(referenceImageMetadata.value[index], index).label
 }
 
-const buildGenerationRecipe = (compiledPrompt: string): GenerationRecipe => ({
-    mainPrompt: textToImagePrompt.value.trim(),
+const buildGenerationRecipe = (compiledPrompt: string, mainPrompt = textToImagePrompt.value.trim(), references = selectedImages.value, metadata = referenceImageMetadata.value, labels = referenceImageLabels.value): GenerationRecipe => ({
+    mainPrompt,
     compiledPrompt,
     supplementPrompt: supplementPrompt.value,
     selectedStyle: selectedStyle.value,
     customPrompt: customPrompt.value,
-    referenceImages: [...selectedImages.value],
-    referenceImageLabels: selectedImages.value.map((_, index) => referenceImageLabels.value[index] || `角色${index + 1}`),
-    referenceImageMetadata: selectedImages.value.map((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index)),
+    referenceImages: [...references],
+    referenceImageLabels: references.map((_, index) => labels[index] || `角色${index + 1}`),
+    referenceImageMetadata: references.map((_, index) => normalizeReferenceRecipeMeta(metadata[index], index)),
     count: generationCount.value,
     batchMode: generationBatchMode.value
 })
@@ -1834,6 +1873,7 @@ const createGenerationTask = (source: GenerationTask['source'], prompt: string, 
     return {
         id: `${source}-${createdAt}-${Math.random().toString(36).slice(2, 8)}`,
         source,
+        origin: 'studio',
         title: `${source === 'image' ? '参考图生成' : '无参考图生成'} #${taskNumber}`,
         prompt,
         status: 'running',
@@ -1857,8 +1897,8 @@ const updateGenerationTask = (taskId: string, patch: Partial<GenerationTask>) =>
 }
 
 const syncGenerationLoadingState = () => {
-    isLoading.value = activeGenerationTasks.value.some(task => task.source === 'image')
-    isTextToImageLoading.value = activeGenerationTasks.value.some(task => task.source === 'text')
+    isLoading.value = activeGenerationTasks.value.some(task => task.source === 'image' && task.origin !== 'toolbox')
+    isTextToImageLoading.value = activeGenerationTasks.value.some(task => task.source === 'text' && task.origin !== 'toolbox')
 }
 
 const pushImageToUpload = (image: string | null) => {
@@ -2792,6 +2832,140 @@ const handleImprovePrompt = async () => {
     }
 }
 
+const handleToolboxImageToPrompt = async (toolRequest: Pick<PromptAssistantRequest, 'prompt' | 'context' | 'images' | 'task'>) => {
+    if (!promptAssistantReady.value) {
+        toolboxPanelRef.value?.setAnalysisError('请先配置提示词助手 API，并确认模型支持读取图片。')
+        return
+    }
+
+    isToolboxAssistantLoading.value = true
+
+    try {
+        const response = await improvePrompt({
+            prompt: toolRequest.prompt || '',
+            context: toolRequest.context || '',
+            images: toolRequest.images || [],
+            task: 'image-to-prompt',
+            apikey: promptAssistantApiKey.value.trim(),
+            endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
+            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID,
+            useProxy: apiUseProxy.value
+        })
+        toolboxPanelRef.value?.setAnalysisResult(response.prompt)
+    } catch (assistantError) {
+        toolboxPanelRef.value?.setAnalysisError(assistantError instanceof Error ? assistantError.message : '图片反推失败')
+    } finally {
+        isToolboxAssistantLoading.value = false
+    }
+}
+
+const sendToolboxPromptToStudio = (prompt: string) => {
+    const nextPrompt = prompt.trim()
+    if (!nextPrompt) return
+    promptPhraseUndoStack.value = [...promptPhraseUndoStack.value, textToImagePrompt.value]
+    setTextToImagePromptFromHistory(nextPrompt)
+    currentView.value = 'studio'
+}
+
+const openTemplateEditorFromToolboxPrompt = (prompt: string) => {
+    const nextPrompt = prompt.trim()
+    if (!nextPrompt) return
+
+    closeTemplateEditor()
+    templateFormTitle.value = nextPrompt.slice(0, 16) || '工具箱模板'
+    templateFormCategory.value = '工具箱'
+    templateFormTags.value = '工具箱, 反推'
+    templateFormDescription.value = '从工具箱提示词保存。'
+    templateFormPrompt.value = nextPrompt
+    templateFormPromptEn.value = ''
+    templateFormSourceLanguage.value = detectTemplateSourceLanguage(nextPrompt)
+    templateAssistantError.value = null
+    templateFormMode.value = 'both'
+    showTemplateEditor.value = true
+}
+
+const applyToolboxReferencesToStudio = (payload: { prompt: string; references: ToolboxReference[] }) => {
+    const references = payload.references.filter(reference => reference.image)
+    const nextPrompt = payload.prompt.trim()
+
+    if (nextPrompt) {
+        promptPhraseUndoStack.value = [...promptPhraseUndoStack.value, textToImagePrompt.value]
+        setTextToImagePromptFromHistory(nextPrompt)
+    }
+
+    if (references.length) {
+        const currentMetaByImage = new Map(selectedImages.value.map((image, index) => [image, normalizeReferenceMeta(referenceImageMetadata.value[index], index)]))
+        const currentLabelByImage = new Map(selectedImages.value.map((image, index) => [image, referenceImageLabels.value[index] || currentMetaByImage.get(image)?.label || `角色${index + 1}`]))
+        const incomingMetaByImage = new Map(references.map(reference => [
+            reference.image,
+            {
+                role: reference.role,
+                label: reference.label,
+                note: reference.note || ''
+            } satisfies ReferenceImageMeta
+        ]))
+        const nextImages = [...references.map(reference => reference.image), ...selectedImages.value]
+            .filter((image, index, list) => list.indexOf(image) === index)
+
+        selectedImages.value = nextImages
+        referenceImageLabels.value = nextImages.map((image, index) => incomingMetaByImage.get(image)?.label || currentLabelByImage.get(image) || `角色${index + 1}`)
+        referenceImageMetadata.value = nextImages.map((image, index) => incomingMetaByImage.get(image) || currentMetaByImage.get(image) || normalizeReferenceRecipeMeta(undefined, index))
+    }
+
+    currentView.value = 'studio'
+    workspaceMode.value = 'quick'
+}
+
+const handleToolboxGenerate = async (payload: ToolboxGeneratePayload) => {
+    const prompt = payload.prompt.trim()
+    const references = payload.references.filter(reference => reference.image)
+
+    if (!prompt || !references.length) {
+        toolboxPanelRef.value?.setAnalysisError('工具箱生成需要提示词和至少一张参考图。')
+        return
+    }
+
+    if (!apiKey.value.trim() || !apiEndpoint.value.trim() || !selectedModel.value.trim()) {
+        toolboxPanelRef.value?.setAnalysisError('请先在顶部配置生图 API、端点和模型。')
+        return
+    }
+
+    const referenceImages = references.map(reference => reference.image)
+    const referenceMetadata = references.map(reference => ({
+        role: reference.role,
+        label: reference.label,
+        note: reference.note || ''
+    } satisfies ReferenceImageMeta))
+    const referenceLabels = references.map((reference, index) => reference.label || `工具箱参考${index + 1}`)
+    const recipe = buildGenerationRecipe(prompt, prompt, referenceImages, referenceMetadata, referenceLabels)
+    const task = {
+        ...createGenerationTask('image', prompt, recipe),
+        origin: 'toolbox' as const,
+        title: `${payload.title || '工具箱生成'} #${generationTasks.value.length + 1}`
+    }
+
+    generationTasks.value = [task, ...generationTasks.value]
+    toolboxGenerationError.value = null
+    syncGenerationLoadingState()
+
+    try {
+        const request = buildGenerateRequest(prompt, referenceImages, generationCount.value)
+        await savePendingGenerationTask(task, request)
+        const response = await generateImage(request, 1, {
+            onTaskCreated: handle => trackGenerationTaskHandle(task, request, handle)
+        })
+        await completeGenerationTask(task, response.imageUrls)
+    } catch (toolboxError) {
+        const message = toolboxError instanceof Error ? toolboxError.message : '工具箱生成失败'
+        await failGenerationTask(task, message)
+        toolboxGenerationResults.value = []
+        toolboxGenerationError.value = message
+        toolboxPanelRef.value?.setAnalysisError(message)
+    } finally {
+        syncGenerationLoadingState()
+    }
+}
+
 const getReferencePayloadField = (provider: string, referenceCount: number) => {
     if (!referenceCount) return '无'
     if (provider === 'openai-chat') return 'messages[].content[].image_url'
@@ -3176,7 +3350,10 @@ const completeGenerationTask = async (task: GenerationTask, imageUrls: string[])
         ? `生成成功，但有 ${persisted.warnings.length} 张图片未能保存为本地副本，远端链接可能会过期。`
         : null
 
-    if (task.source === 'text') {
+    if (task.origin === 'toolbox') {
+        toolboxGenerationResults.value = persisted.images
+        toolboxGenerationError.value = warningMessage
+    } else if (task.source === 'text') {
         textToImageResult.value = persisted.images
         textToImageError.value = warningMessage
         syncImagesToCanvas(persisted.images, 'result', '文生图结果', task.recipe.mainPrompt || task.prompt)
@@ -3186,15 +3363,19 @@ const completeGenerationTask = async (task: GenerationTask, imageUrls: string[])
         syncImagesToCanvas(persisted.images, 'result', '参考图结果', task.recipe.mainPrompt || task.prompt)
     }
 
-    latestResultSource.value = task.source
-    latestGenerationRecipe.value = task.recipe
+    if (task.origin !== 'toolbox') {
+        latestResultSource.value = task.source
+        latestGenerationRecipe.value = task.recipe
+    }
     updateGenerationTask(task.id, { status: 'done', images: persisted.images, error: undefined })
     await addGenerationHistory(task.source, task.prompt, persisted.images, task.recipe, persisted, task)
     await removePendingGenerationTask(task.id)
 }
 
 const failGenerationTask = async (task: GenerationTask, message: string) => {
-    if (task.source === 'text') {
+    if (task.origin === 'toolbox') {
+        toolboxGenerationError.value = message
+    } else if (task.source === 'text') {
         textToImageError.value = message
     } else {
         error.value = message

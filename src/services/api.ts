@@ -210,13 +210,56 @@ export async function fetchModels(apikey: string, endpoint: string, useProxy = f
 
 export async function improvePrompt(request: PromptAssistantRequest): Promise<PromptAssistantResponse> {
     const isTemplateTranslation = request.task === 'translate-template'
+    const isImageToPrompt = request.task === 'image-to-prompt'
     const targetLanguage = request.targetLanguage === 'en' ? 'English' : 'Chinese'
+    const userContent = isImageToPrompt
+        ? [
+            {
+                type: 'text',
+                text: [
+                    '请根据上传图片逆推出适合图像生成模型复刻该画面的提示词。',
+                    '输出中文为主，可以保留必要英文摄影/设计术语。',
+                    '请按以下结构输出：',
+                    '1. 核心提示词：一段可直接用于生图的完整提示词。',
+                    '2. 画面要素：主体、动作/姿态、服装/造型、场景、光线、镜头/构图、风格质感。',
+                    '3. 负面约束：避免错误、不要生成的内容。',
+                    '4. 可复用短词组：用逗号分隔。',
+                    '不要识别或猜测真实人物姓名；不要添加水印、随机文字或不存在的品牌。',
+                    request.context ? `当前工具上下文：\n${request.context}` : '',
+                    request.prompt ? `用户补充要求：\n${request.prompt}` : ''
+                ].filter(Boolean).join('\n\n')
+            },
+            ...(request.images || []).map(image => ({
+                type: 'image_url',
+                image_url: { url: image }
+            }))
+        ]
+        : isTemplateTranslation
+          ? [
+              `Translate this image-generation template into ${targetLanguage}.`,
+              'Keep the meaning, specificity, scene constraints, quality constraints, and negative instructions unchanged.',
+              request.context ? `Template context:\n${request.context}` : '',
+              `Source template:\n${request.prompt}`
+          ].filter(Boolean).join('\n\n')
+          : [
+              '请优化下面的生图提示词，优先使用中文，必要的摄影/平台术语可保留英文。',
+              '要求：结构清楚，适合图像模型理解；强调真实手机镜头、参考图使用方式、主体一致性和质量约束；不要改变用户原意。',
+              request.context ? `当前创作上下文：\n${request.context}` : '',
+              `用户原始提示词：\n${request.prompt}`
+          ].filter(Boolean).join('\n\n')
     const payload: Record<string, unknown> = {
         model: request.model.trim(),
         messages: [
             {
                 role: 'system',
-                content: isTemplateTranslation
+                content: isImageToPrompt
+                    ? [
+                        '你是 Vistack 的图像反推提示词助手。',
+                        '你的任务是观察用户上传的参考图，整理出可复刻画面的图像生成提示词。',
+                        '描述画面视觉信息，不要猜测真实身份、隐私信息或未出现的事实。',
+                        '输出要能直接被生图模型使用，语言清晰，结构稳定。'
+                    ].join('\n')
+                    : isTemplateTranslation
                     ? [
                         'You are Vistack template localization assistant.',
                         'Translate image-generation templates between Chinese and English while preserving all constraints, references, camera terms, negative instructions, aspect-ratio notes, and model-friendly structure.',
@@ -233,19 +276,7 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
             },
             {
                 role: 'user',
-                content: isTemplateTranslation
-                    ? [
-                        `Translate this image-generation template into ${targetLanguage}.`,
-                        'Keep the meaning, specificity, scene constraints, quality constraints, and negative instructions unchanged.',
-                        request.context ? `Template context:\n${request.context}` : '',
-                        `Source template:\n${request.prompt}`
-                    ].filter(Boolean).join('\n\n')
-                    : [
-                        '请优化下面的生图提示词，优先使用中文，必要的摄影/平台术语可保留英文。',
-                        '要求：结构清楚，适合图像模型理解；强调真实手机镜头、参考图使用方式、主体一致性和质量约束；不要改变用户原意。',
-                        request.context ? `当前创作上下文：\n${request.context}` : '',
-                        `用户原始提示词：\n${request.prompt}`
-                    ].filter(Boolean).join('\n\n')
+                content: userContent
             }
         ],
         temperature: 0.4
