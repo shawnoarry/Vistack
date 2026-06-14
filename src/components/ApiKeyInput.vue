@@ -134,6 +134,20 @@
                         </span>
                     </span>
                 </label>
+                <div v-if="useProxy" class="mt-2 rounded-lg border border-brand-line bg-brand-surface px-3 py-2">
+                    <label class="mb-1 block wb-label">代理密码（可选）</label>
+                    <input
+                        type="password"
+                        :value="proxyToken"
+                        @input="$emit('update:proxyToken', ($event.target as HTMLInputElement).value)"
+                        placeholder="留空表示服务器未设密码"
+                        autocomplete="off"
+                        class="wb-input w-full"
+                    />
+                    <p class="mt-1 text-xs leading-5 text-brand-muted">
+                        需与 Vercel 环境变量 <code class="rounded bg-brand-line px-1 py-0.5 text-[11px]">VISTACK_PROXY_TOKEN</code> 完全一致。设置后只有你授权的人能调用此代理，可防止网址被滥用拖累 IP。
+                    </p>
+                </div>
             </div>
 
             <div>
@@ -240,6 +254,7 @@ const props = defineProps<{
     modelLoading: boolean
     modelError: string | null
     useProxy: boolean
+    proxyToken: string
     promptAssistantApiKey: string
     promptAssistantEndpoint: string
     promptAssistantModel: string
@@ -252,6 +267,7 @@ const emit = defineEmits<{
     'update:endpoint': [value: string]
     'update:model': [value: string]
     'update:useProxy': [value: boolean]
+    'update:proxyToken': [value: string]
     'update:promptAssistantApiKey': [value: string]
     'update:promptAssistantEndpoint': [value: string]
     'update:promptAssistantModel': [value: string]

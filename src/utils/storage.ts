@@ -25,6 +25,7 @@ export class LocalStorage {
     private static readonly API_KEY = 'vistack-api-key'
     private static readonly API_ENDPOINT = 'vistack-api-endpoint'
     private static readonly API_USE_PROXY = 'vistack-api-use-proxy'
+    private static readonly API_PROXY_TOKEN = 'vistack-api-proxy-token'
     private static readonly API_CONNECTION_PRESETS = 'vistack-api-connection-presets'
     private static readonly MODEL_ID = 'vistack-model-id'
     private static readonly MODEL_CACHE = 'vistack-model-cache'
@@ -114,6 +115,31 @@ export class LocalStorage {
         } catch (error) {
             console.warn('无法读取 API 代理设置:', error)
             return false
+        }
+    }
+
+    static saveApiProxyToken(token: string): void {
+        try {
+            localStorage.setItem(this.API_PROXY_TOKEN, token)
+        } catch (error) {
+            console.warn('无法保存代理密码:', error)
+        }
+    }
+
+    static getApiProxyToken(): string {
+        try {
+            return localStorage.getItem(this.API_PROXY_TOKEN) || ''
+        } catch (error) {
+            console.warn('无法读取代理密码:', error)
+            return ''
+        }
+    }
+
+    static clearApiProxyToken(): void {
+        try {
+            localStorage.removeItem(this.API_PROXY_TOKEN)
+        } catch (error) {
+            console.warn('无法清除代理密码:', error)
         }
     }
 

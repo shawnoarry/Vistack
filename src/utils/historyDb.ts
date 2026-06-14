@@ -1,4 +1,5 @@
 import type { GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle } from '../types'
+import { LocalStorage } from './storage'
 
 export type GenerationHistorySource = 'text' | 'image'
 
@@ -265,14 +266,22 @@ function isDataUrl(value: string): boolean {
     return value.startsWith('data:')
 }
 
+// 拼出带 token 的代理下载地址。未设密码时就是 /api/proxy。
+function getProxyDownloadUrl(): string {
+    const token = LocalStorage.getApiProxyToken().trim()
+    if (!token) return '/api/proxy'
+    return `/api/proxy?token=${encodeURIComponent(token)}`
+}
+
 async function imageToDataUrl(image: string, useProxy = false): Promise<string> {
     if (isDataUrl(image)) return image
     if (!isHttpUrl(image)) return image
 
     let response: Response
     try {
-        response = useProxy
-            ? await fetch('/api/proxy', {
+        if (useProxy) {
+            const proxyUrl = getProxyDownloadUrl()
+            response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -285,7 +294,9 @@ async function imageToDataUrl(image: string, useProxy = false): Promise<string> 
                     }
                 })
             })
-            : await fetch(image, { cache: 'no-store' })
+        } else {
+            response = await fetch(image, { cache: 'no-store' })
+        }
     } catch (error) {
         throw new Error('图片已生成，但浏览器无法下载到本地保存。可能是跨域限制、链接过期或网络异常。')
     }

@@ -43,6 +43,15 @@ export default async function handler(req: any, res: any) {
         return
     }
 
+    // 鉴权：要求 ?token=xxx 与环境变量 VISTACK_PROXY_TOKEN 一致。
+    // 未配置环境变量时自动放行（仅本地开发场景下会这样）。
+    if (!isProxyAuthorized(getRequestUrl(req))) {
+        res.statusCode = 401
+        res.setHeader('content-type', 'application/json; charset=utf-8')
+        res.end(JSON.stringify({ error: 'Unauthorized: this proxy is protected.' }))
+        return
+    }
+
     if (req.method !== 'POST') {
         res.statusCode = 405
         res.setHeader('content-type', 'application/json; charset=utf-8')
@@ -263,4 +272,46 @@ function isPrivateHost(hostname: string): boolean {
         (first === 172 && second >= 16 && second <= 31) ||
         (first === 192 && second === 168) ||
         (first === 169 && second === 254)
+}
+
+// 读取环境变量中的代理密码。未设置时为空字符串。
+function readProxyToken(): string {
+    if (typeof process !== 'undefined' && process.env && typeof process.env.VISTACK_PROXY_TOKEN === 'string') {
+        return process.env.VISTACK_PROXY_TOKEN.trim()
+    }
+    return ''
+}
+
+// 校验调用方是否带正确的 ?token=xxx。
+// 未配置密码时一律放行（仅本地开发会这样，线上务必设置环境变量）。
+function isProxyAuthorized(requestUrl: string): boolean {
+    const expected = readProxyToken()
+    if (!expected) return true
+
+    try {
+        const parsed = new URL(requestUrl, 'http://localhost')
+        const provided = (parsed.searchParams.get('token') || '').trim()
+        if (!provided) return false
+        if (provided.length !== expected.length) return false
+        return timingSafeEqual(provided, expected)
+    } catch {
+        return false
+    }
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+    let result = 0
+    for (let i = 0; i < a.length; i += 1) {
+        result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+    }
+    return result === 0
+}
+
+// 拼出完整请求 URL，用于解析 query 参数。Vercel 把协议/主机/原始路径拼起来即可。
+function getRequestUrl(req: any): string {
+    const headers = req.headers || {}
+    const host = headers.host || headers['x-forwarded-host'] || 'localhost'
+    const proto = headers['x-forwarded-proto'] || 'https'
+    const rawUrl = typeof req.url === 'string' ? req.url : (req.originalUrl || '/')
+    return `${proto}://${host}${rawUrl}`
 }

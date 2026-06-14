@@ -23,6 +23,41 @@ const FORWARDED_HEADERS = new Set([
     'content-type'
 ])
 
+// 通过环境变量 VISTACK_PROXY_TOKEN 给 /api/proxy 加密码。
+// 未设置环境变量时自动放行（本地开发友好）；线上务必设置一个足够随机的值。
+export function readProxyToken(): string {
+    if (typeof process !== 'undefined' && process.env && typeof process.env.VISTACK_PROXY_TOKEN === 'string') {
+        return process.env.VISTACK_PROXY_TOKEN.trim()
+    }
+    return ''
+}
+
+// 校验调用方是否带正确的 token。token 通过 ?token=xxx 在 URL 上传递。
+// 未配置 token 时一律放行（开发环境默认行为）。
+export function isProxyAuthorized(requestUrl: string): boolean {
+    const expected = readProxyToken()
+    if (!expected) return true
+
+    try {
+        const parsed = new URL(requestUrl, 'http://localhost')
+        const provided = (parsed.searchParams.get('token') || '').trim()
+        if (!provided) return false
+        // 长度先比一下，再做恒定时间比较，避免计时侧信道
+        if (provided.length !== expected.length) return false
+        return timingSafeEqual(provided, expected)
+    } catch {
+        return false
+    }
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+    let result = 0
+    for (let i = 0; i < a.length; i += 1) {
+        result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+    }
+    return result === 0
+}
+
 const RESPONSE_HEADERS = [
     'content-type',
     'cache-control',

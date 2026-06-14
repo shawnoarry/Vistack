@@ -1,5 +1,6 @@
 import type { ApiModel, GenerateImageOptions, GenerateRequest, GenerateResponse, GenerationTaskHandle, GenerationTaskProvider, ModelListResponse, PromptAssistantRequest, PromptAssistantResponse } from '../types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from '../config/api'
+import { LocalStorage } from '../utils/storage'
 import {
     getEndpointPath,
     isGrsaiEndpoint,
@@ -640,7 +641,7 @@ async function fetchFormEndpoint(endpoint: string, apikey: string, formData: For
     }
 
     formData.append('_vistack_target', endpoint)
-    return fetch('/api/proxy', {
+    return fetch(getProxyUrl(), {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${apikey}`
@@ -667,7 +668,7 @@ async function fetchEndpoint(
         })
     }
 
-    return fetch('/api/proxy', {
+    return fetch(getProxyUrl(), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -723,6 +724,15 @@ function buildHeaders(apikey: string): Record<string, string> {
         Authorization: `Bearer ${apikey}`,
         'Content-Type': 'application/json'
     }
+}
+
+// 返回带 token 的代理地址。如果用户没设密码，就是 /api/proxy（开发态可放行）。
+// 线上设了环境变量 VISTACK_PROXY_TOKEN 后，必须带对 token 才能调用。
+function getProxyUrl(): string {
+    const token = LocalStorage.getApiProxyToken().trim()
+    if (!token) return '/api/proxy'
+    // token 是用户自己设的，长度可控，走 query 即可。
+    return `/api/proxy?token=${encodeURIComponent(token)}`
 }
 
 async function imageReferenceToBlob(image: string): Promise<Blob> {

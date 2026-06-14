@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { performMultipartProxyRequest, performProxyRequest, type ProxyPayload, type ProxyResult } from './api/proxyCore'
+import { isProxyAuthorized, performMultipartProxyRequest, performProxyRequest, type ProxyPayload, type ProxyResult } from './api/proxyCore'
 
 function localApiProxyPlugin(): Plugin {
     return {
@@ -11,6 +11,13 @@ function localApiProxyPlugin(): Plugin {
                 if (req.method === 'OPTIONS') {
                     res.statusCode = 204
                     res.end()
+                    return
+                }
+
+                // 鉴权：?token=xxx 必须与环境变量 VISTACK_PROXY_TOKEN 一致。
+                // 未配置环境变量时自动放行（本地开发友好）。
+                if (!isProxyAuthorized(getRequestUrl(req))) {
+                    sendJson(res, 401, { error: 'Unauthorized: this proxy is protected.' })
                     return
                 }
 
@@ -96,6 +103,15 @@ function readRawBody(req: IncomingMessage): Promise<Buffer> {
             resolve(Buffer.concat(chunks))
         })
     })
+}
+
+// 拼出完整请求 URL，用于解析 query 参数（开发环境下）。
+function getRequestUrl(req: IncomingMessage): string {
+    const headers = req.headers || {}
+    const host = headers.host || headers['x-forwarded-host'] || 'localhost'
+    const proto = headers['x-forwarded-proto'] || 'http'
+    const rawUrl = typeof req.url === 'string' ? req.url : '/'
+    return `${proto}://${host}${rawUrl}`
 }
 
 export default defineConfig({

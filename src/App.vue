@@ -99,6 +99,7 @@
                     v-model:endpoint="apiEndpoint"
                     v-model:model="selectedModel"
                     v-model:use-proxy="apiUseProxy"
+                    v-model:proxy-token="apiProxyToken"
                     v-model:prompt-assistant-api-key="promptAssistantApiKey"
                     v-model:prompt-assistant-endpoint="promptAssistantEndpoint"
                     v-model:prompt-assistant-model="promptAssistantModel"
@@ -1193,6 +1194,7 @@ type ThemeMode = 'light' | 'dark'
 const apiKey = ref('')
 const apiEndpoint = ref('')
 const apiUseProxy = ref(false)
+const apiProxyToken = ref('')
 const apiConnectionPresets = ref<ApiConnectionPreset[]>([])
 const selectedApiConnectionPresetId = ref('')
 const isApplyingApiConnectionPreset = ref(false)
@@ -1327,6 +1329,7 @@ onMounted(() => {
     const savedApiKey = LocalStorage.getApiKey()
     const savedEndpoint = LocalStorage.getApiEndpoint()
     const savedApiUseProxy = LocalStorage.getApiUseProxy()
+    const savedApiProxyToken = LocalStorage.getApiProxyToken()
     const savedModelId = LocalStorage.getModelId()
     const savedPromptAssistantApiKey = LocalStorage.getPromptAssistantApiKey()
     const savedPromptAssistantEndpoint = LocalStorage.getPromptAssistantEndpoint()
@@ -1359,6 +1362,7 @@ onMounted(() => {
     selectedModel.value = modelIdToUse
     apiEndpoint.value = endpointToUse
     apiUseProxy.value = savedApiUseProxy
+    apiProxyToken.value = savedApiProxyToken
     selectedApiConnectionPresetId.value = findMatchingApiPresetId(apiConnectionPresets.value, {
         apiKey: savedApiKey,
         endpoint: endpointToUse,
@@ -1439,6 +1443,14 @@ watch(
     (newUseProxy: boolean) => {
         LocalStorage.saveApiUseProxy(newUseProxy)
         syncSelectedApiPreset()
+    },
+    { immediate: false }
+)
+
+watch(
+    apiProxyToken,
+    (newToken: string) => {
+        LocalStorage.saveApiProxyToken(newToken)
     },
     { immediate: false }
 )
@@ -3812,7 +3824,9 @@ const fetchImageForDownload = (image: string) => {
         return fetch(image)
     }
 
-    return fetch('/api/proxy', {
+    const token = LocalStorage.getApiProxyToken().trim()
+    const proxyUrl = token ? `/api/proxy?token=${encodeURIComponent(token)}` : '/api/proxy'
+    return fetch(proxyUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
