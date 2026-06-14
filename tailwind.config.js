@@ -16,10 +16,10 @@ export default {
                     surface: '#F4F4F6'
                 },
                 night: {
-                    accent: '#73648A',
-                    panel: '#453750',
-                    surface: '#333333',
-                    muted: '#9D96B8'
+                    accent: '#FF6B47',
+                    panel: '#1F1F22',
+                    surface: '#161618',
+                    muted: '#A0A0A8'
                 },
                 dark: {
                     bg: '#121212',

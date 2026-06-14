@@ -2,7 +2,7 @@
     <div :class="['min-h-screen transition-colors', themeMode === 'dark' ? 'dark bg-[#242424] text-brand-surface' : 'bg-brand-surface text-brand-ink']">
         <header :class="[
             'sticky top-0 z-40 border-b shadow-sm backdrop-blur transition-colors',
-            themeMode === 'dark' ? 'border-night-muted/35 bg-[#282828]/95 shadow-black/25' : 'border-brand-line bg-white/95 shadow-black/10'
+            themeMode === 'dark' ? 'border-night-muted/35 bg-[#232326]/95 shadow-black/25' : 'border-brand-line bg-white/95 shadow-black/10'
         ]">
             <div class="wb-shell flex flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
@@ -92,7 +92,7 @@
             </div>
         </header>
 
-        <section v-if="showApiSettings" class="border-b border-brand-line bg-white dark:border-night-muted/35 dark:bg-[#282828]">
+        <section v-if="showApiSettings" class="border-b border-brand-line bg-white dark:border-night-muted/35 dark:bg-[#232326]">
             <div class="wb-shell py-4">
                 <ApiKeyInput
                     v-model="apiKey"
@@ -346,7 +346,7 @@
                         </div>
                         <span class="wb-chip">{{ selectedImages.length ? '参考图模式' : '文生图模式' }}</span>
                     </div>
-                    <div class="max-h-[240px] overflow-y-auto rounded-lg border border-brand-line bg-white p-3 text-xs leading-5 text-brand-muted dark:border-night-muted/35 dark:bg-[#282828] dark:text-night-muted">
+                    <div class="max-h-[240px] overflow-y-auto rounded-lg border border-brand-line bg-white p-3 text-xs leading-5 text-brand-muted dark:border-night-muted/35 dark:bg-[#232326] dark:text-night-muted">
                         <pre class="whitespace-pre-wrap font-sans">{{ promptPreview || '填写主提示词后会显示预览。' }}</pre>
                     </div>
                 </section>
@@ -431,7 +431,7 @@
             v-if="currentView === 'studio'"
             :class="[
                 'border-t shadow-[0_-18px_45px_rgba(25,25,25,0.10)] backdrop-blur lg:fixed lg:inset-x-0 lg:bottom-0 lg:z-30',
-                themeMode === 'dark' ? 'border-night-muted/35 bg-[#282828]/95 shadow-black/30' : 'border-brand-line bg-white/95'
+                themeMode === 'dark' ? 'border-night-muted/35 bg-[#232326]/95 shadow-black/30' : 'border-brand-line bg-white/95'
             ]"
         >
             <div class="wb-shell py-2.5">
@@ -570,19 +570,19 @@
                             </div>
 
                             <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                                <label class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
+                                <label class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#232326]">
                                     <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">张数</span>
                                     <select v-model.number="generationCount" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
                                         <option v-for="count in generationCountOptions" :key="count" :value="count">{{ count }} 张</option>
                                     </select>
                                 </label>
-                                <label class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
+                                <label class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#232326]">
                                     <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">生成策略</span>
                                     <select v-model="generationBatchMode" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
                                         <option v-for="option in generationBatchModeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                                     </select>
                                 </label>
-                                <label v-if="showAspectRatioSelector" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
+                                <label v-if="showAspectRatioSelector" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#232326]">
                                     <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">比例</span>
                                     <select v-model="selectedAspectRatio" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
                                         <option v-for="ratio in availableAspectRatios" :key="ratio.value" :value="ratio.value">{{ ratio.label }}</option>
@@ -592,7 +592,7 @@
                                     <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">比例</span>
                                     <div class="mt-0.5 truncate text-xs font-semibold text-brand-muted dark:text-night-muted">自动</div>
                                 </label>
-                                <label v-if="showImageSizeConfig" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#282828]">
+                                <label v-if="showImageSizeConfig" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#232326]">
                                     <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">分辨率</span>
                                     <select v-model="gemini3ImageSize" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
                                         <option value="1K">1K 标准</option>

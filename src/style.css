@@ -9,7 +9,7 @@
 
     .dark body,
     body:has(.dark) {
-        @apply bg-[#242424] text-brand-surface;
+        @apply bg-[#161618] text-brand-surface;
     }
 
     ::selection {
@@ -96,7 +96,7 @@
     }
 
     .dark .wb-input {
-        @apply border-night-muted/40 bg-[#282828] text-brand-surface placeholder:text-night-muted focus:border-night-muted focus:ring-night-muted/20;
+        @apply border-night-muted/40 bg-[#232326] text-brand-surface placeholder:text-night-muted focus:border-night-muted focus:ring-night-muted/20;
     }
 
     .wb-primary {
