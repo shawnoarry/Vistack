@@ -71,13 +71,34 @@
             <div>
                 <label class="mb-1 block wb-label">生图 API 密钥</label>
                 <div class="flex gap-2">
-                    <input
-                        type="password"
-                        :value="modelValue"
-                        @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-                        placeholder="输入 API 密钥"
-                        class="wb-input min-w-0 flex-1"
-                    />
+                    <div class="relative min-w-0 flex-1">
+                        <input
+                            :type="showApiKey ? 'text' : 'password'"
+                            :value="modelValue"
+                            @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+                            placeholder="输入 API 密钥"
+                            class="wb-input w-full pr-10"
+                        />
+                        <button
+                            v-if="modelValue"
+                            type="button"
+                            @click="showApiKey = !showApiKey"
+                            class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-brand-muted transition hover:text-brand-ink"
+                            :title="showApiKey ? '隐藏' : '显示'"
+                            tabindex="-1"
+                        >
+                            <svg v-if="showApiKey" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" y1="2" x2="22" y2="22" />
+                            </svg>
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </button>
+                    </div>
                     <button
                         v-if="modelValue"
                         type="button"
@@ -136,14 +157,35 @@
                 </label>
                 <div v-if="useProxy" class="mt-2 rounded-lg border border-brand-line bg-brand-surface px-3 py-2">
                     <label class="mb-1 block wb-label">代理密码（可选）</label>
-                    <input
-                        type="password"
-                        :value="proxyToken"
-                        @input="$emit('update:proxyToken', ($event.target as HTMLInputElement).value)"
-                        placeholder="留空表示服务器未设密码"
-                        autocomplete="off"
-                        class="wb-input w-full"
-                    />
+                    <div class="relative">
+                        <input
+                            :type="showProxyToken ? 'text' : 'password'"
+                            :value="proxyToken"
+                            @input="$emit('update:proxyToken', ($event.target as HTMLInputElement).value)"
+                            placeholder="留空表示服务器未设密码"
+                            autocomplete="off"
+                            class="wb-input w-full pr-10"
+                        />
+                        <button
+                            v-if="proxyToken"
+                            type="button"
+                            @click="showProxyToken = !showProxyToken"
+                            class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-brand-muted transition hover:text-brand-ink"
+                            :title="showProxyToken ? '隐藏' : '显示'"
+                            tabindex="-1"
+                        >
+                            <svg v-if="showProxyToken" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" y1="2" x2="22" y2="22" />
+                            </svg>
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </button>
+                    </div>
                     <p class="mt-1 text-xs leading-5 text-brand-muted">
                         需与 Vercel 环境变量 <code class="rounded bg-brand-line px-1 py-0.5 text-[11px]">VISTACK_PROXY_TOKEN</code> 完全一致。设置后只有你授权的人能调用此代理，可防止网址被滥用拖累 IP。
                     </p>
@@ -207,13 +249,34 @@
             <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_260px]">
                 <label>
                     <span class="mb-1 block wb-label">助手密钥</span>
-                    <input
-                        type="password"
-                        :value="promptAssistantApiKey"
-                        @input="$emit('update:promptAssistantApiKey', ($event.target as HTMLInputElement).value)"
-                        placeholder="可与生图 API 不同"
-                        class="wb-input w-full"
-                    />
+                    <div class="relative">
+                        <input
+                            :type="showAssistantKey ? 'text' : 'password'"
+                            :value="promptAssistantApiKey"
+                            @input="$emit('update:promptAssistantApiKey', ($event.target as HTMLInputElement).value)"
+                            placeholder="可与生图 API 不同"
+                            class="wb-input w-full pr-10"
+                        />
+                        <button
+                            v-if="promptAssistantApiKey"
+                            type="button"
+                            @click="showAssistantKey = !showAssistantKey"
+                            class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-brand-muted transition hover:text-brand-ink"
+                            :title="showAssistantKey ? '隐藏' : '显示'"
+                            tabindex="-1"
+                        >
+                            <svg v-if="showAssistantKey" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" y1="2" x2="22" y2="22" />
+                            </svg>
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                        </button>
+                    </div>
                 </label>
                 <label>
                     <span class="mb-1 block wb-label">助手端点</span>
@@ -245,6 +308,11 @@ import { computed, ref, toRefs, watch } from 'vue'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from '../config/api'
 import { LocalStorage } from '../utils/storage'
 import type { ApiConnectionPreset, ModelOption } from '../types'
+
+// 三个密码框各自的显示/隐藏状态
+const showApiKey = ref(false)
+const showProxyToken = ref(false)
+const showAssistantKey = ref(false)
 
 const props = defineProps<{
     modelValue: string
