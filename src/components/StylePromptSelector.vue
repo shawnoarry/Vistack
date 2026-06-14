@@ -92,20 +92,20 @@
                 >
                     <div class="flex items-start gap-3">
                         <img v-if="template.image" :src="template.image" :alt="template.title" class="h-16 w-16 flex-shrink-0 rounded-md border border-brand-line object-cover" />
-                        <div v-else class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md border border-brand-line bg-brand-surface text-xs font-semibold text-brand-muted">
+                        <div v-else class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md border border-brand-line bg-brand-surface text-xs font-semibold text-brand-ink/60 dark:bg-night-panel dark:text-brand-surface/70">
                             {{ template.category || 'Prompt' }}
                         </div>
 
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-2">
                                 <div class="text-sm font-semibold text-brand-ink">{{ template.title }}</div>
-                                <span v-if="template.mode" class="rounded bg-brand-line/70 px-1.5 py-0.5 text-[11px] text-brand-muted">{{ modeLabel(template.mode) }}</span>
+                                <span v-if="template.mode" class="rounded bg-brand-ink/8 px-1.5 py-0.5 text-[11px] font-medium text-brand-ink/75 dark:bg-night-muted/15 dark:text-brand-surface/85">{{ modeLabel(template.mode) }}</span>
                                 <span v-if="template.promptEn" class="rounded bg-brand-accent/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand-accent">双语</span>
                             </div>
                             <p class="mt-1 line-clamp-2 text-xs leading-5 text-brand-muted">{{ template.description }}</p>
 
                             <div v-if="template.tags?.length" class="mt-2 flex flex-wrap gap-1.5">
-                                <span v-for="tag in template.tags" :key="tag" class="rounded bg-brand-surface px-1.5 py-0.5 text-[11px] text-brand-muted">{{ tag }}</span>
+                                <span v-for="tag in template.tags" :key="tag" class="rounded bg-brand-ink/6 px-1.5 py-0.5 text-[11px] text-brand-ink/70 dark:bg-night-muted/12 dark:text-brand-surface/75">{{ tag }}</span>
                             </div>
 
                             <div class="mt-2 flex flex-wrap gap-1.5">
@@ -207,7 +207,7 @@
                             <span :class="['mt-0.5 h-4 w-4 shrink-0 rounded border', poolSelection.includes(item.id) ? 'border-brand-accent bg-brand-accent' : 'border-brand-line bg-white']" />
                         </div>
                         <div v-if="item.tags?.length" class="mt-2 flex flex-wrap gap-1.5">
-                            <span v-for="tag in item.tags" :key="tag" class="rounded bg-white px-1.5 py-0.5 text-[11px] text-brand-muted">{{ tag }}</span>
+                            <span v-for="tag in item.tags" :key="tag" class="rounded bg-brand-ink/6 px-1.5 py-0.5 text-[11px] text-brand-ink/70 dark:bg-night-muted/12 dark:text-brand-surface/75">{{ tag }}</span>
                         </div>
                         <p class="mt-2 line-clamp-3 text-xs leading-5 text-brand-muted">{{ item.prompt }}</p>
                     </button>
