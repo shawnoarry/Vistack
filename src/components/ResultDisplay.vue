@@ -18,6 +18,7 @@
                         <div class="min-w-0">
                             <p class="truncate text-xs font-semibold text-brand-ink">{{ task.title }}</p>
                             <p class="mt-1 text-[11px] text-brand-muted">{{ task.count }} 张 · {{ task.aspectRatio }} · {{ task.model }}</p>
+                            <p v-if="taskToolSummary(task)" class="mt-1 text-[11px] leading-4 text-brand-muted">{{ taskToolSummary(task) }}</p>
                         </div>
                         <span
                             :class="[
@@ -232,5 +233,37 @@ const taskStatusLabel = (status: GenerationTaskStatus) => {
     if (status === 'running') return '生成中'
     if (status === 'done') return '已完成'
     return '失败'
+}
+
+const taskToolSummary = (task: GenerationTask) => {
+    if (!task.toolboxTool && !task.toolboxReferences?.length) return ''
+    const toolText = task.toolboxTool ? toolboxToolLabel(task.toolboxTool) : '工具箱任务'
+    const references = task.toolboxReferences || []
+    if (!references.length) return toolText
+
+    const counts = references.reduce<Record<string, number>>((acc, reference) => {
+        const label = referenceRoleLabel(reference.role)
+        acc[label] = (acc[label] || 0) + 1
+        return acc
+    }, {})
+    return `${toolText} · ${Object.entries(counts).map(([label, count]) => `${label}${count}`).join(' / ')}`
+}
+
+const toolboxToolLabel = (tool: NonNullable<GenerationTask['toolboxTool']>) => {
+    if (tool === 'model-asset') return '自定义模特'
+    if (tool === 'outfit-swap') return '一键换装'
+    if (tool === 'couple-photo') return '合影助手'
+    if (tool === 'mask-edit') return '遮罩编辑'
+    if (tool === 'image-to-prompt') return '图片反推'
+    return '可编辑提示词'
+}
+
+const referenceRoleLabel = (role: string) => {
+    if (role === 'character') return '人物'
+    if (role === 'outfit') return '服装'
+    if (role === 'background') return '背景'
+    if (role === 'product') return '产品'
+    if (role === 'style') return '风格'
+    return '参考'
 }
 </script>

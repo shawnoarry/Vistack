@@ -128,6 +128,9 @@ export interface ToolboxGeneratePayload {
     prompt: string
     references: ToolboxReference[]
     title: string
+    tool?: 'image-to-prompt' | 'model-asset' | 'outfit-swap' | 'mask-edit' | 'couple-photo' | 'prompt'
+    assetId?: string
+    assetName?: string
 }
 
 export interface GenerationRecipe {
@@ -165,6 +168,15 @@ export interface GenerationTask {
     useProxy?: boolean
     resolvedEndpoint?: string
     requestProvider?: string
+    toolboxTool?: ToolboxGeneratePayload['tool']
+    toolboxReferences?: ToolboxReference[]
+    toolboxAssetId?: string
+    toolboxAssetName?: string
+}
+
+export interface ToolboxRolePushPayload {
+    task: GenerationTask
+    role: ReferenceImageRole
 }
 
 export type WorkspaceMode = 'quick' | 'canvas'

@@ -895,6 +895,7 @@
             @restore-task="restoreTaskResult"
             @reuse-task="reuseTaskPrompt"
             @push-task="pushTaskImages"
+            @push-task-as-role="pushTaskImagesAsRole"
             @canvas-task="addTaskToCanvas"
             @back-to-studio="currentView = 'studio'"
         />
@@ -1186,7 +1187,7 @@ import {
     type PendingGenerationTaskItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, ToolboxGeneratePayload, ToolboxReference, WorkspaceMode } from './types'
+import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 type ThemeMode = 'light' | 'dark'
@@ -2075,6 +2076,22 @@ const pushTaskImages = (task: GenerationTask) => {
     currentView.value = 'studio'
 }
 
+const pushTaskImagesAsRole = (payload: ToolboxRolePushPayload) => {
+    const images = payload.task.images.filter(Boolean)
+    if (!images.length) return
+    applyToolboxReferencesToStudio({
+        prompt: payload.task.recipe.mainPrompt || payload.task.prompt,
+        references: images.map((image, index) => ({
+            image,
+            role: payload.role,
+            label: `${roleLabel(payload.role)}${index + 1}`,
+            note: payload.role === 'outfit'
+                ? '由工具箱换装结果回流，作为服装、材质和造型参考。'
+                : '由工具箱结果回流，作为人物身份或主体参考。'
+        }))
+    })
+}
+
 const addTaskToCanvas = (task: GenerationTask) => {
     const title = task.source === 'text' ? '文生图任务' : '参考图任务'
     addImagesToCanvas(task.images, 'result', title, task.recipe.mainPrompt || task.prompt)
@@ -2953,6 +2970,10 @@ const handleToolboxGenerate = async (payload: ToolboxGeneratePayload) => {
     const task = {
         ...createGenerationTask('image', prompt, recipe),
         origin: 'toolbox' as const,
+        toolboxTool: payload.tool || 'prompt',
+        toolboxReferences: references,
+        toolboxAssetId: payload.assetId,
+        toolboxAssetName: payload.assetName,
         title: `${payload.title || '工具箱生成'} #${generationTasks.value.length + 1}`
     }
 
@@ -2967,12 +2988,13 @@ const handleToolboxGenerate = async (payload: ToolboxGeneratePayload) => {
             onTaskCreated: handle => trackGenerationTaskHandle(task, request, handle)
         })
         await completeGenerationTask(task, response.imageUrls)
+        toolboxPanelRef.value?.setToolboxNotice('success', '工具箱生成完成，结果已进入历史记录。')
     } catch (toolboxError) {
         const message = toolboxError instanceof Error ? toolboxError.message : '工具箱生成失败'
         await failGenerationTask(task, message)
         toolboxGenerationResults.value = []
         toolboxGenerationError.value = message
-        toolboxPanelRef.value?.setAnalysisError(message)
+        toolboxPanelRef.value?.setToolboxNotice('error', message)
     } finally {
         syncGenerationLoadingState()
     }

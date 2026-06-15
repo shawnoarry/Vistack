@@ -349,6 +349,79 @@
                     </div>
                 </div>
 
+                <div v-else-if="activeTool === 'couple-photo'" class="space-y-4">
+                    <ToolHeader
+                        eyebrow="Couple assistant"
+                        title="合影助手"
+                        description="把角色1、角色2和合影动作预先拆清楚，自动加入防混脸、防身份融合和站位关系提示。"
+                    />
+
+                    <div class="grid gap-4 lg:grid-cols-2">
+                        <div class="space-y-3">
+                            <label class="block">
+                                <span class="mb-1 block wb-label">角色1参考图</span>
+                                <input class="wb-input w-full py-2 text-sm" type="file" accept="image/*" multiple @change="handleCoupleRole1Upload" />
+                            </label>
+                            <ImageGrid :images="coupleRole1Images" title="角色1" @preview="previewImage = $event" @remove="removeCoupleRole1Image" />
+
+                            <label class="block">
+                                <span class="mb-1 block wb-label">角色2参考图</span>
+                                <input class="wb-input w-full py-2 text-sm" type="file" accept="image/*" multiple @change="handleCoupleRole2Upload" />
+                            </label>
+                            <ImageGrid :images="coupleRole2Images" title="角色2" @preview="previewImage = $event" @remove="removeCoupleRole2Image" />
+
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="block">
+                                    <span class="mb-1 block wb-label">合影动作</span>
+                                    <select v-model="coupleAction" class="wb-input w-full">
+                                        <option value="standing">自然并肩站立</option>
+                                        <option value="selfie">近距离自拍</option>
+                                        <option value="walking">并肩行走</option>
+                                        <option value="baseball">球场观众席合影</option>
+                                        <option value="cafe">咖啡店桌边合影</option>
+                                    </select>
+                                </label>
+                                <label class="block">
+                                    <span class="mb-1 block wb-label">构图</span>
+                                    <select v-model="coupleFraming" class="wb-input w-full">
+                                        <option value="auto">自动</option>
+                                        <option value="close">近景半身</option>
+                                        <option value="medium">中景半身</option>
+                                        <option value="full">全身合影</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="rounded-lg border border-brand-line bg-brand-surface p-3 text-sm leading-6 text-brand-muted dark:border-night-muted/35 dark:bg-night-surface dark:text-night-muted">
+                                <p class="font-semibold text-brand-ink dark:text-brand-surface">合影预处理</p>
+                                <p class="mt-1">角色1和角色2会分别作为独立人物参考，不会混成同一个人。提示词会强调站位、身份分离、面部不融合和不要复制其中一个角色。</p>
+                            </div>
+
+                            <label class="block">
+                                <span class="mb-1 block wb-label">场景 / 氛围补充</span>
+                                <textarea
+                                    v-model="coupleScene"
+                                    class="wb-input min-h-[108px] w-full resize-y py-2 text-sm leading-6"
+                                    placeholder="例如：真实手机抓拍、自然笑容、韩国棒球场观众席、16:9 电视转播截图。"
+                                />
+                            </label>
+
+                            <textarea
+                                v-model="couplePrompt"
+                                class="wb-input min-h-[220px] w-full resize-y py-3 text-sm leading-6"
+                                placeholder="点击下方按钮生成合影提示词，也可以手动编辑。"
+                            />
+                            <div class="grid gap-2 sm:grid-cols-2">
+                                <button type="button" class="wb-secondary" @click="buildCouplePrompt">生成提示词</button>
+                                <button type="button" class="wb-primary" :disabled="!canGenerateCouplePhoto" @click="generateCouplePhoto">直接生成</button>
+                                <button type="button" class="wb-primary" :disabled="!canApplyCouplePhoto" @click="applyCoupleToStudio">带角色参考送回</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div v-else class="space-y-4">
                     <ToolHeader
                         eyebrow="Mask edit"
@@ -437,6 +510,11 @@
                     <p class="wb-label text-brand-accent">Prompt preview</p>
                     <h3 class="mt-1 text-base font-semibold text-brand-ink dark:text-brand-surface">可编辑提示词</h3>
                     <p class="mt-1 text-xs leading-5 text-brand-muted dark:text-night-muted">这里是工具生成前会发送给模型的提示词。你可以直接改，也可以在工具箱内生成。</p>
+                    <div class="mt-3 rounded-lg border border-brand-line bg-brand-surface p-2 text-xs leading-5 text-brand-muted dark:border-night-muted/35 dark:bg-night-surface dark:text-night-muted">
+                        <p class="font-semibold text-brand-ink dark:text-brand-surface">当前生成会使用</p>
+                        <p class="mt-1">{{ activeReferenceSummary }}</p>
+                        <p v-if="activeTool === 'image-to-prompt'" class="mt-1 text-brand-accent">图片反推不会直接带图生图，请先加入提示词，或切到模特、换装、遮罩工具。</p>
+                    </div>
                     <p v-if="draftSource" class="mt-2 rounded-md border border-brand-line bg-brand-surface px-2 py-1 text-xs text-brand-muted dark:border-night-muted/35 dark:bg-night-surface dark:text-night-muted">
                         最近加入：{{ draftSource }}
                     </p>
@@ -446,16 +524,30 @@
                     class="wb-input min-h-[360px] w-full resize-y py-3 text-sm leading-6"
                     placeholder="工具生成的提示词会出现在这里。你可以修改后直接生成，或送回创作台继续调整。"
                 />
-                <div class="mt-3 grid grid-cols-2 gap-2">
-                    <button type="button" class="wb-secondary" :disabled="!draftPrompt.trim()" @click="copyDraft">复制提示词</button>
-                    <button type="button" class="wb-secondary" :disabled="!draftPrompt.trim()" @click="clearDraft">清空</button>
-                    <button type="button" class="wb-secondary" :disabled="!draftPrompt.trim()" @click="$emit('save-template', draftPrompt)">存为模板</button>
-                    <button type="button" class="wb-primary" :disabled="!canGenerateDraftPrompt" @click="generateDraftPrompt">直接生成</button>
-                    <button type="button" class="wb-primary" :disabled="!draftPrompt.trim()" @click="sendDraftToStudio">送回创作台</button>
+                <div class="mt-3 space-y-2">
+                    <button type="button" class="wb-primary w-full" :disabled="!canGenerateDraftPrompt" @click="generateDraftPrompt">按当前提示词直接生成</button>
+                    <button type="button" class="wb-secondary w-full" :disabled="!draftPrompt.trim()" @click="sendDraftToStudio">送回创作台继续调整</button>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" class="wb-secondary" :disabled="!draftPrompt.trim()" @click="copyDraft">复制</button>
+                        <button type="button" class="wb-secondary" :disabled="!draftPrompt.trim()" @click="clearDraft">清空</button>
+                        <button type="button" class="wb-secondary" :disabled="!draftPrompt.trim()" @click="$emit('save-template', draftPrompt)">存模板</button>
+                    </div>
                 </div>
                 <p v-if="copyStatus" class="mt-3 rounded-md border border-brand-accent/25 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">{{ copyStatus }}</p>
             </aside>
         </div>
+
+        <section
+            v-if="toolboxNotice.message"
+            :class="[
+                'mt-4 rounded-lg border px-4 py-3 text-sm leading-6',
+                toolboxNotice.kind === 'error' ? 'border-brand-accent/35 bg-brand-accent/10 text-brand-accent' : '',
+                toolboxNotice.kind === 'success' ? 'border-brand-ink/15 bg-brand-surface text-brand-ink dark:border-night-muted/35 dark:bg-night-surface dark:text-brand-surface' : '',
+                toolboxNotice.kind === 'info' ? 'border-brand-line bg-white text-brand-muted dark:border-night-muted/35 dark:bg-night-panel dark:text-night-muted' : ''
+            ]"
+        >
+            {{ toolboxNotice.message }}
+        </section>
 
         <section class="mt-4 rounded-lg border border-brand-line bg-white p-4 shadow-sm shadow-black/5 dark:border-night-muted/35 dark:bg-night-panel">
             <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -464,10 +556,22 @@
                     <h3 class="mt-1 text-base font-semibold text-brand-ink dark:text-brand-surface">工具箱生成结果</h3>
                     <p class="mt-1 text-xs leading-5 text-brand-muted dark:text-night-muted">直接生成的任务会显示在这里，并同步进入现有历史记录。</p>
                 </div>
+                <label class="block min-w-[180px]">
+                    <span class="mb-1 block wb-label">筛选任务</span>
+                    <select v-model="toolboxTaskFilter" class="wb-input w-full">
+                        <option value="all">全部工具</option>
+                        <option value="model-asset">自定义模特</option>
+                        <option value="outfit-swap">一键换装</option>
+                        <option value="couple-photo">合影助手</option>
+                        <option value="mask-edit">遮罩编辑</option>
+                        <option value="running">进行中</option>
+                        <option value="error">失败</option>
+                    </select>
+                </label>
             </div>
             <ResultDisplay
                 :results="generationResults"
-                :tasks="toolboxGenerationTasks"
+                :tasks="filteredToolboxGenerationTasks"
                 :error="generationError || ''"
                 :loading="toolboxGenerationRunning"
                 :can-push="false"
@@ -482,6 +586,63 @@
                 @push-task="pushToolboxTask"
                 @canvas-task="canvasToolboxTask"
             />
+
+            <div v-if="modelAssetResultTasks.length" class="mt-3 rounded-lg border border-brand-line bg-brand-surface p-3 dark:border-night-muted/35 dark:bg-night-surface">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-brand-ink dark:text-brand-surface">模特资产沉淀</p>
+                        <p class="mt-1 text-xs leading-5 text-brand-muted dark:text-night-muted">把生成出的面部角度组、三视图或姿态图保存为新的模特资产，或追加到当前模特。</p>
+                    </div>
+                    <div class="flex flex-wrap items-end gap-2">
+                        <label class="block min-w-[180px]">
+                            <span class="mb-1 block wb-label">作用于</span>
+                            <select v-model="selectedModelResultTaskId" class="wb-input w-full">
+                                <option v-for="task in modelAssetResultTasks" :key="task.id" :value="task.id">{{ task.title }}</option>
+                            </select>
+                        </label>
+                        <button type="button" class="wb-secondary" @click="saveSelectedModelTaskAsAsset">保存为新模特</button>
+                        <button type="button" class="wb-primary" :disabled="!selectedModelAssetId" @click="appendSelectedModelTaskToAsset">追加到当前模特</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="outfitResultTasks.length" class="mt-3 rounded-lg border border-brand-line bg-brand-surface p-3 dark:border-night-muted/35 dark:bg-night-surface">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-brand-ink dark:text-brand-surface">换装结果回流</p>
+                        <p class="mt-1 text-xs leading-5 text-brand-muted dark:text-night-muted">把最新换装结果作为下一轮人物参考、服装参考，或复用本次换装提示词。</p>
+                    </div>
+                    <div class="flex flex-wrap items-end gap-2">
+                        <label class="block min-w-[180px]">
+                            <span class="mb-1 block wb-label">作用于</span>
+                            <select v-model="selectedOutfitResultTaskId" class="wb-input w-full">
+                                <option v-for="task in outfitResultTasks" :key="task.id" :value="task.id">{{ task.title }}</option>
+                            </select>
+                        </label>
+                        <button type="button" class="wb-secondary" @click="pushSelectedOutfitAsCharacter">作为人物参考</button>
+                        <button type="button" class="wb-secondary" @click="pushSelectedOutfitAsOutfit">作为服装参考</button>
+                        <button type="button" class="wb-primary" @click="reuseSelectedOutfitPrompt">复用换装提示词</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="maskResultTasks.length" class="mt-3 rounded-lg border border-brand-line bg-brand-surface p-3 dark:border-night-muted/35 dark:bg-night-surface">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-brand-ink dark:text-brand-surface">遮罩连续编辑</p>
+                        <p class="mt-1 text-xs leading-5 text-brand-muted dark:text-night-muted">把最新局部编辑结果作为新的底图，继续涂抹下一处区域。</p>
+                    </div>
+                    <div class="flex flex-wrap items-end gap-2">
+                        <label class="block min-w-[180px]">
+                            <span class="mb-1 block wb-label">作用于</span>
+                            <select v-model="selectedMaskResultTaskId" class="wb-input w-full">
+                                <option v-for="task in maskResultTasks" :key="task.id" :value="task.id">{{ task.title }}</option>
+                            </select>
+                        </label>
+                        <button type="button" class="wb-primary" @click="continueMaskWithSelectedResult">继续编辑这张图</button>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <div v-if="previewImage" class="fixed inset-0 z-[90] flex items-center justify-center bg-brand-ink/85 p-4" @click.self="previewImage = ''">
@@ -501,7 +662,7 @@
 <script setup lang="ts">
 import { computed, defineComponent, h, nextTick, onMounted, ref, watch } from 'vue'
 import type { PropType } from 'vue'
-import type { GenerationTask, PromptAssistantRequest, ToolboxGeneratePayload, ToolboxReference } from '../types'
+import type { GenerationTask, PromptAssistantRequest, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload } from '../types'
 import ResultDisplay from './ResultDisplay.vue'
 import {
     deleteToolboxModelAsset,
@@ -510,7 +671,7 @@ import {
     type ToolboxModelAsset
 } from '../utils/toolboxAssetsDb'
 
-type ToolId = 'image-to-prompt' | 'model-asset' | 'outfit-swap' | 'mask-edit'
+type ToolId = 'image-to-prompt' | 'model-asset' | 'outfit-swap' | 'couple-photo' | 'mask-edit'
 type ModelAssetMode = 'face-angle-pack' | 'turnaround' | 'portrait-pack' | 'pose-pack'
 type ModelAssetFraming = 'auto' | 'bust' | 'half-body' | 'full-body'
 type ModelAssetStyle = 'realistic' | 'phone' | 'catalog'
@@ -520,6 +681,9 @@ type ReversePromptMode = 'direct' | 'structured' | 'tags' | 'template'
 type OutfitClothingStrategy = 'auto' | 'reference-first' | 'description-first' | 'merge'
 type MaskEditIntent = 'outfit' | 'background' | 'remove' | 'detail' | 'freeform'
 type OutfitPreserveKey = 'identity' | 'hair' | 'pose' | 'body' | 'background' | 'lighting'
+type CoupleAction = 'standing' | 'selfie' | 'walking' | 'baseball' | 'cafe'
+type CoupleFraming = 'auto' | 'close' | 'medium' | 'full'
+type ToolboxTaskFilter = 'all' | 'model-asset' | 'outfit-swap' | 'couple-photo' | 'mask-edit' | 'running' | 'error'
 
 const ImageGrid = defineComponent({
     props: {
@@ -582,6 +746,7 @@ const emit = defineEmits<{
     'restore-task': [task: GenerationTask]
     'reuse-task': [task: GenerationTask]
     'push-task': [task: GenerationTask]
+    'push-task-as-role': [payload: ToolboxRolePushPayload]
     'canvas-task': [task: GenerationTask]
     'back-to-studio': []
 }>()
@@ -590,6 +755,7 @@ const tools: Array<{ id: ToolId; title: string; description: string; ready: bool
     { id: 'image-to-prompt', title: '图片反推提示词', description: '从参考图提炼生图提示词。', ready: true },
     { id: 'model-asset', title: '自定义模特', description: '整理人物资产和多视角参考。', ready: true },
     { id: 'outfit-swap', title: '一键换装', description: '人物图 + 服装图生成换装请求。', ready: true },
+    { id: 'couple-photo', title: '合影助手', description: '拆分双人角色、动作和防混脸约束。', ready: true },
     { id: 'mask-edit', title: '遮罩编辑', description: '本地涂抹遮罩并导出参考。', ready: true }
 ]
 
@@ -605,6 +771,11 @@ const analyzing = ref(false)
 const error = ref('')
 const copyStatus = ref('')
 const previewImage = ref('')
+const toolboxNotice = ref<{ kind: 'info' | 'success' | 'error'; message: string }>({ kind: 'info', message: '' })
+const toolboxTaskFilter = ref<ToolboxTaskFilter>('all')
+const selectedModelResultTaskId = ref('')
+const selectedOutfitResultTaskId = ref('')
+const selectedMaskResultTaskId = ref('')
 
 const modelAssetName = ref('角色1')
 const modelAssetImages = ref<string[]>([])
@@ -628,6 +799,13 @@ const outfitBackgroundMode = ref<'keep' | 'studio' | 'street'>('keep')
 const outfitOutputStyle = ref<'realistic' | 'campaign' | 'lookbook'>('realistic')
 const outfitPrompt = ref('')
 
+const coupleRole1Images = ref<string[]>([])
+const coupleRole2Images = ref<string[]>([])
+const coupleAction = ref<CoupleAction>('standing')
+const coupleFraming = ref<CoupleFraming>('auto')
+const coupleScene = ref('')
+const couplePrompt = ref('')
+
 const maskBaseImage = ref('')
 const maskImage = ref('')
 const maskInstruction = ref('')
@@ -636,6 +814,7 @@ const maskBrushSize = ref(42)
 const maskEraser = ref(false)
 const maskCanvas = ref<HTMLCanvasElement | null>(null)
 const drawingMask = ref(false)
+const maskHasStroke = ref(false)
 
 const outfitPreserveOptions: Array<{ value: OutfitPreserveKey; label: string; description: string }> = [
     { value: 'identity', label: '人物身份', description: '脸型、五官、年龄感不换人' },
@@ -666,6 +845,21 @@ const maskIntentPrompts: Record<MaskEditIntent, string> = {
     remove: '编辑意图：移除物体、瑕疵或多余元素。遮罩区域应自然补全，保持周围纹理、光线和透视一致。',
     detail: '编辑意图：修正细节或补画。只改善遮罩区域的结构、边缘、材质或清晰度，避免改变整体画面。',
     freeform: '编辑意图：按用户补充要求处理遮罩区域。'
+}
+
+const coupleActionPrompts: Record<CoupleAction, string> = {
+    standing: '合影动作：两人自然并肩站立，距离真实，轻松看向镜头，姿态互相协调但不过度亲密。',
+    selfie: '合影动作：两人靠近镜头自拍，手机前置镜头质感，自然笑容，脸部清晰但不要五官融合。',
+    walking: '合影动作：两人并肩行走中的自然抓拍，动作一致但每个人身份独立，轻微动态感。',
+    baseball: '合影动作：两人坐在棒球场观众席，像被转播镜头或朋友抓拍，环境有真实观众和球场灯光。',
+    cafe: '合影动作：两人在咖啡店桌边自然合影，室内自然光，轻松互动，真实生活化。'
+}
+
+const coupleFramingPrompts: Record<CoupleFraming, string> = {
+    auto: '构图范围：根据场景自然决定，但必须让两个人都清楚可见。',
+    close: '构图范围：近景半身合影，重点保留两人的脸部身份、发型和表情。',
+    medium: '构图范围：中景半身合影，包含上半身、姿态关系和部分环境。',
+    full: '构图范围：全身合影，完整呈现两人的身高比例、姿态、服装和站位关系。'
 }
 
 const modelAssetModePresets: Record<ModelAssetMode, { title: string; description: string; avoid: string; prompt: string; defaultFraming: ModelAssetFraming }> = {
@@ -752,16 +946,52 @@ const canSaveModelAsset = computed(() => modelAssetImages.value.length > 0 && mo
 const canPrepareOutfitSwap = computed(() => outfitCharacterImages.value.length > 0 && (outfitImages.value.length > 0 || outfitDescription.value.trim().length > 0))
 const canGenerateOutfitSwap = computed(() => canPrepareOutfitSwap.value)
 const canApplyOutfitSwap = computed(() => canPrepareOutfitSwap.value && outfitPrompt.value.trim().length > 0)
-const canApplyMask = computed(() => Boolean(maskBaseImage.value && maskImage.value && maskInstruction.value.trim()))
+const canPrepareCouplePhoto = computed(() => coupleRole1Images.value.length > 0 && coupleRole2Images.value.length > 0)
+const canGenerateCouplePhoto = computed(() => canPrepareCouplePhoto.value)
+const canApplyCouplePhoto = computed(() => canPrepareCouplePhoto.value && couplePrompt.value.trim().length > 0)
+const canApplyMask = computed(() => Boolean(maskBaseImage.value && maskInstruction.value.trim() && maskHasStroke.value))
 const toolboxGenerationTasks = computed(() => props.generationTasks.filter(task => task.origin === 'toolbox'))
+const filteredToolboxGenerationTasks = computed(() => {
+    if (toolboxTaskFilter.value === 'all') return toolboxGenerationTasks.value
+    if (toolboxTaskFilter.value === 'running') return toolboxGenerationTasks.value.filter(task => task.status === 'running')
+    if (toolboxTaskFilter.value === 'error') return toolboxGenerationTasks.value.filter(task => task.status === 'error')
+    return toolboxGenerationTasks.value.filter(task => task.toolboxTool === toolboxTaskFilter.value)
+})
 const toolboxGenerationRunning = computed(() => toolboxGenerationTasks.value.some(task => task.status === 'running'))
+const modelAssetResultTasks = computed(() => toolboxGenerationTasks.value.filter(task => task.toolboxTool === 'model-asset' && task.status === 'done' && task.images.length > 0))
+const selectedModelAssetTask = computed(() => modelAssetResultTasks.value.find(task => task.id === selectedModelResultTaskId.value) || modelAssetResultTasks.value[0])
+const outfitResultTasks = computed(() => toolboxGenerationTasks.value.filter(task => task.toolboxTool === 'outfit-swap' && task.status === 'done' && task.images.length > 0))
+const selectedOutfitTask = computed(() => outfitResultTasks.value.find(task => task.id === selectedOutfitResultTaskId.value) || outfitResultTasks.value[0])
+const maskResultTasks = computed(() => toolboxGenerationTasks.value.filter(task => task.toolboxTool === 'mask-edit' && task.status === 'done' && task.images.length > 0))
+const selectedMaskTask = computed(() => maskResultTasks.value.find(task => task.id === selectedMaskResultTaskId.value) || maskResultTasks.value[0])
 const activeToolReferences = computed<ToolboxReference[]>(() => {
     if (activeTool.value === 'model-asset') return buildModelAssetReferences()
     if (activeTool.value === 'outfit-swap') return buildOutfitReferences()
-    if (activeTool.value === 'mask-edit') return canApplyMask.value ? buildMaskReferences() : []
+    if (activeTool.value === 'couple-photo') return buildCoupleReferences()
+    if (activeTool.value === 'mask-edit') return maskImage.value ? buildMaskReferences() : []
     return []
 })
 const canGenerateDraftPrompt = computed(() => draftPrompt.value.trim().length > 0 && activeToolReferences.value.length > 0)
+const activeReferenceSummary = computed(() => {
+    if (activeTool.value === 'image-to-prompt') {
+        return uploadedImages.value.length ? `反推图片 ${uploadedImages.value.length} 张；这些图片只用于提示词分析。` : '还没有可用于生成的参考图。'
+    }
+
+    const references = activeToolReferences.value
+    if (!references.length) {
+        if (activeTool.value === 'mask-edit' && maskBaseImage.value && maskHasStroke.value && !maskInstruction.value.trim()) return '底图和遮罩已准备，填写局部修改要求后即可生成。'
+        if (activeTool.value === 'mask-edit' && maskBaseImage.value && !maskHasStroke.value) return '已上传底图，请先在图片上涂抹白色遮罩区域。'
+        return '还没有可用于生成的参考图。'
+    }
+
+    const counts = references.reduce<Record<string, number>>((acc, reference) => {
+        const label = roleSummaryLabel(reference.role)
+        acc[label] = (acc[label] || 0) + 1
+        return acc
+    }, {})
+
+    return Object.entries(counts).map(([label, count]) => `${label} ${count} 张`).join(' / ')
+})
 const outfitApplyLabel = computed(() => {
     if (!outfitCharacterImages.value.length) return '先上传人物图'
     if (!outfitImages.value.length && !outfitDescription.value.trim()) return '先添加服装'
@@ -773,7 +1003,7 @@ const activeModelAssetFraming = computed(() => modelAssetFraming.value === 'auto
 const activeModelAssetUsage = computed(() => modelAssetUsagePresets[modelAssetUsage.value])
 const maskApplyLabel = computed(() => {
     if (!maskBaseImage.value) return '先上传底图'
-    if (!maskImage.value) return '先导出遮罩'
+    if (!maskImage.value && !maskHasStroke.value) return '先涂抹遮罩'
     if (!maskInstruction.value.trim()) return '先填写修改要求'
     return '底图 + 遮罩送回'
 })
@@ -798,6 +1028,42 @@ watch(
             analyzing.value = false
         }
     }
+)
+
+watch(
+    modelAssetResultTasks,
+    tasks => {
+        if (!tasks.length) {
+            selectedModelResultTaskId.value = ''
+        } else if (!tasks.some(task => task.id === selectedModelResultTaskId.value)) {
+            selectedModelResultTaskId.value = tasks[0].id
+        }
+    },
+    { immediate: true }
+)
+
+watch(
+    outfitResultTasks,
+    tasks => {
+        if (!tasks.length) {
+            selectedOutfitResultTaskId.value = ''
+        } else if (!tasks.some(task => task.id === selectedOutfitResultTaskId.value)) {
+            selectedOutfitResultTaskId.value = tasks[0].id
+        }
+    },
+    { immediate: true }
+)
+
+watch(
+    maskResultTasks,
+    tasks => {
+        if (!tasks.length) {
+            selectedMaskResultTaskId.value = ''
+        } else if (!tasks.some(task => task.id === selectedMaskResultTaskId.value)) {
+            selectedMaskResultTaskId.value = tasks[0].id
+        }
+    },
+    { immediate: true }
 )
 
 const primaryActionClass = (enabled: boolean) => [
@@ -828,10 +1094,19 @@ const handleOutfitUpload = async (event: Event) => {
     outfitImages.value = [...outfitImages.value, ...await readImagesFromEvent(event)].slice(0, 6)
 }
 
+const handleCoupleRole1Upload = async (event: Event) => {
+    coupleRole1Images.value = [...coupleRole1Images.value, ...await readImagesFromEvent(event)].slice(0, 6)
+}
+
+const handleCoupleRole2Upload = async (event: Event) => {
+    coupleRole2Images.value = [...coupleRole2Images.value, ...await readImagesFromEvent(event)].slice(0, 6)
+}
+
 const handleMaskBaseUpload = async (event: Event) => {
     const images = await readImagesFromEvent(event)
     maskBaseImage.value = images[0] || ''
     maskImage.value = ''
+    maskHasStroke.value = false
     await nextTick()
     clearMaskCanvas()
 }
@@ -852,10 +1127,19 @@ const removeOutfitImage = (index: number) => {
     outfitImages.value = removeAt(outfitImages.value, index)
 }
 
+const removeCoupleRole1Image = (index: number) => {
+    coupleRole1Images.value = removeAt(coupleRole1Images.value, index)
+}
+
+const removeCoupleRole2Image = (index: number) => {
+    coupleRole2Images.value = removeAt(coupleRole2Images.value, index)
+}
+
 const analyzeImages = () => {
     if (!canAnalyzeImage.value) return
     analyzing.value = true
     error.value = ''
+    setToolboxNotice('info', '正在反推图片提示词。')
     emit('analyze', {
         prompt: imagePromptInstruction.value.trim(),
         context: [`图片数量：${uploadedImages.value.length}`, reversePromptModePrompts[reversePromptMode.value]].join('\n'),
@@ -867,11 +1151,13 @@ const analyzeImages = () => {
 const setAnalysisResult = (prompt: string) => {
     reversePrompt.value = prompt
     analyzing.value = false
+    setToolboxNotice('success', '图片反推完成，可以加入右侧可编辑提示词。')
 }
 
 const setAnalysisError = (message: string) => {
     error.value = message
     analyzing.value = false
+    setToolboxNotice('error', message)
 }
 
 const buildModelAssetPrompt = () => {
@@ -945,6 +1231,7 @@ const saveModelAsset = async () => {
     await putToolboxModelAsset(asset)
     selectedModelAssetId.value = asset.id
     assetStatus.value = `已保存模特：${asset.name}`
+    setToolboxNotice('success', `已保存模特：${asset.name}`)
     await loadModelAssets()
 }
 
@@ -954,6 +1241,7 @@ const deleteSelectedModelAsset = async () => {
     await deleteToolboxModelAsset(selectedModelAssetId.value)
     selectedModelAssetId.value = ''
     assetStatus.value = `已删除保存项：${deletingName}`
+    setToolboxNotice('success', `已删除保存项：${deletingName}`)
     await loadModelAssets()
 }
 
@@ -971,9 +1259,13 @@ const generateModelAsset = () => {
         buildModelAssetPrompt()
     }
 
+    setToolboxNotice('info', '已提交自定义模特生成任务。')
     emit('generate', {
         title: '自定义模特',
         prompt: modelAssetPrompt.value.trim(),
+        tool: 'model-asset',
+        assetId: selectedModelAssetId.value,
+        assetName: modelAssetName.value.trim(),
         references: buildModelAssetReferences()
     })
 }
@@ -1062,9 +1354,11 @@ const generateOutfitSwap = () => {
         buildOutfitPrompt()
     }
 
+    setToolboxNotice('info', '已提交一键换装生成任务。')
     emit('generate', {
         title: '一键换装',
         prompt: outfitPrompt.value.trim(),
+        tool: 'outfit-swap',
         references: buildOutfitReferences()
     })
 }
@@ -1081,6 +1375,57 @@ const buildOutfitReferences = (): ToolboxReference[] => [
         role: 'outfit' as const,
         label: `服装参考${index + 1}`,
         note: '只参考服装、材质、颜色和造型。'
+    }))
+]
+
+const buildCouplePrompt = () => {
+    couplePrompt.value = [
+        '双人合影任务：参考图中的角色1和角色2是两个独立人物。请分别保持两人的身份，不要混脸、不要平均五官、不要把其中一个人的脸复制到另一个人身上。',
+        '角色1参考图只用于角色1；角色2参考图只用于角色2。两人的脸型、五官间距、眼型、鼻梁、唇形、发型、肤色、年龄感和气质都要分别保持。',
+        coupleActionPrompts[coupleAction.value],
+        coupleFramingPrompts[coupleFraming.value],
+        coupleScene.value.trim() ? `场景 / 氛围补充：${coupleScene.value.trim()}` : '',
+        '画面要求：真实自然，不要像拼贴或证件照合成。两人同处一个真实空间，光线、透视、焦距和景深一致。避免多余人物、随机文字、水印、面部融合、角色错位、手部严重错误。'
+    ].filter(Boolean).join('\n\n')
+
+    appendToDraft(couplePrompt.value, '合影助手')
+}
+
+const applyCoupleToStudio = () => {
+    if (!canApplyCouplePhoto.value) return
+    emit('apply-references', {
+        prompt: couplePrompt.value.trim(),
+        references: buildCoupleReferences()
+    })
+}
+
+const generateCouplePhoto = () => {
+    if (!canGenerateCouplePhoto.value) return
+    if (!couplePrompt.value.trim()) {
+        buildCouplePrompt()
+    }
+
+    setToolboxNotice('info', '已提交合影生成任务。')
+    emit('generate', {
+        title: '合影助手',
+        prompt: couplePrompt.value.trim(),
+        tool: 'couple-photo',
+        references: buildCoupleReferences()
+    })
+}
+
+const buildCoupleReferences = (): ToolboxReference[] => [
+    ...coupleRole1Images.value.map((image, index) => ({
+        image,
+        role: 'character' as const,
+        label: `角色1-${index + 1}`,
+        note: '双人合影角色1身份参考，只用于角色1。'
+    })),
+    ...coupleRole2Images.value.map((image, index) => ({
+        image,
+        role: 'character' as const,
+        label: `角色2-${index + 1}`,
+        note: '双人合影角色2身份参考，只用于角色2。'
     }))
 ]
 
@@ -1128,6 +1473,8 @@ const drawMaskPoint = (event: PointerEvent) => {
     context.arc(x, y, radius, 0, Math.PI * 2)
     context.fill()
     context.restore()
+    maskHasStroke.value = true
+    maskImage.value = ''
 }
 
 const clearMaskCanvas = () => {
@@ -1136,24 +1483,31 @@ const clearMaskCanvas = () => {
     if (!canvas || !context) return
     context.clearRect(0, 0, canvas.width, canvas.height)
     maskImage.value = ''
+    maskHasStroke.value = false
 }
 
 const exportMaskImage = () => {
     const canvas = maskCanvas.value
-    if (!canvas) return
+    if (!canvas) return ''
+    if (!maskHasStroke.value) {
+        setToolboxNotice('error', '请先在底图上涂抹遮罩区域。')
+        return ''
+    }
     const output = document.createElement('canvas')
     output.width = canvas.width
     output.height = canvas.height
     const context = output.getContext('2d')
-    if (!context) return
+    if (!context) return ''
     context.fillStyle = '#000000'
     context.fillRect(0, 0, output.width, output.height)
     context.drawImage(canvas, 0, 0)
     maskImage.value = output.toDataURL('image/png')
+    setToolboxNotice('success', '遮罩已导出。')
+    return maskImage.value
 }
 
 const applyMaskToStudio = () => {
-    if (!canApplyMask.value) return
+    if (!ensureMaskReady()) return
     const prompt = buildMaskPrompt()
     appendToDraft(prompt, '遮罩编辑')
     emit('apply-references', {
@@ -1163,13 +1517,34 @@ const applyMaskToStudio = () => {
 }
 
 const generateMaskEdit = () => {
-    if (!canApplyMask.value) return
+    if (!ensureMaskReady()) return
     const prompt = buildMaskPrompt()
+    setToolboxNotice('info', '已提交遮罩编辑任务。')
     emit('generate', {
         title: '遮罩编辑',
         prompt,
+        tool: 'mask-edit',
         references: buildMaskReferences()
     })
+}
+
+const ensureMaskReady = () => {
+    if (!maskBaseImage.value) {
+        setToolboxNotice('error', '请先上传底图。')
+        return false
+    }
+    if (!maskInstruction.value.trim()) {
+        setToolboxNotice('error', '请先填写局部修改要求。')
+        return false
+    }
+    if (!maskImage.value) {
+        exportMaskImage()
+    }
+    if (!maskImage.value) {
+        setToolboxNotice('error', '请先在底图上涂抹遮罩区域。')
+        return false
+    }
+    return true
 }
 
 const buildMaskPrompt = () => [
@@ -1198,13 +1573,112 @@ const downloadToolboxImage = (image: string) => {
     emit('download', image)
 }
 
+const saveSelectedModelTaskAsAsset = async () => {
+    const task = selectedModelAssetTask.value
+    if (!task?.images.length) return
+    const now = Date.now()
+    const name = task.toolboxAssetName || modelAssetName.value.trim() || `模特资产 ${formatAssetDate(now)}`
+    const asset: ToolboxModelAsset = {
+        id: `model-asset-${now}-${Math.random().toString(36).slice(2, 8)}`,
+        name,
+        images: [...task.images],
+        prompt: task.prompt,
+        notes: '由工具箱生成结果保存。',
+        mode: modelAssetMode.value,
+        framing: modelAssetFraming.value,
+        usage: modelAssetUsage.value,
+        fidelity: modelAssetFidelity.value,
+        style: modelAssetStyle.value,
+        favorite: false,
+        createdAt: now,
+        updatedAt: now
+    }
+
+    await putToolboxModelAsset(asset)
+    selectedModelAssetId.value = asset.id
+    modelAssetName.value = asset.name
+    modelAssetImages.value = [...asset.images]
+    modelAssetPrompt.value = asset.prompt
+    assetStatus.value = `已保存生成结果为模特：${asset.name}`
+    setToolboxNotice('success', assetStatus.value)
+    await loadModelAssets()
+}
+
+const appendSelectedModelTaskToAsset = async () => {
+    const task = selectedModelAssetTask.value
+    if (!task?.images.length || !selectedModelAssetId.value) return
+    const existing = modelAssets.value.find(asset => asset.id === selectedModelAssetId.value)
+    if (!existing) {
+        setToolboxNotice('error', '没有找到当前模特资产，请先保存为新模特。')
+        return
+    }
+
+    const now = Date.now()
+    const nextImages = [...existing.images, ...task.images].filter((image, index, list) => image && list.indexOf(image) === index)
+    const asset: ToolboxModelAsset = {
+        ...existing,
+        images: nextImages,
+        prompt: task.prompt || existing.prompt,
+        notes: existing.notes,
+        updatedAt: now
+    }
+
+    await putToolboxModelAsset(asset)
+    modelAssetImages.value = [...asset.images]
+    modelAssetPrompt.value = asset.prompt
+    assetStatus.value = `已追加 ${task.images.length} 张生成图到：${asset.name}`
+    setToolboxNotice('success', assetStatus.value)
+    await loadModelAssets()
+}
+
+const pushSelectedOutfitAsCharacter = () => {
+    const task = selectedOutfitTask.value
+    if (!task?.images.length) return
+    emit('push-task-as-role', { task, role: 'character' })
+    setToolboxNotice('success', '已把最新换装结果作为人物参考送回创作台。')
+}
+
+const pushSelectedOutfitAsOutfit = () => {
+    const task = selectedOutfitTask.value
+    if (!task?.images.length) return
+    emit('push-task-as-role', { task, role: 'outfit' })
+    setToolboxNotice('success', '已把最新换装结果作为服装参考送回创作台。')
+}
+
+const reuseSelectedOutfitPrompt = () => {
+    const task = selectedOutfitTask.value
+    if (!task) return
+    emit('reuse-task', task)
+}
+
+const continueMaskWithSelectedResult = async () => {
+    const task = selectedMaskTask.value
+    const image = task?.images[0]
+    if (!image) return
+    activeTool.value = 'mask-edit'
+    maskBaseImage.value = image
+    maskImage.value = ''
+    maskHasStroke.value = false
+    maskInstruction.value = ''
+    await nextTick()
+    clearMaskCanvas()
+    setToolboxNotice('success', '已把最新遮罩结果设为新的底图，可以继续涂抹。')
+}
+
 const generateDraftPrompt = () => {
     const prompt = draftPrompt.value.trim()
-    if (!prompt || !activeToolReferences.value.length) return
+    if (!prompt) return
+    if (activeTool.value === 'mask-edit' && !ensureMaskReady()) return
+    const references = activeToolReferences.value
+    if (!references.length) return
+    setToolboxNotice('info', '已按当前可编辑提示词提交生成任务。')
     emit('generate', {
         title: `${activeToolTitle.value}提示词`,
         prompt,
-        references: activeToolReferences.value
+        tool: activeTool.value === 'image-to-prompt' ? 'prompt' : activeTool.value,
+        assetId: activeTool.value === 'model-asset' ? selectedModelAssetId.value : undefined,
+        assetName: activeTool.value === 'model-asset' ? modelAssetName.value.trim() : undefined,
+        references
     })
 }
 
@@ -1222,6 +1696,19 @@ const pushToolboxTask = (task: GenerationTask) => {
 
 const canvasToolboxTask = (task: GenerationTask) => {
     emit('canvas-task', task)
+}
+
+const setToolboxNotice = (kind: 'info' | 'success' | 'error', message: string) => {
+    toolboxNotice.value = { kind, message }
+}
+
+const roleSummaryLabel = (role: ToolboxReference['role']) => {
+    if (role === 'character') return '人物参考'
+    if (role === 'outfit') return '服装参考'
+    if (role === 'background') return '背景参考'
+    if (role === 'product') return '产品参考'
+    if (role === 'style') return '风格参考'
+    return '其他参考'
 }
 
 const appendReversePrompt = () => {
@@ -1298,6 +1785,7 @@ const removeAt = <T,>(items: T[], index: number) => items.filter((_, itemIndex) 
 
 defineExpose({
     setAnalysisResult,
-    setAnalysisError
+    setAnalysisError,
+    setToolboxNotice
 })
 </script>
