@@ -118,7 +118,7 @@
             </div>
         </section>
 
-        <main v-if="currentView === 'studio'" class="wb-shell grid items-start gap-4 py-4 lg:pb-[168px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
+        <main v-if="currentView === 'studio'" class="wb-shell grid items-start gap-4 py-4 lg:pb-[132px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
             <aside class="space-y-4">
                 <section class="wb-panel">
                     <div class="mb-3 flex items-center justify-between gap-3">
@@ -393,9 +393,25 @@
                                     </p>
                                     <p class="mt-1 truncate text-xs text-brand-muted">{{ item.recipe?.mainPrompt || item.prompt }}</p>
                                 </div>
-                                <button type="button" class="shrink-0 rounded-md bg-brand-line/60 px-2 py-1 text-[11px] text-brand-muted transition hover:text-brand-accent" @click="toggleHistoryFavorite(item)">
-                                    {{ item.favorite ? '已收藏' : item.aspectRatio }}
-                                </button>
+                                <div class="flex shrink-0 items-center gap-1">
+                                    <span class="rounded-md bg-brand-line/60 px-2 py-1 text-[11px] font-semibold text-brand-muted dark:bg-night-muted/20">
+                                        {{ item.aspectRatio }}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        :aria-pressed="item.favorite === true"
+                                        :title="item.favorite ? '取消收藏' : '收藏这组结果'"
+                                        :class="[
+                                            'rounded-md border px-2 py-1 text-[11px] font-semibold transition',
+                                            item.favorite
+                                                ? 'border-brand-accent/30 bg-brand-accent/10 text-brand-accent'
+                                                : 'border-brand-line bg-brand-surface text-brand-muted hover:border-brand-accent/35 hover:text-brand-accent'
+                                        ]"
+                                        @click="toggleHistoryFavorite(item)"
+                                    >
+                                        {{ item.favorite ? '已收藏' : '收藏' }}
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="mt-3 grid grid-cols-4 gap-2">
@@ -434,7 +450,7 @@
                 themeMode === 'dark' ? 'border-night-muted/35 bg-[#232326]/95 shadow-black/30' : 'border-brand-line bg-white/95'
             ]"
         >
-            <div class="wb-shell py-2.5">
+            <div class="wb-shell py-2">
                 <div v-if="showPromptTools" class="absolute bottom-[calc(100%+10px)] left-1/2 z-40 w-[min(1040px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20 dark:border-night-muted/35 dark:bg-night-surface dark:text-brand-surface">
                     <PromptPhraseBuilder
                         :groups="mergedPromptPhraseGroups"
@@ -449,8 +465,8 @@
                     />
                 </div>
 
-                <div class="rounded-lg border border-brand-line bg-white p-2.5 shadow-sm shadow-black/10 dark:border-night-muted/35 dark:bg-night-surface">
-                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div class="rounded-lg border border-brand-line bg-white p-2 shadow-sm shadow-black/10 dark:border-night-muted/35 dark:bg-night-surface">
+                    <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
                         <div class="min-w-0">
                             <span class="wb-label">Prompt box</span>
                             <p class="mt-0.5 text-xs text-brand-muted dark:text-night-muted">提示词会和参考图用途说明一起提交。</p>
@@ -539,8 +555,8 @@
                             v-model="textToImagePrompt"
                             @input="handlePromptManualInput"
                             placeholder="描述你想生成或改动的画面。参考图会作为素材参与生成，可以写：让角色1穿着服装参考，在背景参考中拍摄产品级主视觉。"
-                            class="wb-input min-h-[72px] max-h-[112px] w-full resize-y py-2 text-sm leading-6"
-                            rows="3"
+                            class="wb-input min-h-[56px] max-h-[96px] w-full resize-y py-2 text-sm leading-6"
+                            rows="2"
                         />
 
                         <div class="flex min-w-0 flex-col gap-2 lg:w-[430px] xl:w-[520px]">
@@ -644,7 +660,7 @@
                     <p v-if="promptAssistantError" class="mt-2 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">
                         {{ promptAssistantError }}
                     </p>
-                    <p v-else-if="!promptAssistantReady" class="mt-2 text-xs text-brand-muted">
+                    <p v-else-if="!promptAssistantReady && showPromptTools" class="mt-2 text-xs text-brand-muted">
                         配置提示词助手 URL / Key / Model 后，可用低费率文本模型先整理中文提示词。
                     </p>
                 </div>
@@ -1013,12 +1029,15 @@
                             >
                                 <button
                                     type="button"
-                                    class="relative block aspect-square w-full bg-brand-surface"
+                                    class="relative block aspect-square w-full bg-brand-surface dark:bg-night-panel"
                                     @click="assetSelectionMode ? toggleAssetSelection(asset.id) : openHistoryPreview(asset.item, asset.image)"
                                 >
                                     <img :src="asset.image" :alt="`历史资产 ${asset.index + 1}`" class="h-full w-full object-cover" />
                                     <span v-if="assetSelectionMode" class="absolute left-2 top-2 rounded-md border border-white/60 bg-brand-ink/75 px-2 py-1 text-xs font-semibold text-brand-surface">
                                         {{ selectedAssetIds.includes(asset.id) ? '已选' : '选择' }}
+                                    </span>
+                                    <span class="absolute right-2 top-2 rounded-md bg-brand-ink/70 px-2 py-1 text-[11px] font-semibold text-brand-surface">
+                                        {{ asset.item.aspectRatio }}
                                     </span>
                                 </button>
                                 <div class="space-y-2 p-3">
@@ -1030,8 +1049,19 @@
                                             </p>
                                             <p class="mt-1 line-clamp-2 text-xs leading-5 text-brand-muted">{{ asset.item.recipe?.mainPrompt || asset.item.prompt }}</p>
                                         </div>
-                                        <button type="button" class="shrink-0 rounded-md bg-brand-line/60 px-2 py-1 text-[11px] text-brand-muted transition hover:text-brand-accent" @click="toggleHistoryFavorite(asset.item)">
-                                            {{ asset.item.favorite ? '已收藏' : asset.item.aspectRatio }}
+                                        <button
+                                            type="button"
+                                            :aria-pressed="asset.item.favorite === true"
+                                            :title="asset.item.favorite ? '取消收藏' : '收藏这张图'"
+                                            :class="[
+                                                'shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold transition',
+                                                asset.item.favorite
+                                                    ? 'border-brand-accent/30 bg-brand-accent/10 text-brand-accent'
+                                                    : 'border-brand-line bg-brand-surface text-brand-muted hover:border-brand-accent/35 hover:text-brand-accent'
+                                            ]"
+                                            @click="toggleHistoryFavorite(asset.item)"
+                                        >
+                                            {{ asset.item.favorite ? '已收藏' : '收藏' }}
                                         </button>
                                     </div>
                                     <div class="flex flex-wrap gap-2">
@@ -1063,30 +1093,62 @@
             <Footer />
         </div>
 
-        <div v-if="historyPreviewItem" class="fixed inset-0 z-[80] flex items-center justify-center bg-brand-ink/90 p-4" @click.self="historyPreviewItem = null">
-            <div class="flex max-h-full w-full max-w-6xl flex-col rounded-lg border border-brand-surface/20 bg-brand-ink p-3 shadow-2xl">
+        <div
+            v-if="historyPreviewItem"
+            :class="[
+                'fixed inset-0 z-[80] flex items-center justify-center p-4',
+                themeMode === 'dark' ? 'bg-black/82' : 'bg-brand-ink/30'
+            ]"
+            @click.self="historyPreviewItem = null"
+        >
+            <div
+                :class="[
+                    'flex max-h-full w-full max-w-6xl flex-col rounded-lg border p-3 shadow-2xl',
+                    themeMode === 'dark'
+                        ? 'border-night-muted/35 bg-[#232326] text-brand-surface shadow-black/50'
+                        : 'border-brand-line bg-white text-brand-ink shadow-black/20'
+                ]"
+            >
                 <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-brand-surface">
+                        <p class="text-sm font-semibold text-brand-ink dark:text-brand-surface">
                             {{ historyPreviewItem.source === 'text' ? '文生图' : '参考图生成' }}
                             <span v-if="historyPreviewItem.category" class="text-brand-muted"> · {{ historyPreviewItem.category }}</span>
                         </p>
                         <p class="mt-1 line-clamp-1 text-xs text-brand-muted">{{ historyPreviewItem.recipe?.mainPrompt || historyPreviewItem.prompt }}</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="openOriginalImage(historyPreviewImage)">原图查看</button>
-                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="handleDownloadResult(historyPreviewImage)">下载</button>
-                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="copyHistoryDiagnostic(historyPreviewItem, historyPreviewImage)">复制生成信息</button>
-                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="pushHistoryImages(historyPreviewItem)">结果作参考</button>
-                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="addHistoryItemToCanvas(historyPreviewItem, historyPreviewImage)">加入画布</button>
-                        <button type="button" class="rounded-md border border-brand-surface/20 px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-surface/10" @click="reuseHistoryRecipe(historyPreviewItem)">一键复用</button>
+                        <button
+                            type="button"
+                            :class="[
+                                'rounded-md border px-3 py-1.5 text-xs font-semibold transition',
+                                historyPreviewOriginalMode
+                                    ? 'border-brand-accent bg-brand-accent text-brand-surface'
+                                    : 'border-brand-line text-brand-ink hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10'
+                            ]"
+                            @click="openOriginalImage(historyPreviewImage)"
+                        >
+                            原图模式
+                        </button>
+                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="handleDownloadResult(historyPreviewImage)">下载</button>
+                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="copyHistoryDiagnostic(historyPreviewItem, historyPreviewImage)">复制生成信息</button>
+                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="pushHistoryImages(historyPreviewItem)">结果作参考</button>
+                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="addHistoryItemToCanvas(historyPreviewItem, historyPreviewImage)">加入画布</button>
+                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="reuseHistoryRecipe(historyPreviewItem)">一键复用</button>
                         <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryImageAt(historyPreviewItem, historyPreviewItem.images.indexOf(historyPreviewImage))">删除当前图</button>
                         <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryItem(historyPreviewItem)">删除整组</button>
                         <button type="button" class="rounded-md bg-brand-accent px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="historyPreviewItem = null">关闭</button>
                     </div>
                 </div>
-                <div class="min-h-0 flex-1 overflow-auto rounded-lg bg-black/20">
-                    <img :src="historyPreviewImage" alt="历史结果预览" class="mx-auto max-h-[74vh] w-auto max-w-full object-contain" />
+                <div class="min-h-0 flex-1 overflow-auto rounded-lg bg-brand-surface dark:bg-black/20">
+                    <img
+                        :src="historyPreviewImage"
+                        alt="历史结果预览"
+                        :class="[
+                            'mx-auto w-auto object-contain',
+                            historyPreviewOriginalMode ? 'max-w-none' : 'max-h-[74vh] max-w-full'
+                        ]"
+                    />
                 </div>
                 <div v-if="historyPreviewItem.images.length > 1" class="mt-3 flex gap-2 overflow-x-auto">
                     <button
@@ -1094,21 +1156,21 @@
                         :key="`${historyPreviewItem.id}-preview-${index}`"
                         type="button"
                         :class="[
-                            'h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-brand-surface',
+                            'h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-brand-surface dark:bg-night-panel',
                             historyPreviewImage === image ? 'border-brand-accent' : 'border-brand-surface/20'
                         ]"
-                        @click="historyPreviewImage = image"
+                        @click="historyPreviewImage = image; historyPreviewOriginalMode = false"
                     >
                         <img :src="image" :alt="`历史结果 ${index + 1}`" class="h-full w-full object-cover" />
                     </button>
                 </div>
                 <div class="mt-3 grid gap-3 text-xs leading-5 text-brand-muted lg:grid-cols-[minmax(0,1fr)_260px]">
-                    <div class="rounded-lg border border-brand-surface/15 bg-brand-surface/5 p-3">
-                        <div class="mb-1 font-semibold text-brand-surface">生成提示词</div>
+                    <div class="rounded-lg border border-brand-line bg-brand-surface p-3 dark:border-night-muted/35 dark:bg-night-panel">
+                        <div class="mb-1 font-semibold text-brand-ink dark:text-brand-surface">生成提示词</div>
                         <p class="max-h-24 overflow-y-auto whitespace-pre-wrap">{{ historyPreviewItem.prompt }}</p>
                     </div>
-                    <div class="rounded-lg border border-brand-surface/15 bg-brand-surface/5 p-3">
-                        <div class="mb-1 font-semibold text-brand-surface">批次信息</div>
+                    <div class="rounded-lg border border-brand-line bg-brand-surface p-3 dark:border-night-muted/35 dark:bg-night-panel">
+                        <div class="mb-1 font-semibold text-brand-ink dark:text-brand-surface">批次信息</div>
                         <p>生成组：{{ historyPreviewItem.images.length }} 张</p>
                         <p>比例：{{ historyPreviewItem.aspectRatio }} · 分辨率：{{ historyPreviewItem.imageSize }}</p>
                         <p>模型：{{ historyPreviewItem.model }}</p>
@@ -1321,6 +1383,7 @@ const newCollectionName = ref('')
 const showCollectionDialog = ref(false)
 const historyPreviewItem = ref<GenerationHistoryItem | null>(null)
 const historyPreviewImage = ref('')
+const historyPreviewOriginalMode = ref(false)
 const assetSelectionMode = ref(false)
 const selectedAssetIds = ref<string[]>([])
 const showBulkDeleteDialog = ref(false)
@@ -3570,6 +3633,7 @@ const restoreHistoryItem = (item: GenerationHistoryItem) => {
 const openHistoryPreview = (item: GenerationHistoryItem, image = item.images[0] || '') => {
     historyPreviewItem.value = item
     historyPreviewImage.value = image
+    historyPreviewOriginalMode.value = false
 }
 
 const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string) => {
@@ -3654,8 +3718,9 @@ const deleteHistoryImageAt = async (item: GenerationHistoryItem, imageIndex: num
 }
 
 const openOriginalImage = (image: string) => {
-    if (!image || typeof window === 'undefined') return
-    window.open(image, '_blank', 'noopener')
+    if (!image) return
+    historyPreviewImage.value = image
+    historyPreviewOriginalMode.value = true
 }
 
 const toggleAssetSelectionMode = () => {

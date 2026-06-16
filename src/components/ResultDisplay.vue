@@ -43,7 +43,7 @@
                         v-else-if="task.images.length"
                         type="button"
                         class="mt-3 grid w-full grid-cols-2 gap-2"
-                        @click="$emit('restore-task', task)"
+                        @click="openTaskPreview(task)"
                     >
                         <span
                             v-for="(image, index) in task.images.slice(0, 4)"
@@ -55,7 +55,7 @@
                     </button>
 
                     <div v-if="task.status === 'done' && task.images.length" class="mt-3 grid grid-cols-2 gap-2">
-                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="$emit('restore-task', task)">恢复预览</button>
+                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="openTaskPreview(task)">查看结果</button>
                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="$emit('reuse-task', task)">复用提示词</button>
                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="$emit('push-task', task)">结果作参考</button>
                         <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="$emit('canvas-task', task)">加入画布</button>
@@ -219,7 +219,13 @@ const onImageLoad = (event: Event, image: string) => {
     }
 }
 
-defineEmits<{
+const openTaskPreview = (task: GenerationTask) => {
+    if (!task.images.length) return
+    previewImage.value = task.images[0]
+    emit('restore-task', task)
+}
+
+const emit = defineEmits<{
     download: [image: string]
     push: [image: string]
     reuse: []
