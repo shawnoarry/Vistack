@@ -1172,6 +1172,14 @@ import { promptPoolGroups } from './data/promptPool'
 import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
 import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
 import { getEndpointPath, isGrsaiEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint, resolveImageGenerationEndpoint } from './utils/apiEndpoint'
+import {
+    aspectRatioToGeminiSize,
+    aspectRatioToOpenAiImageSize,
+    baseAspectRatioResolutionMap,
+    buildAspectRatioOptions,
+    geminiAspectRatioResolutionData,
+    openAiAspectRatioResolutionData
+} from './utils/imageSizing'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
 import {
     deleteGenerationHistoryItem,
@@ -3042,6 +3050,7 @@ const buildRequestDiagnosticText = () => {
         `n: ${generationCount.value}`,
         `aspectRatio: ${showAspectRatioSelector.value ? selectedAspectRatio.value : 'not sent'}`,
         `imageSize: ${showImageSizeConfig.value ? gemini3ImageSize.value : 'not sent'}`,
+        diagnostic.outputSize ? `outputSize: ${diagnostic.outputSize}` : '',
         diagnostic.warning ? `warning: ${diagnostic.warning}` : '',
         references.length ? `references:\n${references.join('\n')}` : 'references: none',
         `promptPreview:\n${promptPreview.value || ''}`
@@ -3097,6 +3106,8 @@ const requestDiagnostic = computed(() => {
     const provider = requestProviderType.value
     const referenceCount = selectedImages.value.length
     const field = getReferencePayloadField(provider, referenceCount)
+    const aspectRatio = showAspectRatioSelector.value ? selectedAspectRatio.value : ''
+    const imageSize = showImageSizeConfig.value ? gemini3ImageSize.value : ''
     const providerLabelMap: Record<string, string> = {
         'openai-chat': 'Chat multimodal',
         'openai-image': 'Images API',
@@ -3109,6 +3120,7 @@ const requestDiagnostic = computed(() => {
         endpoint: resolvedGenerationEndpoint.value,
         provider,
         providerLabel: providerLabelMap[provider] || provider,
+        outputSize: getDiagnosticOutputSize(provider, selectedImageModelType.value, aspectRatio, imageSize),
         referenceSummary: referenceCount
             ? `${referenceCount} 张，将进入 ${field}`
             : '0 张，当前是文生图',
@@ -3119,6 +3131,17 @@ const requestDiagnostic = computed(() => {
             : ''
     }
 })
+
+const getDiagnosticOutputSize = (provider: string, modelType: string, aspectRatio: string, imageSize: string) => {
+    if (!aspectRatio) return ''
+    if (provider === 'openai-image' || provider === 'openai-image-edit' || modelType === 'gpt-image') {
+        return aspectRatioToOpenAiImageSize(aspectRatio, imageSize || '1K')
+    }
+    if (modelType === 'gemini-3-pro-image') {
+        return aspectRatioToGeminiSize(aspectRatio, imageSize || '1K')
+    }
+    return ''
+}
 
 const selectedModelOption = computed(() => {
     const currentId = selectedModel.value.trim()
@@ -3169,89 +3192,18 @@ const supportsImageSizeConfig = computed(() => {
     return isCurrentGrsaiEndpoint.value
 })
 
-const scaleResolutionMap = (map: Record<string, string>, multiplier: number) => Object.fromEntries(
-    Object.entries(map).map(([ratio, resolution]) => {
-        const [width, height] = resolution.split('x').map(Number)
-        return [ratio, `${width * multiplier}x${height * multiplier}`]
-    })
-)
-
-const aspectRatioOptionsFromResolutionMap = (map: Record<string, string>) =>
-    Object.entries(map).map(([ratio, resolution]) => ({
-        value: ratio,
-        label: `${ratio} - ${resolution}`
-    }))
-
-const baseAspectRatioResolutionMap: Record<string, string> = {
-    '1:1': '1024x1024',
-    '2:3': '832x1248',
-    '3:2': '1248x832',
-    '3:4': '864x1184',
-    '4:3': '1184x864',
-    '4:5': '896x1152',
-    '5:4': '1152x896',
-    '9:16': '768x1344',
-    '16:9': '1344x768',
-    '21:9': '1536x672'
-}
-
 const baseAspectRatioOptions = [
-    ...aspectRatioOptionsFromResolutionMap(baseAspectRatioResolutionMap)
+    ...buildAspectRatioOptions(baseAspectRatioResolutionMap)
 ]
-
-const gptImageAspectRatioData: Record<string, Record<string, string>> = {
-    '1K': baseAspectRatioResolutionMap,
-    '2K': scaleResolutionMap(baseAspectRatioResolutionMap, 2),
-    '4K': scaleResolutionMap(baseAspectRatioResolutionMap, 4)
-}
-
-const gemini3AspectRatioData: Record<string, Record<string, string>> = {
-    '1K': {
-        '1:1': '1024x1024',
-        '2:3': '848x1264',
-        '3:2': '1264x848',
-        '3:4': '896x1200',
-        '4:3': '1200x896',
-        '4:5': '928x1152',
-        '5:4': '1152x928',
-        '9:16': '768x1376',
-        '16:9': '1376x768',
-        '21:9': '1584x672'
-    },
-    '2K': {
-        '1:1': '2048x2048',
-        '2:3': '1696x2528',
-        '3:2': '2528x1696',
-        '3:4': '1792x2400',
-        '4:3': '2400x1792',
-        '4:5': '1856x2304',
-        '5:4': '2304x1856',
-        '9:16': '1536x2752',
-        '16:9': '2752x1536',
-        '21:9': '3168x1344'
-    },
-    '4K': {
-        '1:1': '4096x4096',
-        '2:3': '3392x5056',
-        '3:2': '5056x3392',
-        '3:4': '3584x4800',
-        '4:3': '4800x3584',
-        '4:5': '3712x4608',
-        '5:4': '4608x3712',
-        '9:16': '3072x5504',
-        '16:9': '5504x3072',
-        '21:9': '6336x2688'
-    }
-}
 
 const availableAspectRatios = computed(() => {
     const sizeData = selectedImageModelType.value === 'gemini-3-pro-image'
-        ? gemini3AspectRatioData[gemini3ImageSize.value]
+        ? geminiAspectRatioResolutionData[gemini3ImageSize.value]
         : selectedImageModelType.value === 'gpt-image'
-          ? gptImageAspectRatioData[gemini3ImageSize.value]
+          ? openAiAspectRatioResolutionData[gemini3ImageSize.value]
           : null
 
-    return sizeData ? aspectRatioOptionsFromResolutionMap(sizeData) : baseAspectRatioOptions
+    return sizeData ? buildAspectRatioOptions(sizeData) : baseAspectRatioOptions
 })
 
 const showImageSizeConfig = computed(() => {

@@ -10,6 +10,7 @@ import {
     resolveModelEndpointCandidates,
     resolveSiblingEndpoint
 } from '../utils/apiEndpoint'
+import { aspectRatioToGeminiSize, aspectRatioToOpenAiImageSize } from '../utils/imageSizing'
 
 type ApiProvider = 'openai-chat' | 'openai-image' | 'openai-image-edit' | 'grsai' | 'grsai-draw'
 
@@ -353,11 +354,13 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
         imageConfig.aspect_ratio = request.aspectRatio
     }
 
-    if (isGemini3ProImage || isOpenAiImageModel) {
+    if (isGemini3ProImage) {
         if (request.imageSize) {
             imageConfig.image_size = request.imageSize
         }
-        imageConfig.size = aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize)
+        imageConfig.size = aspectRatioToGeminiSize(request.aspectRatio || '1:1', request.imageSize)
+    } else if (isOpenAiImageModel) {
+        imageConfig.size = aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize)
     }
 
     if (isGemini3ProImage) {
@@ -404,7 +407,7 @@ async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateReq
     const payload: Record<string, unknown> = {
         model: modelId,
         prompt: request.prompt,
-        size: aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize),
+        size: aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize),
         n: normalizeImageCount(request.count)
     }
 
@@ -440,9 +443,8 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest, 
     }
 
     if (isGptImage) {
-        const size = aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize)
-        payload.aspectRatio = size
-        payload.size = size
+        payload.aspectRatio = request.aspectRatio || '1:1'
+        payload.size = aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize)
     } else if (request.aspectRatio) {
         payload.aspectRatio = request.aspectRatio
     }
@@ -473,7 +475,7 @@ async function generateWithOpenAiImageEdit(apiEndpoint: string, request: Generat
     const formData = new FormData()
     formData.append('model', modelId)
     formData.append('prompt', request.prompt)
-    formData.append('size', aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize))
+    formData.append('size', aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize))
     formData.append('n', String(normalizeImageCount(request.count)))
     if (isDallEModelId(modelId)) {
         formData.append('response_format', 'url')
@@ -513,15 +515,14 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
     }
 
     if (request.aspectRatio) {
-        payload.aspectRatio = isGptImage ? aspectRatioToSize(request.aspectRatio, request.imageSize) : request.aspectRatio
+        payload.aspectRatio = request.aspectRatio
     }
 
     if (isGptImage) {
-        payload.size = aspectRatioToSize(request.aspectRatio || '1:1', request.imageSize)
-        payload.imageSize = request.imageSize || '1K'
-    } else {
-        payload.imageSize = request.imageSize || '1K'
+        payload.size = aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize)
     }
+
+    payload.imageSize = request.imageSize || '1K'
 
     const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
     const directUrls = extractImageUrls(data)
@@ -864,45 +865,6 @@ function resolveGrsaiResultEndpoint(endpoint: string): string {
     }
 
     return endpoint.replace(/\/generate\/?$/, '/result')
-}
-
-function aspectRatioToSize(aspectRatio: string, imageSize = '1K'): string {
-    if (/^\d+x\d+$/i.test(aspectRatio)) {
-        return aspectRatio
-    }
-
-    const sizeMap: Record<string, string> = {
-        '1:1': '1024x1024',
-        '2:3': '832x1248',
-        '3:2': '1248x832',
-        '3:4': '864x1184',
-        '4:3': '1184x864',
-        '4:5': '896x1152',
-        '5:4': '1152x896',
-        '9:16': '768x1344',
-        '16:9': '1344x768',
-        '21:9': '1536x672'
-    }
-
-    const baseSize = sizeMap[aspectRatio] || '1024x1024'
-    return scaleSize(baseSize, imageSize)
-}
-
-function scaleSize(size: string, imageSize = '1K'): string {
-    const match = size.match(/^(\d+)x(\d+)$/i)
-    if (!match) return size
-
-    const multiplier = imageSize.toUpperCase() === '4K'
-        ? 4
-        : imageSize.toUpperCase() === '2K'
-          ? 2
-          : 1
-
-    if (multiplier === 1) return size
-
-    const width = Number(match[1])
-    const height = Number(match[2])
-    return `${width * multiplier}x${height * multiplier}`
 }
 
 function normalizeModels(data: ModelListResponse): ApiModel[] {
