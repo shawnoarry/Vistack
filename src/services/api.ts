@@ -150,18 +150,20 @@ export async function generateImage(request: GenerateRequest, _maxRetries: numbe
     const targetCount = normalizeImageCount(request.count)
     const batchMode = request.batchMode === 'single' ? 'single' : 'fill'
     const requestLimit = batchMode === 'fill' ? targetCount : 1
+    const profile = getApiProfile(request.endpoint, request.model, request.images.length > 0)
+    const isSingleOutputEditRequest = profile.provider === 'openai-image-edit'
 
     const collectedUrls: string[] = []
     let lastError: Error | null = null
 
     for (let requestIndex = 1; requestIndex <= requestLimit && collectedUrls.length < targetCount; requestIndex += 1) {
         const remainingCount = targetCount - collectedUrls.length
-        const countForRequest = requestIndex === 1 ? targetCount : remainingCount
+        const countForRequest = isSingleOutputEditRequest ? 1 : requestIndex === 1 ? targetCount : remainingCount
+        const countLog = isSingleOutputEditRequest ? 'n=not sent' : `n=${countForRequest}`
 
         try {
-            console.log(`Attempting image generation request ${requestIndex}/${requestLimit} with n=${countForRequest}...`)
+            console.log(`Attempting image generation request ${requestIndex}/${requestLimit} with ${countLog}...`)
 
-            const profile = getApiProfile(request.endpoint, request.model, request.images.length > 0)
             const response = await generateWithProfile(profile, { ...request, count: countForRequest }, options)
 
             if (response.imageUrls.length > 0) {
@@ -501,7 +503,6 @@ async function generateWithOpenAiImageEdit(apiEndpoint: string, request: Generat
     formData.append('model', modelId)
     formData.append('prompt', request.prompt)
     formData.append('size', aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize))
-    formData.append('n', String(normalizeImageCount(request.count)))
     if (isDallEModelId(modelId)) {
         formData.append('response_format', 'url')
     }

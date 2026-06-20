@@ -3131,7 +3131,19 @@ const generationRequestLimit = computed(() =>
     generationBatchMode.value === 'fill' ? generationCount.value : 1
 )
 
+const requestImageCountParam = computed(() =>
+    requestProviderType.value === 'openai-image-edit' ? 'not sent' : String(generationCount.value)
+)
+
 const generationRequestSummary = computed(() => {
+    if (requestProviderType.value === 'openai-image-edit') {
+        if (generationBatchMode.value === 'single') {
+            return '图片编辑兼容模式：单次请求，不发送 n'
+        }
+
+        return `图片编辑兼容模式：不发送 n，最多 ${generationRequestLimit.value} 次单张请求补齐`
+    }
+
     if (generationBatchMode.value === 'single') {
         return `单次请求，n=${generationCount.value}`
     }
@@ -3157,7 +3169,7 @@ const buildRequestDiagnosticText = () => {
         `referencePayloadField: ${diagnostic.payloadField}`,
         `batchMode: ${generationBatchMode.value}`,
         `generationRequests: ${generationRequestLimit.value}`,
-        `n: ${generationCount.value}`,
+        `n: ${requestImageCountParam.value}`,
         `aspectRatio: ${showAspectRatioSelector.value ? selectedAspectRatio.value : 'not sent'}`,
         `imageSize: ${showImageSizeConfig.value ? gemini3ImageSize.value : 'not sent'}`,
         diagnostic.outputSize ? `outputSize: ${diagnostic.outputSize}` : '',
