@@ -17,6 +17,15 @@ interface MultipartProxyPayload {
     body: FormData
 }
 
+interface StreamProxyMessage {
+    type: 'ready' | 'heartbeat' | 'done' | 'error'
+    elapsedMs?: number
+    status?: number
+    headers?: Record<string, string>
+    body?: string
+    error?: string
+}
+
 const FORWARDED_HEADERS = new Set([
     'accept',
     'authorization',
@@ -63,7 +72,21 @@ export default async function handler(req: any, res: any) {
         if (isMultipart(req)) {
             const formData = await readMultipartPayload(req)
             const target = String(formData.get('_vistack_target') || '')
+            const streamMode = String(formData.get('_vistack_stream') || '')
             formData.delete('_vistack_target')
+            formData.delete('_vistack_stream')
+
+            if (streamMode === 'ndjson') {
+                await streamMultipartProxyRequest(res, {
+                    target,
+                    headers: {
+                        Authorization: String(req.headers.authorization || '')
+                    },
+                    body: formData
+                })
+                return
+            }
+
             const result = await performMultipartProxyRequest({
                 target,
                 headers: {
@@ -140,6 +163,54 @@ function sendProxyResult(res: any, result: ProxyResult) {
     }
     res.statusCode = result.status
     res.end(Buffer.from(result.body))
+}
+
+async function streamMultipartProxyRequest(res: any, payload: MultipartProxyPayload): Promise<void> {
+    const startedAt = Date.now()
+    let heartbeatTimer: ReturnType<typeof setInterval> | undefined
+
+    try {
+        res.statusCode = 200
+        res.setHeader('content-type', 'application/x-ndjson; charset=utf-8')
+        res.setHeader('cache-control', 'no-cache, no-transform')
+        res.setHeader('x-accel-buffering', 'no')
+        res.write(formatStreamMessage({ type: 'ready', elapsedMs: 0 }))
+
+        heartbeatTimer = setInterval(() => {
+            res.write(formatStreamMessage({
+                type: 'heartbeat',
+                elapsedMs: Date.now() - startedAt
+            }))
+        }, 10_000)
+
+        const result = await performMultipartProxyRequest(payload)
+        res.write(formatStreamMessage({
+            type: 'done',
+            elapsedMs: Date.now() - startedAt,
+            status: result.status,
+            headers: result.headers,
+            body: arrayBufferToBase64(result.body)
+        }))
+    } catch (error) {
+        res.write(formatStreamMessage({
+            type: 'error',
+            elapsedMs: Date.now() - startedAt,
+            error: error instanceof Error ? error.message : 'Proxy stream request failed.'
+        }))
+    } finally {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer)
+        }
+        res.end()
+    }
+}
+
+function formatStreamMessage(message: StreamProxyMessage): string {
+    return `${JSON.stringify(message)}\n`
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+    return Buffer.from(buffer).toString('base64')
 }
 
 function isMultipart(req: any): boolean {

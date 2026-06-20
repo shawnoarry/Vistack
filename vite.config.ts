@@ -31,6 +31,7 @@ function localApiProxyPlugin(): Plugin {
                         const formData = await readMultipartBody(req)
                         const target = String(formData.get('_vistack_target') || '')
                         formData.delete('_vistack_target')
+                        formData.delete('_vistack_stream')
                         const result = await performMultipartProxyRequest({
                             target,
                             headers: {

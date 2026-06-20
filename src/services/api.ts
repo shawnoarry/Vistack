@@ -138,6 +138,14 @@ const REFERENCE_IMAGE_MAX_SIDE = 1600
 const REFERENCE_IMAGE_COMPRESSION_THRESHOLD = 1_000_000
 const REFERENCE_IMAGE_JPEG_QUALITY = 0.88
 
+interface ProxyStreamMessage {
+    type?: string
+    status?: number
+    headers?: Record<string, string>
+    body?: string
+    error?: string
+}
+
 export async function generateImage(request: GenerateRequest, _maxRetries: number = 1, options: GenerateImageOptions = {}): Promise<GenerateResponse> {
     const targetCount = normalizeImageCount(request.count)
     const batchMode = request.batchMode === 'single' ? 'single' : 'fill'
@@ -368,7 +376,7 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
 
     const imageConfig: Record<string, unknown> = {}
 
-    if (request.aspectRatio) {
+    if (request.aspectRatio && !isOpenAiImageModel) {
         imageConfig.aspect_ratio = request.aspectRatio
     }
 
@@ -461,7 +469,6 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest, 
     }
 
     if (isGptImage) {
-        payload.aspectRatio = request.aspectRatio || '1:1'
         payload.size = aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize)
     } else if (request.aspectRatio) {
         payload.aspectRatio = request.aspectRatio
@@ -532,7 +539,7 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
         payload.urls = request.images
     }
 
-    if (request.aspectRatio) {
+    if (request.aspectRatio && !isGptImage) {
         payload.aspectRatio = request.aspectRatio
     }
 
@@ -660,13 +667,14 @@ async function fetchFormEndpoint(endpoint: string, apikey: string, formData: For
     }
 
     formData.append('_vistack_target', endpoint)
+    formData.append('_vistack_stream', 'ndjson')
     return fetch(getProxyUrl(), {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${apikey}`
         },
         body: formData
-    })
+    }).then(readProxyStreamResponse)
 }
 
 
@@ -722,6 +730,93 @@ async function readJsonResponse(response: Response): Promise<unknown> {
     } catch {
         throw new Error(`API did not return valid JSON: ${responseText}`)
     }
+}
+
+async function readProxyStreamResponse(response: Response): Promise<Response> {
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.includes('application/x-ndjson')) {
+        return response
+    }
+
+    if (!response.body) {
+        throw new Error('Proxy stream did not return a readable body.')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let pending = ''
+
+    while (true) {
+        const { done, value } = await reader.read()
+        if (value) {
+            pending += decoder.decode(value, { stream: !done })
+            const lines = pending.split('\n')
+            pending = lines.pop() || ''
+
+            for (const line of lines) {
+                const resolved = parseProxyStreamLine(line)
+                if (resolved) {
+                    return resolved
+                }
+            }
+        }
+
+        if (done) {
+            pending += decoder.decode()
+            const resolved = parseProxyStreamLine(pending)
+            if (resolved) {
+                return resolved
+            }
+            break
+        }
+    }
+
+    throw new Error('Proxy stream ended before returning a final response.')
+}
+
+function parseProxyStreamLine(line: string): Response | null {
+    const trimmed = line.trim()
+    if (!trimmed) return null
+
+    let message: ProxyStreamMessage
+    try {
+        message = JSON.parse(trimmed)
+    } catch {
+        return null
+    }
+
+    if (message.type === 'ready' || message.type === 'heartbeat') {
+        return null
+    }
+
+    if (message.type === 'error') {
+        throw new Error(message.error || 'Proxy stream request failed.')
+    }
+
+    if (message.type === 'done') {
+        const body = message.body ? base64ToUint8Array(message.body) : new Uint8Array()
+        return new Response(toArrayBuffer(body), {
+            status: message.status || 200,
+            headers: message.headers || {}
+        })
+    }
+
+    return null
+}
+
+function base64ToUint8Array(value: string): Uint8Array {
+    const binary = atob(value)
+    const bytes = new Uint8Array(binary.length)
+    for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index)
+    }
+    return bytes
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+    const buffer = new ArrayBuffer(bytes.byteLength)
+    new Uint8Array(buffer).set(bytes)
+    return buffer
 }
 
 function formatHttpErrorMessage(status: number, responseText: string): string {

@@ -3151,6 +3151,7 @@ const buildRequestDiagnosticText = () => {
         `endpoint: ${diagnostic.endpoint}`,
         `provider: ${diagnostic.provider}`,
         `proxy: ${apiUseProxy.value ? 'on' : 'off'}`,
+        diagnostic.proxyStream ? `proxyStream: ${diagnostic.proxyStream}` : '',
         `model: ${selectedModel.value.trim() || DEFAULT_MODEL_ID}`,
         `referenceCount: ${selectedImages.value.length}`,
         `referencePayloadField: ${diagnostic.payloadField}`,
@@ -3229,6 +3230,7 @@ const requestDiagnostic = computed(() => {
         endpoint: resolvedGenerationEndpoint.value,
         provider,
         providerLabel: providerLabelMap[provider] || provider,
+        proxyStream: apiUseProxy.value && provider === 'openai-image-edit' ? 'ndjson' : '',
         outputSize: getDiagnosticOutputSize(provider, selectedImageModelType.value, aspectRatio, imageSize),
         referenceSummary: referenceCount
             ? `${referenceCount} 张，将进入 ${field}`
