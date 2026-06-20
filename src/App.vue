@@ -547,6 +547,18 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8L12 3zM6 14l.8 2.2L9 17l-2.2.8L6 20l-.8-2.2L3 17l2.2-.8L6 14zM18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z" />
                                 </svg>
                             </button>
+                            <button
+                                type="button"
+                                :disabled="!canTranslatePrompt"
+                                :class="['wb-icon-button', canTranslatePrompt ? 'border-brand-accent/35 text-brand-accent dark:border-night-muted dark:text-brand-surface' : 'cursor-not-allowed']"
+                                :title="isPromptAssistantLoading ? '翻译中' : '翻译成中文'"
+                                aria-label="翻译成中文"
+                                @click="handleTranslatePrompt"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 5h8M8 3v2m2 0c-.5 2.5-2.1 4.5-4.7 6M6 8c1 1.6 2.2 2.7 3.8 3.4M13 19l4-9 4 9M14.5 16h5" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
@@ -2221,6 +2233,13 @@ const canImprovePrompt = computed(
         !isPromptAssistantLoading.value
 )
 
+const canTranslatePrompt = computed(
+    () =>
+        promptAssistantReady.value &&
+        textToImagePrompt.value.trim() &&
+        !isPromptAssistantLoading.value
+)
+
 const referenceImageRolePrompt = computed(() => {
     if (!selectedImages.value.length) return ''
     const mappings = selectedImages.value.map((_, index) => {
@@ -2927,6 +2946,33 @@ const handleImprovePrompt = async () => {
         textToImagePrompt.value = response.prompt
     } catch (assistantError) {
         promptAssistantError.value = assistantError instanceof Error ? assistantError.message : '提示词助手调用失败'
+    } finally {
+        isPromptAssistantLoading.value = false
+    }
+}
+
+const handleTranslatePrompt = async () => {
+    if (!canTranslatePrompt.value) return
+
+    isPromptAssistantLoading.value = true
+    promptAssistantError.value = null
+
+    try {
+        promptPhraseUndoStack.value = [...promptPhraseUndoStack.value, textToImagePrompt.value]
+        const request: PromptAssistantRequest = {
+            prompt: textToImagePrompt.value.trim(),
+            context: buildPromptAssistantContext(),
+            apikey: promptAssistantApiKey.value.trim(),
+            endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
+            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID,
+            task: 'translate-prompt',
+            targetLanguage: 'zh',
+            useProxy: apiUseProxy.value
+        }
+        const response = await improvePrompt(request)
+        textToImagePrompt.value = response.prompt
+    } catch (assistantError) {
+        promptAssistantError.value = assistantError instanceof Error ? assistantError.message : '提示词翻译失败'
     } finally {
         isPromptAssistantLoading.value = false
     }

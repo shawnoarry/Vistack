@@ -52,7 +52,7 @@
                             <p class="wb-label text-brand-accent">Image to prompt</p>
                             <h3 class="mt-1 text-lg font-semibold text-brand-ink dark:text-brand-surface">图片反推生图提示词</h3>
                             <p class="mt-1 text-sm leading-6 text-brand-muted dark:text-night-muted">
-                                上传图片后，用提示词助手模型分析画面，整理成可直接用于生图的提示词、画面要素和负面约束。
+                                上传图片后，用提示词助手模型分析画面，整理成可直接用于生图的提示词、画面要素和负面约束。需助手模型具备视觉识别能力。
                             </p>
                         </div>
                         <span :class="['rounded-md border px-2.5 py-1 text-xs font-semibold', assistantReady ? 'border-brand-accent/25 bg-brand-accent/10 text-brand-accent' : 'border-brand-line bg-brand-surface text-brand-muted']">
@@ -66,6 +66,9 @@
                                 <span class="mb-1 block wb-label">上传分析图片</span>
                                 <input class="wb-input w-full py-2 text-sm" type="file" accept="image/*" multiple @change="handleReverseImageUpload" />
                             </label>
+                            <p class="rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs leading-5 text-brand-accent">
+                                此功能会把图片发给提示词助手 API，请选择支持图片理解 / 视觉识别的助手模型；普通文本模型无法反推图片内容。
+                            </p>
 
                             <ImageGrid :images="uploadedImages" title="反推图片" @preview="previewImage = $event" @remove="removeUploadedImage" />
 

@@ -40,7 +40,7 @@ export interface PromptAssistantRequest {
     apikey: string
     endpoint: string
     model: string
-    task?: 'optimize' | 'translate-template' | 'image-to-prompt'
+    task?: 'optimize' | 'translate-template' | 'translate-prompt' | 'image-to-prompt'
     targetLanguage?: 'zh' | 'en'
     useProxy?: boolean
     images?: string[]

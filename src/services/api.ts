@@ -212,6 +212,7 @@ export async function fetchModels(apikey: string, endpoint: string, useProxy = f
 
 export async function improvePrompt(request: PromptAssistantRequest): Promise<PromptAssistantResponse> {
     const isTemplateTranslation = request.task === 'translate-template'
+    const isPromptTranslation = request.task === 'translate-prompt'
     const isImageToPrompt = request.task === 'image-to-prompt'
     const targetLanguage = request.targetLanguage === 'en' ? 'English' : 'Chinese'
     const userContent = isImageToPrompt
@@ -243,6 +244,15 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
               request.context ? `Template context:\n${request.context}` : '',
               `Source template:\n${request.prompt}`
           ].filter(Boolean).join('\n\n')
+          : isPromptTranslation
+            ? [
+                `Translate this image-generation prompt into ${targetLanguage}.`,
+                'Preserve the original meaning, order, strength, negative constraints, camera/style terms, and model-specific keywords.',
+                'Do not optimize, rewrite, expand, summarize, or add new visual details.',
+                'Keep useful English technical terms in parentheses when they are likely to improve image-model stability.',
+                request.context ? `Current creation context:\n${request.context}` : '',
+                `Source prompt:\n${request.prompt}`
+            ].filter(Boolean).join('\n\n')
           : [
               '请优化下面的生图提示词，优先使用中文，必要的摄影/平台术语可保留英文。',
               '要求：结构清楚，适合图像模型理解；强调真实手机镜头、参考图使用方式、主体一致性和质量约束；不要改变用户原意。',
@@ -266,6 +276,14 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
                         'You are Vistack template localization assistant.',
                         'Translate image-generation templates between Chinese and English while preserving all constraints, references, camera terms, negative instructions, aspect-ratio notes, and model-friendly structure.',
                         'Do not add new celebrities, brands, watermarks, random text, or extra explanation.',
+                        'Output only the translated prompt text. Do not use Markdown.'
+                    ].join('\n')
+                    : isPromptTranslation
+                    ? [
+                        'You are Vistack prompt translation assistant.',
+                        'Translate image-generation prompts accurately for Chinese-speaking users.',
+                        'Keep model-friendly technical terms, camera terms, composition terms, negative prompts, weights, brackets, and quoted phrases intact when useful.',
+                        'Do not optimize, embellish, censor, simplify, or add new content.',
                         'Output only the translated prompt text. Do not use Markdown.'
                     ].join('\n')
                     : [
