@@ -550,13 +550,13 @@
                         </div>
                     </div>
 
-                    <div class="grid items-start gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
+                    <div class="grid items-stretch gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
                         <textarea
                             v-model="textToImagePrompt"
                             @input="handlePromptManualInput"
                             placeholder="描述你想生成或改动的画面。参考图会作为素材参与生成，可以写：让角色1穿着服装参考，在背景参考中拍摄产品级主视觉。"
-                            class="wb-input min-h-[56px] max-h-[96px] w-full resize-y py-2 text-sm leading-6"
-                            rows="2"
+                            class="wb-input h-full min-h-[132px] w-full resize-y py-3 text-sm leading-6"
+                            rows="5"
                         />
 
                         <div class="flex min-w-0 flex-col gap-2 lg:w-[430px] xl:w-[520px]">
