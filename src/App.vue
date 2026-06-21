@@ -644,7 +644,7 @@
                                             : 'cursor-not-allowed bg-brand-line text-brand-muted dark:bg-night-panel dark:text-night-muted'
                                     ]"
                                 >
-                                    {{ selectedImages.length ? (isLoading ? '生成中...' : '参考图生成') : '先传参考图' }}
+                                    {{ selectedImages.length ? (isLoading ? '继续生成' : '参考图生成') : '先传参考图' }}
                                 </button>
                                 <button
                                     type="button"
@@ -658,7 +658,7 @@
                                             : 'cursor-not-allowed bg-brand-line text-brand-muted dark:bg-night-panel dark:text-night-muted'
                                     ]"
                                 >
-                                    {{ selectedImages.length ? '移除参考图' : (isTextToImageLoading ? '生成中...' : '无参考图生成') }}
+                                    {{ selectedImages.length ? '移除参考图' : (isTextToImageLoading ? '继续生成' : '无参考图生成') }}
                                 </button>
                             </div>
 
@@ -2207,8 +2207,7 @@ const canGenerateTextImage = computed(
         apiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         textToImagePrompt.value.trim() &&
-        selectedImages.value.length === 0 &&
-        !isTextToImageLoading.value
+        selectedImages.value.length === 0
 )
 
 const canGenerate = computed(
@@ -2217,8 +2216,7 @@ const canGenerate = computed(
         apiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         selectedImages.value.length > 0 &&
-        (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim()) &&
-        !isLoading.value
+        (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim())
 )
 
 const promptAssistantReady = computed(
