@@ -1247,11 +1247,13 @@ import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from '.
 import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
 import { getEndpointPath, isGrsaiEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint, resolveImageGenerationEndpoint } from './utils/apiEndpoint'
 import {
+    aspectRatioToGrsaiGptImageSize,
     aspectRatioToGeminiSize,
     aspectRatioToOpenAiImageSize,
     baseAspectRatioResolutionMap,
     buildAspectRatioOptions,
     geminiAspectRatioResolutionData,
+    grsaiGptImageAspectRatioResolutionData,
     openAiAspectRatioResolutionData
 } from './utils/imageSizing'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
@@ -3170,8 +3172,8 @@ const buildRequestDiagnosticText = () => {
         `batchMode: ${generationBatchMode.value}`,
         `generationRequests: ${generationRequestLimit.value}`,
         `n: ${requestImageCountParam.value}`,
-        `aspectRatio: ${showAspectRatioSelector.value ? selectedAspectRatio.value : 'not sent'}`,
-        `imageSize: ${showImageSizeConfig.value ? gemini3ImageSize.value : 'not sent'}`,
+        `aspectRatio: ${diagnostic.sentAspectRatio || 'not sent'}`,
+        `imageSize: ${diagnostic.sentImageSize || 'not sent'}`,
         diagnostic.outputSize ? `outputSize: ${diagnostic.outputSize}` : '',
         diagnostic.warning ? `warning: ${diagnostic.warning}` : '',
         references.length ? `references:\n${references.join('\n')}` : 'references: none',
@@ -3230,6 +3232,7 @@ const requestDiagnostic = computed(() => {
     const field = getReferencePayloadField(provider, referenceCount)
     const aspectRatio = showAspectRatioSelector.value ? selectedAspectRatio.value : ''
     const imageSize = showImageSizeConfig.value ? gemini3ImageSize.value : ''
+    const outputSize = getDiagnosticOutputSize(provider, selectedImageModelType.value, aspectRatio, imageSize)
     const providerLabelMap: Record<string, string> = {
         'openai-chat': 'Chat multimodal',
         'openai-image': 'Images API',
@@ -3243,7 +3246,9 @@ const requestDiagnostic = computed(() => {
         provider,
         providerLabel: providerLabelMap[provider] || provider,
         proxyStream: apiUseProxy.value && provider === 'openai-image-edit' ? 'ndjson' : '',
-        outputSize: getDiagnosticOutputSize(provider, selectedImageModelType.value, aspectRatio, imageSize),
+        sentAspectRatio: shouldSendPixelSizeAsGrsaiAspectRatio(provider, selectedImageModelType.value) ? outputSize : aspectRatio,
+        sentImageSize: shouldSendPixelSizeAsGrsaiAspectRatio(provider, selectedImageModelType.value) ? '' : imageSize,
+        outputSize,
         referenceSummary: referenceCount
             ? `${referenceCount} 张，将进入 ${field}`
             : '0 张，当前是文生图',
@@ -3258,12 +3263,19 @@ const requestDiagnostic = computed(() => {
 const getDiagnosticOutputSize = (provider: string, modelType: string, aspectRatio: string, imageSize: string) => {
     if (!aspectRatio) return ''
     if (provider === 'openai-image' || provider === 'openai-image-edit' || modelType === 'gpt-image') {
+        if (provider === 'grsai' || provider === 'grsai-draw') {
+            return aspectRatioToGrsaiGptImageSize(aspectRatio, imageSize || '1K')
+        }
         return aspectRatioToOpenAiImageSize(aspectRatio, imageSize || '1K')
     }
     if (modelType === 'gemini-3-pro-image') {
         return aspectRatioToGeminiSize(aspectRatio, imageSize || '1K')
     }
     return ''
+}
+
+const shouldSendPixelSizeAsGrsaiAspectRatio = (provider: string, modelType: string) => {
+    return (provider === 'grsai' || provider === 'grsai-draw') && modelType === 'gpt-image'
 }
 
 const selectedModelOption = computed(() => {
@@ -3323,7 +3335,9 @@ const availableAspectRatios = computed(() => {
     const sizeData = selectedImageModelType.value === 'gemini-3-pro-image'
         ? geminiAspectRatioResolutionData[gemini3ImageSize.value]
         : selectedImageModelType.value === 'gpt-image'
-          ? openAiAspectRatioResolutionData[gemini3ImageSize.value]
+          ? (requestProviderType.value === 'grsai' || requestProviderType.value === 'grsai-draw')
+            ? grsaiGptImageAspectRatioResolutionData[gemini3ImageSize.value]
+            : openAiAspectRatioResolutionData[gemini3ImageSize.value]
           : null
 
     return sizeData ? buildAspectRatioOptions(sizeData) : baseAspectRatioOptions

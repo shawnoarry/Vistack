@@ -33,6 +33,17 @@ export function aspectRatioToOpenAiImageSize(aspectRatio: string, imageSize = '1
     }))
 }
 
+export function aspectRatioToGrsaiGptImageSize(aspectRatio: string, imageSize = '1K'): string {
+    if (/^\d+x\d+$/i.test(aspectRatio)) {
+        return aspectRatio.toLowerCase()
+    }
+
+    const sizeData = grsaiGptImageAspectRatioResolutionData[imageSize.toUpperCase()]
+        || grsaiGptImageAspectRatioResolutionData['1K']
+
+    return sizeData[aspectRatio] || sizeData['1:1']
+}
+
 export function aspectRatioToGeminiSize(aspectRatio: string, imageSize = '1K'): string {
     if (/^\d+x\d+$/i.test(aspectRatio)) {
         return aspectRatio
@@ -79,6 +90,45 @@ export const openAiAspectRatioResolutionData: Record<string, Record<string, stri
     '1K': mapAspectRatiosToOpenAiSizes(baseAspectRatioResolutionMap, '1K'),
     '2K': mapAspectRatiosToOpenAiSizes(baseAspectRatioResolutionMap, '2K'),
     '4K': mapAspectRatiosToOpenAiSizes(baseAspectRatioResolutionMap, '4K')
+}
+
+export const grsaiGptImageAspectRatioResolutionData: Record<string, Record<string, string>> = {
+    '1K': {
+        '1:1': '1280x1280',
+        '2:3': '848x1280',
+        '3:2': '1280x848',
+        '3:4': '960x1280',
+        '4:3': '1280x960',
+        '4:5': '1024x1280',
+        '5:4': '1280x1024',
+        '9:16': '720x1280',
+        '16:9': '1280x720',
+        '21:9': '1280x544'
+    },
+    '2K': {
+        '1:1': '2048x2048',
+        '2:3': '1360x2048',
+        '3:2': '2048x1360',
+        '3:4': '1536x2048',
+        '4:3': '2048x1536',
+        '4:5': '1632x2048',
+        '5:4': '2048x1632',
+        '9:16': '1152x2048',
+        '16:9': '2048x1152',
+        '21:9': '2048x864'
+    },
+    '4K': {
+        '1:1': '2880x2880',
+        '2:3': '2336x3520',
+        '3:2': '3520x2336',
+        '3:4': '2480x3312',
+        '4:3': '3312x2480',
+        '4:5': '2560x3216',
+        '5:4': '3216x2560',
+        '9:16': '2160x3840',
+        '16:9': '3840x2160',
+        '21:9': '3840x1632'
+    }
 }
 
 export const geminiAspectRatioResolutionData: Record<string, Record<string, string>> = {

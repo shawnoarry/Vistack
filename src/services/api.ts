@@ -10,7 +10,7 @@ import {
     resolveModelEndpointCandidates,
     resolveSiblingEndpoint
 } from '../utils/apiEndpoint'
-import { aspectRatioToGeminiSize, aspectRatioToOpenAiImageSize } from '../utils/imageSizing'
+import { aspectRatioToGeminiSize, aspectRatioToGrsaiGptImageSize, aspectRatioToOpenAiImageSize } from '../utils/imageSizing'
 
 type ApiProvider = 'openai-chat' | 'openai-image' | 'openai-image-edit' | 'grsai' | 'grsai-draw'
 
@@ -471,12 +471,15 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest, 
     }
 
     if (isGptImage) {
-        payload.size = aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize)
+        const outputSize = aspectRatioToGrsaiGptImageSize(request.aspectRatio || '1:1', request.imageSize)
+        payload.aspectRatio = outputSize
     } else if (request.aspectRatio) {
         payload.aspectRatio = request.aspectRatio
     }
 
-    payload.imageSize = request.imageSize || '1K'
+    if (!isGptImage) {
+        payload.imageSize = request.imageSize || '1K'
+    }
 
     const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
     const directUrls = extractImageUrls(data)
@@ -540,15 +543,16 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
         payload.urls = request.images
     }
 
-    if (request.aspectRatio && !isGptImage) {
+    if (isGptImage) {
+        const outputSize = aspectRatioToGrsaiGptImageSize(request.aspectRatio || '1:1', request.imageSize)
+        payload.aspectRatio = outputSize
+    } else if (request.aspectRatio) {
         payload.aspectRatio = request.aspectRatio
     }
 
-    if (isGptImage) {
-        payload.size = aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize)
+    if (!isGptImage) {
+        payload.imageSize = request.imageSize || '1K'
     }
-
-    payload.imageSize = request.imageSize || '1K'
 
     const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
     const directUrls = extractImageUrls(data)
