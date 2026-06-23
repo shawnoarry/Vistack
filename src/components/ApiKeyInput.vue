@@ -65,6 +65,9 @@
             <p v-if="selectedPreset" class="mt-2 truncate text-xs text-brand-muted">
                 当前预设：{{ selectedPreset.endpoint }} · {{ selectedPreset.useProxy ? '代理开启' : '直连' }}
             </p>
+            <p v-if="selectedPreset?.useProxy" class="mt-1 text-xs text-brand-muted">
+                代理密码：{{ selectedPreset.proxyToken ? '已随预设保存' : '未随预设保存' }}
+            </p>
         </div>
 
         <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px]">
@@ -397,7 +400,7 @@ const canFetchModels = computed(() => modelValue.value.trim() !== '' && effectiv
 const canSavePreset = computed(() => modelValue.value.trim() !== '' && endpoint.value.trim() !== '')
 const selectedPreset = computed(() => props.apiPresets.find(preset => preset.id === props.selectedPresetId))
 const endpointModeLabel = computed(() => {
-    const value = endpoint.value.trim().toLowerCase()
+    const value = effectiveEndpoint.value.trim().toLowerCase()
     if (!value) return '使用默认端点'
     if (value.includes('grsai') || value.endsWith('/api/generate') || value.endsWith('/v1/api/generate')) return 'Grsai 自动适配'
     if (value.includes('/draw/')) return 'Draw 任务接口'

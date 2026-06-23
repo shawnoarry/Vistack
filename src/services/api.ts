@@ -214,6 +214,9 @@ export async function fetchModels(apikey: string, endpoint: string, useProxy = f
         try {
             return await fetchModelsFromKnownEndpoints(apikey, profile.endpoint, useProxy, proxyToken)
         } catch (error) {
+            if (shouldSurfaceModelListError(error)) {
+                throw error
+            }
             console.warn('Unable to fetch Grsai models; using built-in model choices:', error)
             return GRS_AI_FALLBACK_MODELS
         }
@@ -643,6 +646,11 @@ async function fetchModelsFromKnownEndpoints(apikey: string, endpoint: string, u
     }
 
     throw lastError || new Error('Unable to fetch model list')
+}
+
+function shouldSurfaceModelListError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error || '')
+    return /HTTP\s+(401|403)|API_KEY_REQUIRED|Unauthorized|forbidden|Vistack proxy endpoint returned HTTP 404|Failed to fetch|NetworkError/i.test(message)
 }
 
 async function postJson(endpoint: string, apikey: string, payload: Record<string, unknown>, useProxy = false, proxyToken?: string): Promise<unknown> {
