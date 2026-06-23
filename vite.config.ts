@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, type Plugin, type PreviewServer, type ViteDevServer } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { isProxyAuthorized, performMultipartProxyRequest, performProxyRequest, type ProxyPayload, type ProxyResult } from './api/proxyCore'
 
@@ -52,7 +52,58 @@ function localApiProxyPlugin(): Plugin {
                     })
                 }
             })
+        },
+        configurePreviewServer(server) {
+            mountLocalApiProxy(server)
         }
+    }
+}
+
+function mountLocalApiProxy(server: ViteDevServer | PreviewServer) {
+    server.middlewares.use('/api/proxy', handleLocalApiProxy)
+}
+
+async function handleLocalApiProxy(req: IncomingMessage, res: ServerResponse) {
+    if (req.method === 'OPTIONS') {
+        res.statusCode = 204
+        res.end()
+        return
+    }
+
+    if (!isProxyAuthorized(getRequestUrl(req))) {
+        sendJson(res, 401, { error: 'Unauthorized: this proxy is protected.' })
+        return
+    }
+
+    if (req.method !== 'POST') {
+        sendJson(res, 405, { error: 'Proxy endpoint only accepts POST.' })
+        return
+    }
+
+    try {
+        if (isMultipart(req)) {
+            const formData = await readMultipartBody(req)
+            const target = String(formData.get('_vistack_target') || '')
+            formData.delete('_vistack_target')
+            formData.delete('_vistack_stream')
+            const result = await performMultipartProxyRequest({
+                target,
+                headers: {
+                    Authorization: String(req.headers.authorization || '')
+                },
+                body: formData
+            })
+            sendProxyResult(res, result)
+            return
+        }
+
+        const payload = await readJsonBody(req)
+        const result = await performProxyRequest(payload)
+        sendProxyResult(res, result)
+    } catch (error) {
+        sendJson(res, 400, {
+            error: error instanceof Error ? error.message : 'Proxy request failed.'
+        })
     }
 }
 
@@ -60,6 +111,7 @@ function sendProxyResult(res: ServerResponse, result: ProxyResult) {
     for (const [key, value] of Object.entries(result.headers)) {
         res.setHeader(key, value)
     }
+    res.setHeader('x-vistack-proxy', '1')
     res.statusCode = result.status
     res.end(Buffer.from(result.body))
 }

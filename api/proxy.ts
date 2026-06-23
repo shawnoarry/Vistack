@@ -161,6 +161,7 @@ function sendProxyResult(res: any, result: ProxyResult) {
     for (const [key, value] of Object.entries(result.headers)) {
         res.setHeader(key, value)
     }
+    res.setHeader('x-vistack-proxy', '1')
     res.statusCode = result.status
     res.end(Buffer.from(result.body))
 }
@@ -173,6 +174,7 @@ async function streamMultipartProxyRequest(res: any, payload: MultipartProxyPayl
         res.statusCode = 200
         res.setHeader('content-type', 'application/x-ndjson; charset=utf-8')
         res.setHeader('cache-control', 'no-cache, no-transform')
+        res.setHeader('x-vistack-proxy', '1')
         res.setHeader('x-accel-buffering', 'no')
         res.write(formatStreamMessage({ type: 'ready', elapsedMs: 0 }))
 

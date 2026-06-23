@@ -146,6 +146,8 @@ interface ProxyStreamMessage {
     error?: string
 }
 
+const VISTACK_PROXY_HEADER = 'x-vistack-proxy'
+
 export async function generateImage(request: GenerateRequest, _maxRetries: number = 1, options: GenerateImageOptions = {}): Promise<GenerateResponse> {
     const targetCount = normalizeImageCount(request.count)
     const batchMode = request.batchMode === 'single' ? 'single' : 'fill'
@@ -645,19 +647,19 @@ async function fetchModelsFromKnownEndpoints(apikey: string, endpoint: string, u
 async function postJson(endpoint: string, apikey: string, payload: Record<string, unknown>, useProxy = false): Promise<unknown> {
     const response = await fetchEndpoint(endpoint, apikey, 'POST', payload, useProxy)
 
-    return readJsonResponse(response)
+    return readJsonResponse(response, { endpoint, useProxy })
 }
 
 async function postFormData(endpoint: string, apikey: string, formData: FormData, useProxy = false): Promise<unknown> {
     const response = await fetchFormEndpoint(endpoint, apikey, formData, useProxy)
 
-    return readJsonResponse(response)
+    return readJsonResponse(response, { endpoint, useProxy })
 }
 
 async function getJson(endpoint: string, apikey: string, useProxy = false): Promise<unknown> {
     const response = await fetchEndpoint(endpoint, apikey, 'GET', undefined, useProxy)
 
-    return readJsonResponse(response)
+    return readJsonResponse(response, { endpoint, useProxy })
 }
 
 async function fetchFormEndpoint(endpoint: string, apikey: string, formData: FormData, useProxy = false): Promise<Response> {
@@ -714,11 +716,11 @@ async function fetchEndpoint(
     })
 }
 
-async function readJsonResponse(response: Response): Promise<unknown> {
+async function readJsonResponse(response: Response, context?: { endpoint?: string, useProxy?: boolean }): Promise<unknown> {
     const responseText = await response.text()
 
     if (!response.ok) {
-        const message = formatHttpErrorMessage(response.status, responseText)
+        const message = formatHttpErrorMessage(response.status, responseText, response, context)
         if (response.status >= 400 && response.status < 500) {
             throw new TerminalGenerationError(message)
         }
@@ -750,6 +752,7 @@ async function readProxyStreamResponse(response: Response): Promise<Response> {
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let pending = ''
+    const viaVistackProxy = response.headers.get(VISTACK_PROXY_HEADER) === '1'
 
     while (true) {
         const { done, value } = await reader.read()
@@ -759,7 +762,7 @@ async function readProxyStreamResponse(response: Response): Promise<Response> {
             pending = lines.pop() || ''
 
             for (const line of lines) {
-                const resolved = parseProxyStreamLine(line)
+                const resolved = parseProxyStreamLine(line, viaVistackProxy)
                 if (resolved) {
                     return resolved
                 }
@@ -768,7 +771,7 @@ async function readProxyStreamResponse(response: Response): Promise<Response> {
 
         if (done) {
             pending += decoder.decode()
-            const resolved = parseProxyStreamLine(pending)
+            const resolved = parseProxyStreamLine(pending, viaVistackProxy)
             if (resolved) {
                 return resolved
             }
@@ -779,7 +782,7 @@ async function readProxyStreamResponse(response: Response): Promise<Response> {
     throw new Error('Proxy stream ended before returning a final response.')
 }
 
-function parseProxyStreamLine(line: string): Response | null {
+function parseProxyStreamLine(line: string, viaVistackProxy = false): Response | null {
     const trimmed = line.trim()
     if (!trimmed) return null
 
@@ -800,9 +803,13 @@ function parseProxyStreamLine(line: string): Response | null {
 
     if (message.type === 'done') {
         const body = message.body ? base64ToUint8Array(message.body) : new Uint8Array()
+        const headers = new Headers(message.headers || {})
+        if (viaVistackProxy) {
+            headers.set(VISTACK_PROXY_HEADER, '1')
+        }
         return new Response(toArrayBuffer(body), {
             status: message.status || 200,
-            headers: message.headers || {}
+            headers
         })
     }
 
@@ -824,17 +831,37 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
     return buffer
 }
 
-function formatHttpErrorMessage(status: number, responseText: string): string {
+function formatHttpErrorMessage(
+    status: number,
+    responseText: string,
+    response?: Response,
+    context?: { endpoint?: string, useProxy?: boolean }
+): string {
     const trimmed = responseText.trim()
+    const viaVistackProxy = response?.headers.get(VISTACK_PROXY_HEADER) === '1'
+    const targetSuffix = context?.endpoint ? ` Target: ${context.endpoint}` : ''
+
+    if (context?.useProxy && status === 404 && !viaVistackProxy) {
+        return [
+            'Vistack proxy endpoint returned HTTP 404 before reaching the upstream API.',
+            'Check that /api/proxy is deployed or disable proxy for this endpoint.',
+            targetSuffix.trim()
+        ].filter(Boolean).join(' ')
+    }
+
+    const prefix = context?.useProxy && viaVistackProxy
+        ? `API request failed via Vistack proxy (upstream HTTP ${status})`
+        : `API request failed (HTTP ${status})`
+
     if (!trimmed) {
-        return `API request failed (HTTP ${status})`
+        return `${prefix}${targetSuffix}`
     }
 
     try {
         const parsed = JSON.parse(trimmed)
-        return `API request failed (HTTP ${status}): ${extractFailureReason(parsed)}`
+        return `${prefix}: ${extractFailureReason(parsed)}${targetSuffix}`
     } catch {
-        return `API request failed (HTTP ${status}): ${trimmed}`
+        return `${prefix}: ${trimmed}${targetSuffix}`
     }
 }
 
