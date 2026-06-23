@@ -207,19 +207,19 @@ export async function generateImage(request: GenerateRequest, _maxRetries: numbe
     throw new Error(`Unable to generate ${targetCount} image(s). Last error: ${lastErrorMessage}`)
 }
 
-export async function fetchModels(apikey: string, endpoint: string, useProxy = false): Promise<ApiModel[]> {
+export async function fetchModels(apikey: string, endpoint: string, useProxy = false, proxyToken?: string): Promise<ApiModel[]> {
     const profile = getApiProfile(endpoint)
 
     if (profile.provider === 'grsai' || profile.provider === 'grsai-draw' || profile.isGrsaiHost) {
         try {
-            return await fetchModelsFromKnownEndpoints(apikey, profile.endpoint, useProxy)
+            return await fetchModelsFromKnownEndpoints(apikey, profile.endpoint, useProxy, proxyToken)
         } catch (error) {
             console.warn('Unable to fetch Grsai models; using built-in model choices:', error)
             return GRS_AI_FALLBACK_MODELS
         }
     }
 
-    return fetchModelsFromKnownEndpoints(apikey, profile.endpoint, useProxy)
+    return fetchModelsFromKnownEndpoints(apikey, profile.endpoint, useProxy, proxyToken)
 }
 
 export async function improvePrompt(request: PromptAssistantRequest): Promise<PromptAssistantResponse> {
@@ -314,7 +314,7 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
         temperature: 0.4
     }
 
-    const data = await postJson(resolveChatCompletionsEndpoint(request.endpoint), request.apikey, payload, request.useProxy)
+    const data = await postJson(resolveChatCompletionsEndpoint(request.endpoint), request.apikey, payload, request.useProxy, request.proxyToken)
     const content = extractTextContent(data).trim()
 
     if (!content) {
@@ -403,7 +403,7 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
         payload.image_config = imageConfig
     }
 
-    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
+    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy, request.proxyToken)
     const directImageUrls = extractImageUrls(data)
     if (directImageUrls.length > 0) {
         return { imageUrls: directImageUrls }
@@ -449,7 +449,7 @@ async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateReq
         payload.image = request.images
     }
 
-    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
+    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy, request.proxyToken)
     const imageUrls = extractImageUrls(data)
 
     if (imageUrls.length > 0) {
@@ -483,7 +483,7 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest, 
         payload.imageSize = request.imageSize || '1K'
     }
 
-    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
+    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy, request.proxyToken)
     const directUrls = extractImageUrls(data)
 
     if (directUrls.length > 0) {
@@ -497,7 +497,7 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest, 
         throw new TerminalGenerationError(`Grsai API did not return an image or task ID: ${summarizeResponse(data)}`)
     }
 
-    const handle = createGenerationTaskHandle('grsai', apiEndpoint, modelId, taskId, request.useProxy)
+    const handle = createGenerationTaskHandle('grsai', apiEndpoint, modelId, taskId, request.useProxy, request.proxyToken)
     await options.onTaskCreated?.(handle)
     return pollGeneratedTask(handle, request.apikey)
 }
@@ -517,7 +517,7 @@ async function generateWithOpenAiImageEdit(apiEndpoint: string, request: Generat
         formData.append('image[]', blob, `reference-${index + 1}.${mimeToExtension(blob.type)}`)
     }
 
-    const data = await postFormData(apiEndpoint, request.apikey, formData, request.useProxy)
+    const data = await postFormData(apiEndpoint, request.apikey, formData, request.useProxy, request.proxyToken)
     const imageUrls = extractImageUrls(data)
 
     if (imageUrls.length > 0) {
@@ -556,7 +556,7 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
         payload.imageSize = request.imageSize || '1K'
     }
 
-    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy)
+    const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy, request.proxyToken)
     const directUrls = extractImageUrls(data)
 
     if (directUrls.length > 0) {
@@ -570,16 +570,16 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
         throw new TerminalGenerationError(`Grsai draw API did not return an image or task ID: ${summarizeResponse(data)}`)
     }
 
-    const handle = createGenerationTaskHandle('grsai-draw', apiEndpoint, modelId, taskId, request.useProxy)
+    const handle = createGenerationTaskHandle('grsai-draw', apiEndpoint, modelId, taskId, request.useProxy, request.proxyToken)
     await options.onTaskCreated?.(handle)
     return pollGeneratedTask(handle, request.apikey)
 }
 
 export async function pollGeneratedTask(handle: GenerationTaskHandle, apikey: string): Promise<GenerateResponse> {
-    return pollGrsaiResult(handle.apiEndpoint, apikey, handle.taskId, handle.resultEndpoint, handle.useProxy)
+    return pollGrsaiResult(handle.apiEndpoint, apikey, handle.taskId, handle.resultEndpoint, handle.useProxy, handle.proxyToken)
 }
 
-function createGenerationTaskHandle(provider: GenerationTaskProvider, apiEndpoint: string, model: string, taskId: string, useProxy?: boolean): GenerationTaskHandle {
+function createGenerationTaskHandle(provider: GenerationTaskProvider, apiEndpoint: string, model: string, taskId: string, useProxy?: boolean, proxyToken?: string): GenerationTaskHandle {
     return {
         provider,
         taskId,
@@ -587,11 +587,12 @@ function createGenerationTaskHandle(provider: GenerationTaskProvider, apiEndpoin
         resultEndpoint: resolveGrsaiResultEndpoint(apiEndpoint),
         model,
         createdAt: Date.now(),
-        useProxy
+        useProxy,
+        proxyToken
     }
 }
 
-async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: string, resultEndpointOverride?: string, useProxy = false): Promise<GenerateResponse> {
+async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: string, resultEndpointOverride?: string, useProxy = false, proxyToken?: string): Promise<GenerateResponse> {
     const resultEndpoint = resultEndpointOverride || resolveGrsaiResultEndpoint(apiEndpoint)
     const maxPolls = 36
     const delayMs = 5000
@@ -601,7 +602,7 @@ async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: stri
             await delay(delayMs)
         }
 
-        const data = await fetchGrsaiResult(resultEndpoint, apikey, taskId, useProxy) as GrsaiResultResponse
+        const data = await fetchGrsaiResult(resultEndpoint, apikey, taskId, useProxy, proxyToken) as GrsaiResultResponse
         const imageUrls = extractImageUrls(data)
 
         if (imageUrls.length > 0) {
@@ -614,21 +615,21 @@ async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: stri
     throw new TerminalGenerationError('Grsai task timed out. Please try again later or check the task in the provider dashboard.')
 }
 
-async function fetchGrsaiResult(resultEndpoint: string, apikey: string, taskId: string, useProxy = false): Promise<unknown> {
+async function fetchGrsaiResult(resultEndpoint: string, apikey: string, taskId: string, useProxy = false, proxyToken?: string): Promise<unknown> {
     if (getEndpointPath(resultEndpoint).endsWith('/draw/result')) {
-        return postJson(resultEndpoint, apikey, { id: taskId }, useProxy)
+        return postJson(resultEndpoint, apikey, { id: taskId }, useProxy, proxyToken)
     }
 
-    return getJson(`${resultEndpoint}?id=${encodeURIComponent(taskId)}`, apikey, useProxy)
+    return getJson(`${resultEndpoint}?id=${encodeURIComponent(taskId)}`, apikey, useProxy, proxyToken)
 }
 
-async function fetchModelsFromKnownEndpoints(apikey: string, endpoint: string, useProxy = false): Promise<ApiModel[]> {
+async function fetchModelsFromKnownEndpoints(apikey: string, endpoint: string, useProxy = false, proxyToken?: string): Promise<ApiModel[]> {
     const modelUrls = resolveModelEndpoints(endpoint)
     let lastError: Error | null = null
 
     for (const modelUrl of modelUrls) {
         try {
-            const data = await getJson(modelUrl, apikey, useProxy) as ModelListResponse
+            const data = await getJson(modelUrl, apikey, useProxy, proxyToken) as ModelListResponse
             const models = normalizeModels(data)
 
             if (models.length > 0) {
@@ -644,25 +645,25 @@ async function fetchModelsFromKnownEndpoints(apikey: string, endpoint: string, u
     throw lastError || new Error('Unable to fetch model list')
 }
 
-async function postJson(endpoint: string, apikey: string, payload: Record<string, unknown>, useProxy = false): Promise<unknown> {
-    const response = await fetchEndpoint(endpoint, apikey, 'POST', payload, useProxy)
+async function postJson(endpoint: string, apikey: string, payload: Record<string, unknown>, useProxy = false, proxyToken?: string): Promise<unknown> {
+    const response = await fetchEndpoint(endpoint, apikey, 'POST', payload, useProxy, proxyToken)
 
     return readJsonResponse(response, { endpoint, useProxy })
 }
 
-async function postFormData(endpoint: string, apikey: string, formData: FormData, useProxy = false): Promise<unknown> {
-    const response = await fetchFormEndpoint(endpoint, apikey, formData, useProxy)
+async function postFormData(endpoint: string, apikey: string, formData: FormData, useProxy = false, proxyToken?: string): Promise<unknown> {
+    const response = await fetchFormEndpoint(endpoint, apikey, formData, useProxy, proxyToken)
 
     return readJsonResponse(response, { endpoint, useProxy })
 }
 
-async function getJson(endpoint: string, apikey: string, useProxy = false): Promise<unknown> {
-    const response = await fetchEndpoint(endpoint, apikey, 'GET', undefined, useProxy)
+async function getJson(endpoint: string, apikey: string, useProxy = false, proxyToken?: string): Promise<unknown> {
+    const response = await fetchEndpoint(endpoint, apikey, 'GET', undefined, useProxy, proxyToken)
 
     return readJsonResponse(response, { endpoint, useProxy })
 }
 
-async function fetchFormEndpoint(endpoint: string, apikey: string, formData: FormData, useProxy = false): Promise<Response> {
+async function fetchFormEndpoint(endpoint: string, apikey: string, formData: FormData, useProxy = false, proxyToken?: string): Promise<Response> {
     if (!useProxy) {
         return fetch(endpoint, {
             method: 'POST',
@@ -675,7 +676,7 @@ async function fetchFormEndpoint(endpoint: string, apikey: string, formData: For
 
     formData.append('_vistack_target', endpoint)
     formData.append('_vistack_stream', 'ndjson')
-    return fetch(getProxyUrl(), {
+    return fetch(getProxyUrl(proxyToken), {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${apikey}`
@@ -690,7 +691,8 @@ async function fetchEndpoint(
     apikey: string,
     method: 'GET' | 'POST',
     payload?: Record<string, unknown>,
-    useProxy = false
+    useProxy = false,
+    proxyToken?: string
 ): Promise<Response> {
     const headers = buildHeaders(apikey)
 
@@ -702,7 +704,7 @@ async function fetchEndpoint(
         })
     }
 
-    return fetch(getProxyUrl(), {
+    return fetch(getProxyUrl(proxyToken), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -874,8 +876,8 @@ function buildHeaders(apikey: string): Record<string, string> {
 
 // 返回带 token 的代理地址。如果用户没设密码，就是 /api/proxy（开发态可放行）。
 // 线上设了环境变量 VISTACK_PROXY_TOKEN 后，必须带对 token 才能调用。
-function getProxyUrl(): string {
-    const token = LocalStorage.getApiProxyToken().trim()
+function getProxyUrl(tokenOverride?: string): string {
+    const token = (tokenOverride ?? LocalStorage.getApiProxyToken()).trim()
     if (!token) return '/api/proxy'
     // token 是用户自己设的，长度可控，走 query 即可。
     return `/api/proxy?token=${encodeURIComponent(token)}`

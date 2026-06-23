@@ -37,7 +37,7 @@ export interface StoredImage {
 export interface PendingGenerationTaskItem {
     id: string
     task: GenerationTask
-    request: Omit<GenerateRequest, 'apikey'>
+    request: Omit<GenerateRequest, 'apikey' | 'proxyToken'>
     handles: GenerationTaskHandle[]
     createdAt: number
     updatedAt: number
@@ -194,7 +194,7 @@ export function deletePendingGenerationTaskItem(id: string): Promise<undefined> 
     return pendingTaskTransaction<undefined>('readwrite', store => store.delete(id))
 }
 
-export async function persistGeneratedImages(images: string[], useProxy = false): Promise<{
+export async function persistGeneratedImages(images: string[], useProxy = false, proxyToken?: string): Promise<{
     images: string[]
     imageIds: string[]
     rawImageUrls: string[]
@@ -210,7 +210,7 @@ export async function persistGeneratedImages(images: string[], useProxy = false)
         rawImageUrls.push(rawImageUrl)
 
         try {
-            const dataUrl = await imageToDataUrl(image, useProxy)
+            const dataUrl = await imageToDataUrl(image, useProxy, proxyToken)
             const id = await hashText(dataUrl)
             await putStoredImage({
                 id,
@@ -267,20 +267,20 @@ function isDataUrl(value: string): boolean {
 }
 
 // 拼出带 token 的代理下载地址。未设密码时就是 /api/proxy。
-function getProxyDownloadUrl(): string {
-    const token = LocalStorage.getApiProxyToken().trim()
+function getProxyDownloadUrl(tokenOverride?: string): string {
+    const token = (tokenOverride ?? LocalStorage.getApiProxyToken()).trim()
     if (!token) return '/api/proxy'
     return `/api/proxy?token=${encodeURIComponent(token)}`
 }
 
-async function imageToDataUrl(image: string, useProxy = false): Promise<string> {
+async function imageToDataUrl(image: string, useProxy = false, proxyToken?: string): Promise<string> {
     if (isDataUrl(image)) return image
     if (!isHttpUrl(image)) return image
 
     let response: Response
     try {
         if (useProxy) {
-            const proxyUrl = getProxyDownloadUrl()
+            const proxyUrl = getProxyDownloadUrl(proxyToken)
             response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: {

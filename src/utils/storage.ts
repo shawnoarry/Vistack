@@ -32,6 +32,8 @@ export class LocalStorage {
     private static readonly PROMPT_ASSISTANT_API_KEY = 'vistack-prompt-assistant-api-key'
     private static readonly PROMPT_ASSISTANT_ENDPOINT = 'vistack-prompt-assistant-endpoint'
     private static readonly PROMPT_ASSISTANT_MODEL_ID = 'vistack-prompt-assistant-model-id'
+    private static readonly PROMPT_ASSISTANT_USE_PROXY = 'vistack-prompt-assistant-use-proxy'
+    private static readonly PROMPT_ASSISTANT_PROXY_TOKEN = 'vistack-prompt-assistant-proxy-token'
     private static readonly ASSET_COLLECTIONS = 'vistack-asset-collections'
     private static readonly CUSTOM_PROMPT_PHRASE_GROUPS = 'vistack-custom-prompt-phrase-groups'
     private static readonly PROMPT_PHRASE_OVERRIDES = 'vistack-prompt-phrase-overrides'
@@ -166,6 +168,7 @@ export class LocalStorage {
                     endpoint: typeof item?.endpoint === 'string' ? item.endpoint : '',
                     model: typeof item?.model === 'string' ? item.model : '',
                     useProxy: item?.useProxy === true,
+                    proxyToken: typeof item?.proxyToken === 'string' ? item.proxyToken : '',
                     createdAt: typeof item?.createdAt === 'number' ? item.createdAt : Date.now(),
                     updatedAt: typeof item?.updatedAt === 'number' ? item.updatedAt : Date.now()
                 }))
@@ -276,6 +279,48 @@ export class LocalStorage {
             localStorage.removeItem(this.PROMPT_ASSISTANT_MODEL_ID)
         } catch (error) {
             console.warn('无法清除提示词助手模型:', error)
+        }
+    }
+
+    static savePromptAssistantUseProxy(useProxy: boolean): void {
+        try {
+            localStorage.setItem(this.PROMPT_ASSISTANT_USE_PROXY, useProxy ? 'true' : 'false')
+        } catch (error) {
+            console.warn('Unable to save prompt assistant proxy setting:', error)
+        }
+    }
+
+    static getPromptAssistantUseProxy(): boolean {
+        try {
+            return localStorage.getItem(this.PROMPT_ASSISTANT_USE_PROXY) === 'true'
+        } catch (error) {
+            console.warn('Unable to read prompt assistant proxy setting:', error)
+            return false
+        }
+    }
+
+    static savePromptAssistantProxyToken(token: string): void {
+        try {
+            localStorage.setItem(this.PROMPT_ASSISTANT_PROXY_TOKEN, token)
+        } catch (error) {
+            console.warn('Unable to save prompt assistant proxy token:', error)
+        }
+    }
+
+    static getPromptAssistantProxyToken(): string {
+        try {
+            return localStorage.getItem(this.PROMPT_ASSISTANT_PROXY_TOKEN) || ''
+        } catch (error) {
+            console.warn('Unable to read prompt assistant proxy token:', error)
+            return ''
+        }
+    }
+
+    static clearPromptAssistantProxyToken(): void {
+        try {
+            localStorage.removeItem(this.PROMPT_ASSISTANT_PROXY_TOKEN)
+        } catch (error) {
+            console.warn('Unable to clear prompt assistant proxy token:', error)
         }
     }
 

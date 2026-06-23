@@ -103,6 +103,8 @@
                     v-model:prompt-assistant-api-key="promptAssistantApiKey"
                     v-model:prompt-assistant-endpoint="promptAssistantEndpoint"
                     v-model:prompt-assistant-model="promptAssistantModel"
+                    v-model:prompt-assistant-use-proxy="promptAssistantUseProxy"
+                    v-model:prompt-assistant-proxy-token="promptAssistantProxyToken"
                     :api-presets="apiConnectionPresets"
                     :selected-preset-id="selectedApiConnectionPresetId"
                     :models="modelOptions"
@@ -1346,6 +1348,8 @@ const modelsError = ref<string | null>(null)
 const promptAssistantApiKey = ref('')
 const promptAssistantEndpoint = ref('')
 const promptAssistantModel = ref('')
+const promptAssistantUseProxy = ref(false)
+const promptAssistantProxyToken = ref('')
 const isPromptAssistantLoading = ref(false)
 const isToolboxAssistantLoading = ref(false)
 const promptAssistantError = ref<string | null>(null)
@@ -1403,6 +1407,17 @@ const selectedAssetIds = ref<string[]>([])
 const showBulkDeleteDialog = ref(false)
 const bulkDeleteConfirmText = ref('')
 
+const effectiveApiEndpoint = computed(() => apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT)
+const effectiveSelectedModel = computed(() => selectedModel.value.trim() || DEFAULT_MODEL_ID)
+const effectivePromptAssistantEndpoint = computed(() => promptAssistantEndpoint.value.trim() || DEFAULT_PROMPT_ASSISTANT_ENDPOINT)
+const effectivePromptAssistantModel = computed(() => promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID)
+const modelCacheKey = (endpoint = effectiveApiEndpoint.value, apikey = apiKey.value, useProxy = apiUseProxy.value) =>
+    [
+        endpoint.trim() || DEFAULT_API_ENDPOINT,
+        apikey.trim().slice(-12),
+        useProxy ? 'proxy' : 'direct'
+    ].join('|')
+
 const toggleThemeMode = () => {
     themeMode.value = themeMode.value === 'dark' ? 'light' : 'dark'
     LocalStorage.saveThemeMode(themeMode.value)
@@ -1420,6 +1435,8 @@ onMounted(() => {
     const savedPromptAssistantApiKey = LocalStorage.getPromptAssistantApiKey()
     const savedPromptAssistantEndpoint = LocalStorage.getPromptAssistantEndpoint()
     const savedPromptAssistantModel = LocalStorage.getPromptAssistantModelId()
+    const savedPromptAssistantUseProxy = LocalStorage.getPromptAssistantUseProxy()
+    const savedPromptAssistantProxyToken = LocalStorage.getPromptAssistantProxyToken()
     assetCollections.value = LocalStorage.getAssetCollections()
     apiConnectionPresets.value = LocalStorage.getApiConnectionPresets()
     customPromptPhraseGroups.value = LocalStorage.getCustomPromptPhraseGroups()
@@ -1453,11 +1470,14 @@ onMounted(() => {
         apiKey: savedApiKey,
         endpoint: endpointToUse,
         model: modelIdToUse,
-        useProxy: savedApiUseProxy
+        useProxy: savedApiUseProxy,
+        proxyToken: savedApiProxyToken
     })
     promptAssistantApiKey.value = savedPromptAssistantApiKey
     promptAssistantEndpoint.value = savedPromptAssistantEndpoint.trim() || DEFAULT_PROMPT_ASSISTANT_ENDPOINT
     promptAssistantModel.value = savedPromptAssistantModel.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID
+    promptAssistantUseProxy.value = savedPromptAssistantUseProxy
+    promptAssistantProxyToken.value = savedPromptAssistantProxyToken
 
     ensureSelectedOptionPresent()
 
@@ -1511,7 +1531,7 @@ watch(
             modelsError.value = null
             if (previousTrimmed) {
                 selectedModel.value = DEFAULT_MODEL_ID
-                LocalStorage.clearModelCache(previousTrimmed)
+                LocalStorage.clearModelCache(modelCacheKey(previousTrimmed))
             }
             showApiSettings.value = true
         }
@@ -1537,6 +1557,7 @@ watch(
     apiProxyToken,
     (newToken: string) => {
         LocalStorage.saveApiProxyToken(newToken)
+        syncSelectedApiPreset()
     },
     { immediate: false }
 )
@@ -1549,7 +1570,7 @@ watch(
             LocalStorage.saveModelId(trimmed)
         } else {
             LocalStorage.clearModelId()
-            LocalStorage.clearModelCache(apiEndpoint.value)
+            LocalStorage.clearModelCache(modelCacheKey())
             // Avoid resetting the model during initialization.
             if (hasSyncedInitialEndpoint) {
                 selectedModel.value = DEFAULT_MODEL_ID
@@ -1605,6 +1626,22 @@ watch(
 )
 
 watch(
+    promptAssistantUseProxy,
+    (newUseProxy: boolean) => {
+        LocalStorage.savePromptAssistantUseProxy(newUseProxy)
+    },
+    { immediate: false }
+)
+
+watch(
+    promptAssistantProxyToken,
+    (newToken: string) => {
+        LocalStorage.savePromptAssistantProxyToken(newToken)
+    },
+    { immediate: false }
+)
+
+watch(
     selectedImages,
     images => {
         referenceImageLabels.value = images.map((_, index) => referenceImageLabels.value[index] || `角色${index + 1}`)
@@ -1639,13 +1676,13 @@ watch(
 )
 
 const handleFetchModels = async () => {
-    if (!apiKey.value.trim() || !apiEndpoint.value.trim()) return
+    if (!apiKey.value.trim() || !effectiveApiEndpoint.value.trim()) return
 
     isFetchingModels.value = true
     modelsError.value = null
 
     try {
-        const rawModels = await fetchModels(apiKey.value, apiEndpoint.value, apiUseProxy.value)
+        const rawModels = await fetchModels(apiKey.value, effectiveApiEndpoint.value, apiUseProxy.value, apiProxyToken.value)
         const options = mapModelsToOptions(rawModels)
 
         if (!options.length) {
@@ -1653,7 +1690,7 @@ const handleFetchModels = async () => {
         }
 
         modelOptions.value = options
-        LocalStorage.saveModelCache(apiEndpoint.value, options)
+        LocalStorage.saveModelCache(modelCacheKey(), options)
 
         const preferred =
             options.find(option => option.id === selectedModel.value) ||
@@ -1685,17 +1722,19 @@ const normalizeApiPresetEndpoint = (endpoint: string) => endpoint.trim().replace
 
 const findMatchingApiPresetId = (
     presets: ApiConnectionPreset[],
-    config: { apiKey: string; endpoint: string; model: string; useProxy: boolean }
+    config: { apiKey: string; endpoint: string; model: string; useProxy: boolean; proxyToken?: string }
 ) => {
     const endpoint = normalizeApiPresetEndpoint(config.endpoint)
     const model = config.model.trim()
     const apiKeyValue = config.apiKey.trim()
+    const proxyTokenValue = config.useProxy ? (config.proxyToken || '').trim() : ''
 
     return presets.find(preset =>
         normalizeApiPresetEndpoint(preset.endpoint) === endpoint &&
         preset.model.trim() === model &&
         preset.apiKey.trim() === apiKeyValue &&
-        preset.useProxy === config.useProxy
+        preset.useProxy === config.useProxy &&
+        (!config.useProxy || (preset.proxyToken || '').trim() === proxyTokenValue)
     )?.id || ''
 }
 
@@ -1703,9 +1742,10 @@ const syncSelectedApiPreset = () => {
     if (isApplyingApiConnectionPreset.value) return
     selectedApiConnectionPresetId.value = findMatchingApiPresetId(apiConnectionPresets.value, {
         apiKey: apiKey.value,
-        endpoint: apiEndpoint.value,
+        endpoint: effectiveApiEndpoint.value,
         model: selectedModel.value,
-        useProxy: apiUseProxy.value
+        useProxy: apiUseProxy.value,
+        proxyToken: apiProxyToken.value
     })
 }
 
@@ -1716,8 +1756,8 @@ const persistApiConnectionPresets = (presets: ApiConnectionPreset[]) => {
 
 const createApiPresetFromCurrentConfig = (name?: string): ApiConnectionPreset => {
     const now = Date.now()
-    const endpoint = apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT
-    const model = selectedModel.value.trim() || DEFAULT_MODEL_ID
+    const endpoint = effectiveApiEndpoint.value
+    const model = effectiveSelectedModel.value
 
     return {
         id: `api-preset-${now}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1726,6 +1766,7 @@ const createApiPresetFromCurrentConfig = (name?: string): ApiConnectionPreset =>
         endpoint,
         model,
         useProxy: apiUseProxy.value,
+        proxyToken: apiUseProxy.value ? apiProxyToken.value.trim() : '',
         createdAt: now,
         updatedAt: now
     }
@@ -1744,8 +1785,8 @@ const handleUpdateApiPreset = (presetId: string) => {
         return
     }
 
-    const endpoint = apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT
-    const model = selectedModel.value.trim() || DEFAULT_MODEL_ID
+    const endpoint = effectiveApiEndpoint.value
+    const model = effectiveSelectedModel.value
     const nextPreset: ApiConnectionPreset = {
         ...existing,
         name: existing.name.trim() || buildApiPresetName(endpoint, model),
@@ -1753,6 +1794,7 @@ const handleUpdateApiPreset = (presetId: string) => {
         endpoint,
         model,
         useProxy: apiUseProxy.value,
+        proxyToken: apiUseProxy.value ? apiProxyToken.value.trim() : '',
         updatedAt: Date.now()
     }
 
@@ -1781,6 +1823,7 @@ const handleSelectApiPreset = (presetId: string) => {
     apiKey.value = preset.apiKey
     apiEndpoint.value = preset.endpoint
     apiUseProxy.value = preset.useProxy
+    apiProxyToken.value = preset.proxyToken || ''
     restoreModelOptionsFromCache(preset.endpoint)
     selectedModel.value = preset.model || DEFAULT_MODEL_ID
     ensureSelectedOptionPresent()
@@ -1858,10 +1901,9 @@ const handleModelPicked = () => {
 }
 
 const restoreModelOptionsFromCache = (endpoint: string) => {
-    const trimmedEndpoint = endpoint.trim()
-    if (!trimmedEndpoint) return
+    const trimmedEndpoint = endpoint.trim() || DEFAULT_API_ENDPOINT
 
-    const cached = LocalStorage.getModelCache(trimmedEndpoint)
+    const cached = LocalStorage.getModelCache(modelCacheKey(trimmedEndpoint))
     if (!cached.length) return
 
     modelOptions.value = cached
@@ -1943,11 +1985,12 @@ const buildGenerateRequest = (prompt: string, images: string[], count = generati
         prompt,
         images,
         apikey: apiKey.value,
-        endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
-        model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
+        endpoint: effectiveApiEndpoint.value,
+        model: effectiveSelectedModel.value,
         count,
         batchMode: generationBatchMode.value,
-        useProxy: apiUseProxy.value
+        useProxy: apiUseProxy.value,
+        proxyToken: apiUseProxy.value ? apiProxyToken.value.trim() : ''
     }
 
     if (showAspectRatioSelector.value) {
@@ -1976,8 +2019,8 @@ const createGenerationTask = (source: GenerationTask['source'], prompt: string, 
         prompt,
         status: 'running',
         createdAt,
-        model: selectedModel.value.trim() || DEFAULT_MODEL_ID,
-        endpoint: apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
+        model: effectiveSelectedModel.value,
+        endpoint: effectiveApiEndpoint.value,
         resolvedEndpoint: resolvedGenerationEndpoint.value,
         requestProvider: requestProviderType.value,
         aspectRatio: selectedAspectRatio.value,
@@ -1986,7 +2029,8 @@ const createGenerationTask = (source: GenerationTask['source'], prompt: string, 
         batchMode: recipe.batchMode,
         images: [],
         recipe,
-        useProxy: apiUseProxy.value
+        useProxy: apiUseProxy.value,
+        proxyToken: apiUseProxy.value ? apiProxyToken.value.trim() : ''
     }
 }
 
@@ -2204,7 +2248,7 @@ const canPushDisplayResult = computed(() => Boolean(displayResults.value.length 
 const canGenerateTextImage = computed(
     () =>
         apiKey.value.trim() &&
-        apiEndpoint.value.trim() &&
+        effectiveApiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         textToImagePrompt.value.trim() &&
         selectedImages.value.length === 0
@@ -2213,7 +2257,7 @@ const canGenerateTextImage = computed(
 const canGenerate = computed(
     () =>
         apiKey.value.trim() &&
-        apiEndpoint.value.trim() &&
+        effectiveApiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         selectedImages.value.length > 0 &&
         (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim())
@@ -2222,8 +2266,8 @@ const canGenerate = computed(
 const promptAssistantReady = computed(
     () =>
         Boolean(promptAssistantApiKey.value.trim()) &&
-        Boolean(promptAssistantEndpoint.value.trim()) &&
-        Boolean(promptAssistantModel.value.trim())
+        Boolean(effectivePromptAssistantEndpoint.value.trim()) &&
+        Boolean(effectivePromptAssistantModel.value.trim())
 )
 
 const canImprovePrompt = computed(
@@ -2811,8 +2855,8 @@ const detectTemplateSourceLanguage = (value: string): 'zh' | 'en' | 'bilingual' 
 
 const promptAssistantConfigured = computed(() =>
     Boolean(promptAssistantApiKey.value.trim()) &&
-    Boolean(promptAssistantEndpoint.value.trim()) &&
-    Boolean(promptAssistantModel.value.trim())
+    Boolean(effectivePromptAssistantEndpoint.value.trim()) &&
+    Boolean(effectivePromptAssistantModel.value.trim())
 )
 
 const canTranslateTemplateToEnglish = computed(() =>
@@ -2853,11 +2897,12 @@ const translateTemplatePrompt = async (targetLanguage: 'zh' | 'en') => {
                 `语言来源：${templateFormSourceLanguage.value}`
             ].join('\n'),
             apikey: promptAssistantApiKey.value.trim(),
-            endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
-            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID,
+            endpoint: resolveChatCompletionsEndpoint(effectivePromptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
+            model: effectivePromptAssistantModel.value,
             task: 'translate-template',
             targetLanguage,
-            useProxy: apiUseProxy.value
+            useProxy: promptAssistantUseProxy.value,
+            proxyToken: promptAssistantUseProxy.value ? promptAssistantProxyToken.value.trim() : ''
         })
 
         if (targetLanguage === 'en') {
@@ -2938,9 +2983,10 @@ const handleImprovePrompt = async () => {
             prompt: textToImagePrompt.value.trim(),
             context: buildPromptAssistantContext(),
             apikey: promptAssistantApiKey.value.trim(),
-            endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
-            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID,
-            useProxy: apiUseProxy.value
+            endpoint: resolveChatCompletionsEndpoint(effectivePromptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
+            model: effectivePromptAssistantModel.value,
+            useProxy: promptAssistantUseProxy.value,
+            proxyToken: promptAssistantUseProxy.value ? promptAssistantProxyToken.value.trim() : ''
         }
         const response = await improvePrompt(request)
         textToImagePrompt.value = response.prompt
@@ -2963,11 +3009,12 @@ const handleTranslatePrompt = async () => {
             prompt: textToImagePrompt.value.trim(),
             context: buildPromptAssistantContext(),
             apikey: promptAssistantApiKey.value.trim(),
-            endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
-            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID,
+            endpoint: resolveChatCompletionsEndpoint(effectivePromptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
+            model: effectivePromptAssistantModel.value,
             task: 'translate-prompt',
             targetLanguage: 'zh',
-            useProxy: apiUseProxy.value
+            useProxy: promptAssistantUseProxy.value,
+            proxyToken: promptAssistantUseProxy.value ? promptAssistantProxyToken.value.trim() : ''
         }
         const response = await improvePrompt(request)
         textToImagePrompt.value = response.prompt
@@ -2993,9 +3040,10 @@ const handleToolboxImageToPrompt = async (toolRequest: Pick<PromptAssistantReque
             images: toolRequest.images || [],
             task: 'image-to-prompt',
             apikey: promptAssistantApiKey.value.trim(),
-            endpoint: resolveChatCompletionsEndpoint(promptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
-            model: promptAssistantModel.value.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID,
-            useProxy: apiUseProxy.value
+            endpoint: resolveChatCompletionsEndpoint(effectivePromptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
+            model: effectivePromptAssistantModel.value,
+            useProxy: promptAssistantUseProxy.value,
+            proxyToken: promptAssistantUseProxy.value ? promptAssistantProxyToken.value.trim() : ''
         })
         toolboxPanelRef.value?.setAnalysisResult(response.prompt)
     } catch (assistantError) {
@@ -3164,7 +3212,7 @@ const buildRequestDiagnosticText = () => {
         `provider: ${diagnostic.provider}`,
         `proxy: ${apiUseProxy.value ? 'on' : 'off'}`,
         diagnostic.proxyStream ? `proxyStream: ${diagnostic.proxyStream}` : '',
-        `model: ${selectedModel.value.trim() || DEFAULT_MODEL_ID}`,
+        `model: ${effectiveSelectedModel.value}`,
         `referenceCount: ${selectedImages.value.length}`,
         `referencePayloadField: ${diagnostic.payloadField}`,
         `batchMode: ${generationBatchMode.value}`,
@@ -3209,8 +3257,8 @@ const promptPreview = computed(() => selectedImages.value.length ? composeImageP
 
 const resolvedGenerationEndpoint = computed(() =>
     resolveImageGenerationEndpoint(
-        apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
-        selectedModel.value.trim() || DEFAULT_MODEL_ID,
+        effectiveApiEndpoint.value,
+        effectiveSelectedModel.value,
         selectedImages.value.length > 0
     )
 )
@@ -3222,6 +3270,20 @@ const requestProviderType = computed(() => {
     if (path.endsWith('/v1/api/generate') || path.endsWith('/api/generate')) return 'grsai'
     if (path.includes('/draw/') && !path.endsWith('/draw/result')) return 'grsai-draw'
     return 'openai-chat'
+})
+
+const requestRouteWarning = computed(() => {
+    const rawPath = getEndpointPath(effectiveApiEndpoint.value)
+    const isExplicitChatEndpoint = rawPath.endsWith('/chat/completions') || rawPath.endsWith('/completions') || rawPath.endsWith('/responses')
+    if (isExplicitChatEndpoint && isCurrentGptImageModel.value) {
+        return '当前填的是完整 Chat endpoint；Vistack 会保持原样，不会自动切到 Images API。'
+    }
+
+    if (isExplicitChatEndpoint && selectedImages.value.length > 0 && requestProviderType.value === 'openai-chat') {
+        return '当前完整 Chat endpoint 将通过 messages[].content[].image_url 发送参考图，不会使用 Images Edit multipart。'
+    }
+
+    return ''
 })
 
 const requestDiagnostic = computed(() => {
@@ -3252,9 +3314,9 @@ const requestDiagnostic = computed(() => {
             : '0 张，当前是文生图',
         requestSummary: generationRequestSummary.value,
         payloadField: field,
-        warning: referenceCount && field === '未发送'
+        warning: requestRouteWarning.value || (referenceCount && field === '未发送'
             ? '当前路由不会发送参考图。'
-            : ''
+            : '')
     }
 })
 
@@ -3287,7 +3349,7 @@ const selectedModelProfileText = computed(() => [
     selectedModelOption.value?.description
 ].filter(Boolean).join(' ').toLowerCase())
 
-const isCurrentGrsaiEndpoint = computed(() => isGrsaiEndpoint(apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT))
+const isCurrentGrsaiEndpoint = computed(() => isGrsaiEndpoint(effectiveApiEndpoint.value))
 const isCurrentGptImageModel = computed(() => isOpenAiImageModelId(selectedModelProfileText.value))
 
 // Show ratio controls for image models that accept aspect ratio or mapped sizes.
@@ -3383,8 +3445,8 @@ const addGenerationHistory = async (
         id: task ? `history-${task.id}` : `${source}-${createdAt}`,
         source,
         prompt,
-        model: task?.model || selectedModel.value.trim() || DEFAULT_MODEL_ID,
-        endpoint: task?.endpoint || apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT,
+        model: task?.model || effectiveSelectedModel.value,
+        endpoint: task?.endpoint || effectiveApiEndpoint.value,
         resolvedEndpoint: task?.resolvedEndpoint,
         requestProvider: task?.requestProvider,
         aspectRatio: task?.aspectRatio || selectedAspectRatio.value,
@@ -3409,9 +3471,10 @@ const addGenerationHistory = async (
     }
 }
 
-const stripApiKeyFromRequest = (request: GenerateRequest): Omit<GenerateRequest, 'apikey'> => {
-    const { apikey, ...requestWithoutKey } = request
+const stripApiKeyFromRequest = (request: GenerateRequest): Omit<GenerateRequest, 'apikey' | 'proxyToken'> => {
+    const { apikey, proxyToken, ...requestWithoutKey } = request
     void apikey
+    void proxyToken
     return requestWithoutKey
 }
 
@@ -3466,7 +3529,7 @@ const trackGenerationTaskHandle = async (task: GenerationTask, request: Generate
 }
 
 const completeGenerationTask = async (task: GenerationTask, imageUrls: string[]) => {
-    const persisted = await persistGeneratedImages(imageUrls, task.useProxy)
+    const persisted = await persistGeneratedImages(imageUrls, task.useProxy, task.proxyToken)
     const warningMessage = persisted.warnings.length
         ? `生成成功，但有 ${persisted.warnings.length} 张图片未能保存为本地副本，远端链接可能会过期。`
         : null

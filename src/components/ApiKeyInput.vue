@@ -299,6 +299,31 @@
                     />
                 </label>
             </div>
+            <label class="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-brand-line bg-white px-3 py-2 transition hover:border-brand-accent/40">
+                <input
+                    type="checkbox"
+                    :checked="promptAssistantUseProxy"
+                    @change="$emit('update:promptAssistantUseProxy', ($event.target as HTMLInputElement).checked)"
+                    class="mt-1 h-4 w-4 rounded border-brand-line text-brand-accent focus:ring-brand-accent"
+                />
+                <span class="min-w-0">
+                    <span class="block text-sm font-semibold text-brand-ink">助手使用同源代理</span>
+                    <span class="mt-1 block text-xs leading-5 text-brand-muted">
+                        只影响提示词优化、翻译和图片反推；不会跟随上方生图代理开关。
+                    </span>
+                </span>
+            </label>
+            <div v-if="promptAssistantUseProxy" class="mt-2 rounded-lg border border-brand-line bg-white px-3 py-2">
+                <label class="mb-1 block wb-label">助手代理密码（可选）</label>
+                <input
+                    type="password"
+                    :value="promptAssistantProxyToken"
+                    @input="$emit('update:promptAssistantProxyToken', ($event.target as HTMLInputElement).value)"
+                    placeholder="留空表示服务端未设置密码"
+                    autocomplete="off"
+                    class="wb-input w-full"
+                />
+            </div>
         </div>
     </div>
 </template>
@@ -326,6 +351,8 @@ const props = defineProps<{
     promptAssistantApiKey: string
     promptAssistantEndpoint: string
     promptAssistantModel: string
+    promptAssistantUseProxy: boolean
+    promptAssistantProxyToken: string
     apiPresets: ApiConnectionPreset[]
     selectedPresetId: string
 }>()
@@ -339,6 +366,8 @@ const emit = defineEmits<{
     'update:promptAssistantApiKey': [value: string]
     'update:promptAssistantEndpoint': [value: string]
     'update:promptAssistantModel': [value: string]
+    'update:promptAssistantUseProxy': [value: boolean]
+    'update:promptAssistantProxyToken': [value: string]
     'save-preset': [name?: string]
     'update-preset': [presetId: string]
     'delete-preset': [presetId: string]
@@ -349,6 +378,7 @@ const emit = defineEmits<{
 
 const { modelValue, endpoint, models, model } = toRefs(props)
 const presetNameDraft = ref('')
+const effectiveEndpoint = computed(() => endpoint.value.trim() || DEFAULT_API_ENDPOINT)
 
 const clearApiKey = () => {
     LocalStorage.clearApiKey()
@@ -362,8 +392,8 @@ const resetEndpoint = () => {
     emit('update:model', '')
 }
 
-const isCustomEndpoint = computed(() => endpoint.value !== '' && endpoint.value !== DEFAULT_API_ENDPOINT)
-const canFetchModels = computed(() => modelValue.value.trim() !== '' && endpoint.value.trim() !== '')
+const isCustomEndpoint = computed(() => endpoint.value.trim() !== '' && endpoint.value.trim() !== DEFAULT_API_ENDPOINT)
+const canFetchModels = computed(() => modelValue.value.trim() !== '' && effectiveEndpoint.value.trim() !== '')
 const canSavePreset = computed(() => modelValue.value.trim() !== '' && endpoint.value.trim() !== '')
 const selectedPreset = computed(() => props.apiPresets.find(preset => preset.id === props.selectedPresetId))
 const endpointModeLabel = computed(() => {

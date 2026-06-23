@@ -11,6 +11,7 @@ export interface GenerateRequest {
     count?: number
     enableGoogleSearch?: boolean
     useProxy?: boolean
+    proxyToken?: string
     batchMode?: GenerationBatchMode
 }
 
@@ -28,6 +29,7 @@ export interface GenerationTaskHandle {
     model: string
     createdAt: number
     useProxy?: boolean
+    proxyToken?: string
 }
 
 export interface GenerateImageOptions {
@@ -43,6 +45,7 @@ export interface PromptAssistantRequest {
     task?: 'optimize' | 'translate-template' | 'translate-prompt' | 'image-to-prompt'
     targetLanguage?: 'zh' | 'en'
     useProxy?: boolean
+    proxyToken?: string
     images?: string[]
 }
 
@@ -80,6 +83,7 @@ export interface ApiConnectionPreset {
     endpoint: string
     model: string
     useProxy: boolean
+    proxyToken?: string
     createdAt: number
     updatedAt: number
 }
@@ -166,6 +170,7 @@ export interface GenerationTask {
     error?: string
     recipe: GenerationRecipe
     useProxy?: boolean
+    proxyToken?: string
     resolvedEndpoint?: string
     requestProvider?: string
     toolboxTool?: ToolboxGeneratePayload['tool']
