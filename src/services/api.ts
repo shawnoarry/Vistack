@@ -3,6 +3,7 @@ import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from '../config/api'
 import { LocalStorage } from '../utils/storage'
 import {
     getEndpointPath,
+    isDoraverseImageProxyEndpoint,
     isGrsaiEndpoint,
     isOpenAiImageModelId,
     resolveChatCompletionsEndpoint,
@@ -10,7 +11,7 @@ import {
     resolveModelEndpointCandidates,
     resolveSiblingEndpoint
 } from '../utils/apiEndpoint'
-import { aspectRatioToGeminiSize, aspectRatioToGrsaiGptImageSize, aspectRatioToOpenAiImageSize } from '../utils/imageSizing'
+import { aspectRatioToDoraverseGptImageSize, aspectRatioToGeminiSize, aspectRatioToGrsaiGptImageSize, aspectRatioToOpenAiImageSize } from '../utils/imageSizing'
 
 type ApiProvider = 'openai-chat' | 'openai-image' | 'openai-image-edit' | 'grsai' | 'grsai-draw'
 
@@ -137,7 +138,6 @@ const GRS_AI_FALLBACK_MODELS: ApiModel[] = [
 const REFERENCE_IMAGE_MAX_SIDE = 1600
 const REFERENCE_IMAGE_COMPRESSION_THRESHOLD = 1_000_000
 const REFERENCE_IMAGE_JPEG_QUALITY = 0.88
-
 interface ProxyStreamMessage {
     type?: string
     status?: number
@@ -393,7 +393,7 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
         }
         imageConfig.size = aspectRatioToGeminiSize(request.aspectRatio || '1:1', request.imageSize)
     } else if (isOpenAiImageModel) {
-        imageConfig.size = aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize)
+        imageConfig.size = resolveOpenAiImageSize(apiEndpoint, modelId, request.aspectRatio || '1:1', request.imageSize)
     }
 
     if (isGemini3ProImage) {
@@ -440,9 +440,11 @@ async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateReq
     const payload: Record<string, unknown> = {
         model: modelId,
         prompt: request.prompt,
-        size: aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize),
+        size: resolveOpenAiImageSize(apiEndpoint, modelId, request.aspectRatio || '1:1', request.imageSize),
         n: normalizeImageCount(request.count)
     }
+
+    appendDoraverseImageOptions(payload, apiEndpoint, request)
 
     if (isDallEModelId(modelId)) {
         payload.response_format = 'url'
@@ -510,14 +512,16 @@ async function generateWithOpenAiImageEdit(apiEndpoint: string, request: Generat
     const formData = new FormData()
     formData.append('model', modelId)
     formData.append('prompt', request.prompt)
-    formData.append('size', aspectRatioToOpenAiImageSize(request.aspectRatio || '1:1', request.imageSize))
+    formData.append('size', resolveOpenAiImageSize(apiEndpoint, modelId, request.aspectRatio || '1:1', request.imageSize))
+    appendDoraverseImageFormOptions(formData, apiEndpoint, request)
     if (isDallEModelId(modelId)) {
         formData.append('response_format', 'url')
     }
 
+    const imageFieldName = isDoraverseImageProxyEndpoint(apiEndpoint) && request.images.length === 1 ? 'image' : 'image[]'
     for (let index = 0; index < request.images.length; index += 1) {
         const blob = await imageReferenceToBlob(request.images[index])
-        formData.append('image[]', blob, `reference-${index + 1}.${mimeToExtension(blob.type)}`)
+        formData.append(imageFieldName, blob, `reference-${index + 1}.${mimeToExtension(blob.type)}`)
     }
 
     const data = await postFormData(apiEndpoint, request.apikey, formData, request.useProxy, request.proxyToken)
@@ -913,6 +917,49 @@ function mimeToExtension(mime: string): string {
 
 function isDallEModelId(modelId: string): boolean {
     return /dall[\s_-]*e/i.test(modelId)
+}
+
+function resolveOpenAiImageSize(endpoint: string, modelId: string, aspectRatio: string, imageSize?: string): string {
+    if (isDoraverseImageProxyEndpoint(endpoint)) {
+        if (shouldUseDoraverseGptImageSize(endpoint, modelId)) {
+            return aspectRatioToDoraverseGptImageSize(aspectRatio)
+        }
+
+        return aspectRatio || 'auto'
+    }
+
+    if (shouldUseDoraverseGptImageSize(endpoint, modelId)) {
+        return aspectRatioToDoraverseGptImageSize(aspectRatio)
+    }
+
+    return aspectRatioToOpenAiImageSize(aspectRatio, imageSize)
+}
+
+function shouldUseDoraverseGptImageSize(endpoint: string, modelId: string): boolean {
+    return isDoraverseImageProxyEndpoint(endpoint) && /^gpt-image-2\b/i.test(modelId.trim())
+}
+
+function appendDoraverseImageOptions(payload: Record<string, unknown>, endpoint: string, request: GenerateRequest): void {
+    if (!isDoraverseImageProxyEndpoint(endpoint)) return
+
+    payload.quality = request.quality || 'auto'
+    payload.autoPrompt = request.autoPrompt === true
+    payload.translate = request.translate === true
+    if (request.imageSize) {
+        payload.resolution = request.imageSize
+    }
+}
+
+function appendDoraverseImageFormOptions(formData: FormData, endpoint: string, request: GenerateRequest): void {
+    if (!isDoraverseImageProxyEndpoint(endpoint)) return
+
+    formData.append('n', String(normalizeImageCount(request.count)))
+    formData.append('quality', request.quality || 'auto')
+    formData.append('autoPrompt', String(request.autoPrompt === true))
+    formData.append('translate', String(request.translate === true))
+    if (request.imageSize) {
+        formData.append('resolution', request.imageSize)
+    }
 }
 
 async function prepareReferenceImages(images: string[]): Promise<string[]> {

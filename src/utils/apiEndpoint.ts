@@ -6,6 +6,7 @@ const CHAT_COMPLETIONS_SUFFIX = ['chat', 'completions']
 const IMAGE_GENERATIONS_SUFFIX = ['images', 'generations']
 const IMAGE_EDITS_SUFFIX = ['images', 'edits']
 const MODELS_SUFFIX = ['models']
+const DORAVERSE_METAPI_HOST = 'metapi.lilililwan.xyz'
 
 export function resolveChatCompletionsEndpoint(endpoint: string, fallback = DEFAULT_PROMPT_ASSISTANT_ENDPOINT): string {
     return resolveEndpoint(endpoint, 'chat', fallback)
@@ -20,6 +21,10 @@ export function resolveImageGenerationEndpoint(endpoint: string, model?: string,
 
     if (isGrsaiEndpoint(trimmed)) {
         return resolveGrsaiGenerateEndpoint(trimmed)
+    }
+
+    if (isDoraverseImageProxyEndpoint(trimmed)) {
+        return resolveEndpoint(trimmed, hasReferenceImages ? 'image-edit' : 'image-generation', DEFAULT_API_ENDPOINT)
     }
 
     if (hasReferenceImages && shouldUseOpenAiImageEndpoint(model)) {
@@ -73,6 +78,16 @@ export function isGrsaiEndpoint(endpoint: string): boolean {
 export function isOpenAiImageModelId(model?: string): boolean {
     const normalized = model?.trim().toLowerCase() || ''
     return /gpt[\s_-]*image|gptimage|dall[\s_-]*e/.test(normalized)
+}
+
+export function isDoraverseImageProxyEndpoint(endpoint: string): boolean {
+    try {
+        const url = new URL(endpoint)
+        return url.hostname.toLowerCase() === DORAVERSE_METAPI_HOST &&
+            normalizePath(url.pathname).includes('/imageproxy')
+    } catch {
+        return endpoint.toLowerCase().includes(`${DORAVERSE_METAPI_HOST}/imageproxy`)
+    }
 }
 
 export function normalizeEndpointPath(pathname: string): string {

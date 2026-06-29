@@ -33,6 +33,21 @@ export function aspectRatioToOpenAiImageSize(aspectRatio: string, imageSize = '1
     }))
 }
 
+export function aspectRatioToDoraverseGptImageSize(aspectRatio: string): string {
+    const explicitSize = parsePixelSize(aspectRatio)
+    const ratio = explicitSize || parseAspectRatio(aspectRatio) || { width: 1, height: 1 }
+
+    if (ratio.width / ratio.height > 1.15) {
+        return '1536x1024'
+    }
+
+    if (ratio.height / ratio.width > 1.15) {
+        return '1024x1536'
+    }
+
+    return '1024x1024'
+}
+
 export function aspectRatioToGrsaiGptImageSize(aspectRatio: string, imageSize = '1K'): string {
     if (/^\d+x\d+$/i.test(aspectRatio)) {
         return aspectRatio.toLowerCase()
@@ -85,6 +100,10 @@ export const baseAspectRatioResolutionMap: Record<string, string> = {
     '16:9': '1344x768',
     '21:9': '1536x672'
 }
+
+export const doraverseGptImageAspectRatioResolutionMap: Record<string, string> = Object.fromEntries(
+    Object.keys(baseAspectRatioResolutionMap).map(ratio => [ratio, aspectRatioToDoraverseGptImageSize(ratio)])
+)
 
 export const openAiAspectRatioResolutionData: Record<string, Record<string, string>> = {
     '1K': mapAspectRatiosToOpenAiSizes(baseAspectRatioResolutionMap, '1K'),

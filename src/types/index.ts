@@ -13,6 +13,9 @@ export interface GenerateRequest {
     useProxy?: boolean
     proxyToken?: string
     batchMode?: GenerationBatchMode
+    quality?: string
+    autoPrompt?: boolean
+    translate?: boolean
 }
 
 export interface GenerateResponse {
@@ -74,6 +77,14 @@ export interface ModelOption {
     label: string
     description?: string
     supportsImages: boolean
+    sizeFormat?: string
+    maxGenerations?: number
+    maxInputImages?: number
+    defaultSize?: string
+    defaultResolution?: string
+    supportedSizes?: string[]
+    supportedResolutions?: string[]
+    hasResolution?: boolean
 }
 
 export interface ApiConnectionPreset {

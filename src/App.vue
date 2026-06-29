@@ -577,10 +577,10 @@
                             <div class="grid grid-cols-2 gap-1.5 text-center text-[11px] sm:grid-cols-[76px_76px_76px_minmax(0,1fr)]">
                                 <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
                                     <div class="text-brand-muted dark:text-night-muted">参考</div>
-                                    <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ selectedImages.length }}</div>
+                                    <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ selectedModelMaxInputImages ? `${selectedImages.length}/${selectedModelMaxInputImages}` : selectedImages.length }}</div>
                                 </div>
                                 <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
-                                    <div class="text-brand-muted dark:text-night-muted">比例</div>
+                                    <div class="text-brand-muted dark:text-night-muted">{{ sizeControlLabel }}</div>
                                     <div class="font-semibold text-brand-ink dark:text-brand-surface">{{ showAspectRatioSelector ? selectedAspectRatio : '自动' }}</div>
                                 </div>
                                 <div class="rounded-md bg-brand-surface px-2 py-1.5 dark:bg-night-panel">
@@ -613,32 +613,44 @@
                                     </select>
                                 </label>
                                 <label v-if="showAspectRatioSelector" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#232326]">
-                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">比例</span>
+                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">{{ sizeControlLabel }}</span>
                                     <select v-model="selectedAspectRatio" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
                                         <option v-for="ratio in availableAspectRatios" :key="ratio.value" :value="ratio.value">{{ ratio.label }}</option>
                                     </select>
                                 </label>
                                 <label v-else class="min-w-0 rounded-lg border border-brand-line bg-brand-surface px-2 py-1 dark:border-night-muted/35 dark:bg-night-panel">
-                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">比例</span>
+                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">{{ sizeControlLabel }}</span>
                                     <div class="mt-0.5 truncate text-xs font-semibold text-brand-muted dark:text-night-muted">自动</div>
                                 </label>
                                 <label v-if="showImageSizeConfig" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#232326]">
                                     <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">分辨率</span>
                                     <select v-model="gemini3ImageSize" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
-                                        <option value="1K">1K 标准</option>
-                                        <option value="2K">2K 高清</option>
-                                        <option value="4K">4K 超清</option>
+                                        <option v-for="option in imageSizeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                                     </select>
                                 </label>
                                 <label v-else class="min-w-0 rounded-lg border border-brand-line bg-brand-surface px-2 py-1 dark:border-night-muted/35 dark:bg-night-panel">
                                     <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">分辨率</span>
                                     <div class="mt-0.5 truncate text-xs font-semibold text-brand-muted dark:text-night-muted">自动</div>
                                 </label>
+                                <label v-if="showDoraverseImageProxyControls" class="min-w-0 rounded-lg border border-brand-line bg-white px-2 py-1 dark:border-night-muted/35 dark:bg-[#232326]">
+                                    <span class="block text-[10px] font-semibold text-brand-muted dark:text-night-muted">质量</span>
+                                    <select v-model="imageQuality" class="mt-0.5 w-full bg-transparent text-xs font-semibold text-brand-ink outline-none dark:text-brand-surface">
+                                        <option v-for="option in imageQualityOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                    </select>
+                                </label>
+                                <label v-if="showDoraverseImageProxyControls" class="flex min-h-[50px] items-center gap-2 rounded-lg border border-brand-line bg-white px-2 py-1 text-xs font-semibold text-brand-muted dark:border-night-muted/35 dark:bg-[#232326] dark:text-night-muted">
+                                    <input v-model="imageAutoPrompt" type="checkbox" class="h-3.5 w-3.5 rounded border-brand-line text-brand-accent focus:ring-brand-accent" />
+                                    自动优化
+                                </label>
+                                <label v-if="showDoraverseImageProxyControls" class="flex min-h-[50px] items-center gap-2 rounded-lg border border-brand-line bg-white px-2 py-1 text-xs font-semibold text-brand-muted dark:border-night-muted/35 dark:bg-[#232326] dark:text-night-muted">
+                                    <input v-model="imageTranslate" type="checkbox" class="h-3.5 w-3.5 rounded border-brand-line text-brand-accent focus:ring-brand-accent" />
+                                    翻译
+                                </label>
                                 <button
                                     type="button"
                                     @click="handleGenerate"
                                     :disabled="!canGenerate"
-                                    :title="selectedImages.length ? '使用当前参考图和提示词生成' : '左侧上传参考图后此按钮会启用'"
+                                    :title="generationActionTitle"
                                     :class="[
                                         'inline-flex min-h-[50px] items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
                                         canGenerate
@@ -652,7 +664,7 @@
                                     type="button"
                                     @click="handleTextToImageGenerate"
                                     :disabled="!canGenerateTextImage"
-                                    :title="selectedImages.length ? '已上传参考图，请使用参考图生成；移除参考图后可无参考图生成' : '不使用参考图，直接按提示词生成'"
+                                    :title="textGenerationActionTitle"
                                     :class="[
                                         'inline-flex min-h-[50px] items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
                                         canGenerateTextImage
@@ -660,8 +672,16 @@
                                             : 'cursor-not-allowed bg-brand-line text-brand-muted dark:bg-night-panel dark:text-night-muted'
                                     ]"
                                 >
-                                    {{ selectedImages.length ? '移除参考图' : (isTextToImageLoading ? '继续生成' : '无参考图生成') }}
+                                    {{ selectedImages.length ? '需移除参考图' : (isTextToImageLoading ? '继续生成' : '无参考图生成') }}
                                 </button>
+                                <p
+                                    v-if="shouldShowGenerationBlockingReason"
+                                    class="col-span-full rounded-md border border-brand-accent/25 bg-brand-accent/10 px-2 py-1 text-xs leading-5 text-brand-accent"
+                                    role="alert"
+                                    aria-live="polite"
+                                >
+                                    {{ generationBlockingReason }}
+                                </p>
                             </div>
 
                             <label v-if="supportsGoogleSearch" class="col-span-full flex min-h-8 items-center gap-2 rounded-md bg-brand-surface px-2 py-1.5 text-xs font-semibold text-brand-muted dark:bg-night-panel dark:text-night-muted">
@@ -1247,13 +1267,15 @@ import { styleTemplates } from './data/templates'
 import { promptPoolGroups } from './data/promptPool'
 import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
 import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
-import { getEndpointPath, isGrsaiEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint, resolveImageGenerationEndpoint } from './utils/apiEndpoint'
+import { getEndpointPath, isDoraverseImageProxyEndpoint, isGrsaiEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint, resolveImageGenerationEndpoint } from './utils/apiEndpoint'
 import {
+    aspectRatioToDoraverseGptImageSize,
     aspectRatioToGrsaiGptImageSize,
     aspectRatioToGeminiSize,
     aspectRatioToOpenAiImageSize,
     baseAspectRatioResolutionMap,
     buildAspectRatioOptions,
+    doraverseGptImageAspectRatioResolutionMap,
     geminiAspectRatioResolutionData,
     grsaiGptImageAspectRatioResolutionData,
     openAiAspectRatioResolutionData
@@ -1392,6 +1414,9 @@ const referenceRoleLabels: Record<ReferenceImageRole, string> = {
 // Image model settings
 const gemini3ImageSize = ref('2K')
 const gemini3EnableGoogleSearch = ref(false)
+const imageQuality = ref('auto')
+const imageAutoPrompt = ref(false)
+const imageTranslate = ref(false)
 
 const generationHistory = ref<GenerationHistoryItem[]>([])
 const historyLoading = ref(false)
@@ -1847,12 +1872,24 @@ const mapModelsToOptions = (models: ApiModel[]): ModelOption[] => {
         const description = (typeof model.description === 'string' && model.description.trim()) ||
             (typeof (model as Record<string, unknown>).about === 'string' && String((model as Record<string, unknown>).about).trim()) ||
             ''
+        const inferred = inferModelOptionMetadata(model.id)
+        const explicitHasResolution = (model as Record<string, unknown>).hasResolution
 
         options.push({
             id: model.id,
             label,
             description,
-            supportsImages
+            supportsImages,
+            sizeFormat: readString((model as Record<string, unknown>).sizeFormat) || inferred.sizeFormat,
+            maxGenerations: readPositiveInteger((model as Record<string, unknown>).maxGenerations) || inferred.maxGenerations,
+            maxInputImages: readPositiveInteger((model as Record<string, unknown>).maxInputImages) || inferred.maxInputImages,
+            defaultSize: readString((model as Record<string, unknown>).defaultSize) || inferred.defaultSize,
+            defaultResolution: readString((model as Record<string, unknown>).defaultResolution) || inferred.defaultResolution,
+            supportedSizes: readStringArray((model as Record<string, unknown>).supportedSizes) || inferred.supportedSizes,
+            supportedResolutions: readStringArray((model as Record<string, unknown>).supportedResolutions) || inferred.supportedResolutions,
+            hasResolution: typeof explicitHasResolution === 'boolean'
+                ? explicitHasResolution === true
+                : inferred.hasResolution
         })
     })
 
@@ -1882,11 +1919,145 @@ const detectImageSupport = (model: ApiModel): boolean => {
 }
 
 const buildModelLabel = (model: ApiModel): string => {
+    const displayName = readString((model as Record<string, unknown>).displayName)
+    if (displayName) {
+        return `${model.id} - ${displayName}`
+    }
+
     if (model.name && typeof model.name === 'string' && model.name.trim()) {
         return `${model.id} - ${model.name.trim()}`
     }
     return model.id
 }
+
+const readString = (value: unknown): string => typeof value === 'string' ? value.trim() : ''
+
+const readStringArray = (value: unknown): string[] | undefined => {
+    if (!Array.isArray(value)) return undefined
+    const values = value
+        .map(item => readString(item))
+        .filter(Boolean)
+    return values.length ? values : undefined
+}
+
+const readPositiveInteger = (value: unknown): number | undefined => {
+    const normalized = typeof value === 'number'
+        ? value
+        : typeof value === 'string' && value.trim()
+          ? Number(value)
+          : NaN
+
+    if (!Number.isFinite(normalized) || normalized < 1) return undefined
+    return Math.floor(normalized)
+}
+
+const ratioSizeOptions = ['21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16']
+
+const inferModelOptionMetadata = (modelId: string): Partial<ModelOption> => {
+    const normalized = modelId.toLowerCase()
+
+    if (/gpt[\s_-]*image|gptimage/.test(normalized)) {
+        return {
+            sizeFormat: 'absolute',
+            maxGenerations: 4,
+            maxInputImages: 4,
+            defaultSize: '1024x1024',
+            defaultResolution: '720p',
+            supportedSizes: ['1024x1024', '1536x1024', '1024x1536'],
+            supportedResolutions: ['720p'],
+            hasResolution: false
+        }
+    }
+
+    if (normalized.includes('nano-banana-2')) {
+        return {
+            sizeFormat: 'ratio',
+            maxGenerations: 4,
+            maxInputImages: 4,
+            defaultSize: '21:9',
+            defaultResolution: normalized.includes('4k') ? '4K' : '1K',
+            supportedSizes: ratioSizeOptions,
+            supportedResolutions: ['1K', '2K', '4K'],
+            hasResolution: true
+        }
+    }
+
+    if (normalized.includes('nano-banana-pro')) {
+        return {
+            sizeFormat: 'ratio',
+            maxGenerations: 4,
+            maxInputImages: 2,
+            defaultSize: '21:9',
+            defaultResolution: '1K',
+            supportedSizes: ratioSizeOptions,
+            supportedResolutions: ['1K', '2K'],
+            hasResolution: true
+        }
+    }
+
+    if (normalized.includes('nano-banana') || normalized.includes('gemini-2.5-flash-image')) {
+        return {
+            sizeFormat: 'ratio',
+            maxGenerations: 4,
+            maxInputImages: 2,
+            defaultSize: '21:9',
+            defaultResolution: '720p',
+            supportedSizes: ratioSizeOptions,
+            supportedResolutions: ['720p'],
+            hasResolution: false
+        }
+    }
+
+    if (normalized.includes('grok-imagine')) {
+        return {
+            sizeFormat: 'ratio',
+            maxGenerations: 4,
+            maxInputImages: 1,
+            defaultSize: '2:1',
+            defaultResolution: '720p',
+            supportedSizes: ['2:1', '20:9', '19.5:9', '16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16', '9:19.5', '9:20', '1:2'],
+            supportedResolutions: ['720p'],
+            hasResolution: false
+        }
+    }
+
+    if (normalized.includes('seedream')) {
+        return {
+            sizeFormat: 'named',
+            maxGenerations: 6,
+            maxInputImages: 6,
+            defaultSize: 'square_hd',
+            defaultResolution: '720p',
+            supportedSizes: ['auto', 'square', 'square_hd', '3:4', '4:3', '9:16', '16:9', 'auto_2K', 'auto_4K'],
+            supportedResolutions: ['720p'],
+            hasResolution: false
+        }
+    }
+
+    if (normalized.includes('flux')) {
+        return {
+            sizeFormat: 'named',
+            maxGenerations: 1,
+            maxInputImages: 1,
+            defaultSize: 'square_hd',
+            defaultResolution: '720p',
+            supportedSizes: ['square_hd', 'square', 'portrait_4:3', 'portrait_16:9', 'landscape_4:3', 'landscape_16:9'],
+            supportedResolutions: ['720p'],
+            hasResolution: false
+        }
+    }
+
+    return {}
+}
+
+const formatResolutionOptionLabel = (value: string): string => {
+    const normalized = value.trim()
+    if (!normalized) return value
+    if (/^\d+k$/i.test(normalized)) return normalized.toUpperCase()
+    return normalized
+}
+
+const formatModelSizeOptionLabel = (value: string): string => value.trim() || value
 
 const handleModelPicked = () => {
     if (!selectedModel.value.trim()) return
@@ -2003,6 +2174,12 @@ const buildGenerateRequest = (prompt: string, images: string[], count = generati
 
     if (supportsGoogleSearch.value) {
         request.enableGoogleSearch = gemini3EnableGoogleSearch.value
+    }
+
+    if (showDoraverseImageProxyControls.value) {
+        request.quality = imageQuality.value
+        request.autoPrompt = imageAutoPrompt.value
+        request.translate = imageTranslate.value
     }
 
     return request
@@ -2254,13 +2431,52 @@ const canGenerateTextImage = computed(
         selectedImages.value.length === 0
 )
 
+const isReferenceCountWithinModelLimit = computed(() =>
+    selectedModelMaxInputImages.value <= 0 ||
+    selectedImages.value.length <= selectedModelMaxInputImages.value
+)
+
 const canGenerate = computed(
     () =>
         apiKey.value.trim() &&
         effectiveApiEndpoint.value.trim() &&
         selectedModel.value.trim() &&
         selectedImages.value.length > 0 &&
+        isReferenceCountWithinModelLimit.value &&
         (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim())
+)
+
+const generationBlockingReason = computed(() => {
+    if (!apiKey.value.trim()) return '请先配置 API Key。'
+    if (!effectiveApiEndpoint.value.trim()) return '请先配置生图 API 端点。'
+    if (!selectedModel.value.trim()) return '请先选择模型。'
+    if (selectedImages.value.length > 0 && !isReferenceCountWithinModelLimit.value) {
+        return `当前模型最多支持 ${selectedModelMaxInputImages.value} 张参考图，请移除多余图片。`
+    }
+    if (selectedImages.value.length > 0 && !(textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim())) {
+        return '请先输入提示词或选择模板。'
+    }
+    return ''
+})
+
+const shouldShowGenerationBlockingReason = computed(() =>
+    Boolean(generationBlockingReason.value) &&
+    (
+        selectedImages.value.length > 0 ||
+        textToImagePrompt.value.trim().length > 0 ||
+        selectedStyle.value.trim().length > 0 ||
+        customPrompt.value.trim().length > 0
+    )
+)
+
+const generationActionTitle = computed(() =>
+    generationBlockingReason.value || (selectedImages.value.length ? '使用当前参考图和提示词生成' : '左侧上传参考图后此按钮会启用')
+)
+
+const textGenerationActionTitle = computed(() =>
+    selectedImages.value.length
+        ? '已上传参考图，请使用参考图生成；移除参考图后可无参考图生成'
+        : '不使用参考图，直接按提示词生成'
 )
 
 const promptAssistantReady = computed(
@@ -2510,7 +2726,9 @@ const selectedTemplatePrompt = computed(() => {
     const template = allStyleTemplates.value.find(item => item.id === selectedStyle.value)
     return template ? resolveTemplatePrompt(template) : ''
 })
-const generationCountOptions = [1, 2, 3, 4]
+const generationCountOptions = computed(() =>
+    Array.from({ length: selectedModelMaxGenerations.value }, (_, index) => index + 1)
+)
 const generationBatchModeOptions: Array<{ label: string; value: GenerationBatchMode }> = [
     { label: '补齐多张', value: 'fill' },
     { label: '单次请求', value: 'single' }
@@ -3169,7 +3387,7 @@ const getReferencePayloadField = (provider: string, referenceCount: number) => {
     if (!referenceCount) return '无'
     if (provider === 'openai-chat') return 'messages[].content[].image_url'
     if (provider === 'openai-image') return 'image'
-    if (provider === 'openai-image-edit') return 'multipart image[]'
+    if (provider === 'openai-image-edit') return showDoraverseImageProxyControls.value && referenceCount === 1 ? 'multipart image' : 'multipart image[]'
     if (provider === 'grsai') return 'images'
     if (provider === 'grsai-draw') return 'images + urls'
     return '未发送'
@@ -3180,11 +3398,19 @@ const generationRequestLimit = computed(() =>
 )
 
 const requestImageCountParam = computed(() =>
-    requestProviderType.value === 'openai-image-edit' ? 'not sent' : String(generationCount.value)
+    requestProviderType.value === 'openai-image-edit' && !showDoraverseImageProxyControls.value
+        ? 'not sent'
+        : String(generationCount.value)
 )
 
 const generationRequestSummary = computed(() => {
     if (requestProviderType.value === 'openai-image-edit') {
+        if (showDoraverseImageProxyControls.value) {
+            return generationBatchMode.value === 'single'
+                ? `图片编辑模式：单次请求，n=${generationCount.value}`
+                : `图片编辑模式：补齐多张，最多 ${generationRequestLimit.value} 次请求，首请求 n=${generationCount.value}`
+        }
+
         if (generationBatchMode.value === 'single') {
             return '图片编辑兼容模式：单次请求，不发送 n'
         }
@@ -3220,6 +3446,9 @@ const buildRequestDiagnosticText = () => {
         `n: ${requestImageCountParam.value}`,
         `aspectRatio: ${diagnostic.sentAspectRatio || 'not sent'}`,
         `imageSize: ${diagnostic.sentImageSize || 'not sent'}`,
+        showDoraverseImageProxyControls.value ? `quality: ${imageQuality.value}` : '',
+        showDoraverseImageProxyControls.value ? `autoPrompt: ${imageAutoPrompt.value}` : '',
+        showDoraverseImageProxyControls.value ? `translate: ${imageTranslate.value}` : '',
         diagnostic.outputSize ? `outputSize: ${diagnostic.outputSize}` : '',
         diagnostic.warning ? `warning: ${diagnostic.warning}` : '',
         references.length ? `references:\n${references.join('\n')}` : 'references: none',
@@ -3293,6 +3522,14 @@ const requestDiagnostic = computed(() => {
     const aspectRatio = showAspectRatioSelector.value ? selectedAspectRatio.value : ''
     const imageSize = showImageSizeConfig.value ? gemini3ImageSize.value : ''
     const outputSize = getDiagnosticOutputSize(provider, selectedImageModelType.value, aspectRatio, imageSize)
+    const referenceLimitWarning = referenceCount > 0 &&
+        selectedModelMaxInputImages.value > 0 &&
+        referenceCount > selectedModelMaxInputImages.value
+        ? `参考图超过当前模型上限 ${selectedModelMaxInputImages.value} 张`
+        : ''
+    const referenceRouteWarning = referenceCount && field === '未发送'
+        ? '当前路由不会发送参考图。'
+        : ''
     const providerLabelMap: Record<string, string> = {
         'openai-chat': 'Chat multimodal',
         'openai-image': 'Images API',
@@ -3314,9 +3551,7 @@ const requestDiagnostic = computed(() => {
             : '0 张，当前是文生图',
         requestSummary: generationRequestSummary.value,
         payloadField: field,
-        warning: requestRouteWarning.value || (referenceCount && field === '未发送'
-            ? '当前路由不会发送参考图。'
-            : '')
+        warning: requestRouteWarning.value || referenceLimitWarning || referenceRouteWarning
     }
 })
 
@@ -3325,6 +3560,9 @@ const getDiagnosticOutputSize = (provider: string, modelType: string, aspectRati
     if (provider === 'openai-image' || provider === 'openai-image-edit' || modelType === 'gpt-image') {
         if (provider === 'grsai' || provider === 'grsai-draw') {
             return aspectRatioToGrsaiGptImageSize(aspectRatio, imageSize || '1K')
+        }
+        if (shouldUseDoraverseGptImageSize.value) {
+            return aspectRatioToDoraverseGptImageSize(aspectRatio)
         }
         return aspectRatioToOpenAiImageSize(aspectRatio, imageSize || '1K')
     }
@@ -3343,6 +3581,69 @@ const selectedModelOption = computed(() => {
     return modelOptions.value.find(option => option.id === currentId)
 })
 
+const selectedModelMaxGenerations = computed(() =>
+    Math.min(Math.max(selectedModelOption.value?.maxGenerations || 4, 1), 12)
+)
+
+const selectedModelMaxInputImages = computed(() =>
+    Math.max(selectedModelOption.value?.maxInputImages || 0, 0)
+)
+
+const selectedModelSupportedSizes = computed(() =>
+    selectedModelOption.value?.supportedSizes?.filter(Boolean) || []
+)
+
+const selectedModelSupportedResolutions = computed(() =>
+    selectedModelOption.value?.supportedResolutions?.filter(Boolean) || []
+)
+
+const selectedModelSizeFormat = computed(() =>
+    (selectedModelOption.value?.sizeFormat || '').toLowerCase()
+)
+
+const selectedModelHasSizeMetadata = computed(() =>
+    selectedModelSupportedSizes.value.length > 0
+)
+
+const selectedModelHasResolutionMetadata = computed(() =>
+    typeof selectedModelOption.value?.hasResolution === 'boolean'
+        ? selectedModelOption.value.hasResolution
+        : selectedModelSupportedResolutions.value.length > 0
+)
+
+const showDoraverseImageProxyControls = computed(() =>
+    isDoraverseImageProxyEndpoint(effectiveApiEndpoint.value)
+)
+
+const sizeControlLabel = computed(() =>
+    selectedModelSizeFormat.value === 'absolute' || selectedModelSizeFormat.value === 'named'
+        ? '尺寸'
+        : '比例'
+)
+
+const imageSizeOptions = computed(() => {
+    const resolutions = selectedModelSupportedResolutions.value
+    if (resolutions.length > 0) {
+        return resolutions.map(value => ({
+            value,
+            label: formatResolutionOptionLabel(value)
+        }))
+    }
+
+    return [
+        { value: '1K', label: '1K 标准' },
+        { value: '2K', label: '2K 高清' },
+        { value: '4K', label: '4K 超清' }
+    ]
+})
+
+const imageQualityOptions = [
+    { value: 'auto', label: 'auto' },
+    { value: 'low', label: 'low' },
+    { value: 'medium', label: 'medium' },
+    { value: 'high', label: 'high' }
+]
+
 const selectedModelProfileText = computed(() => [
     selectedModel.value,
     selectedModelOption.value?.label,
@@ -3351,9 +3652,14 @@ const selectedModelProfileText = computed(() => [
 
 const isCurrentGrsaiEndpoint = computed(() => isGrsaiEndpoint(effectiveApiEndpoint.value))
 const isCurrentGptImageModel = computed(() => isOpenAiImageModelId(selectedModelProfileText.value))
+const isCurrentDoraverseMetapiEndpoint = computed(() =>
+    isDoraverseImageProxyEndpoint(effectiveApiEndpoint.value)
+)
 
 // Show ratio controls for image models that accept aspect ratio or mapped sizes.
 const showAspectRatioSelector = computed(() => {
+    if (selectedModelHasSizeMetadata.value) return true
+
     const modelText = selectedModelProfileText.value
     if (!modelText) return false
 
@@ -3378,6 +3684,12 @@ const selectedImageModelType = computed(() => {
     return 'default'
 })
 
+const shouldUseDoraverseGptImageSize = computed(() =>
+    isCurrentDoraverseMetapiEndpoint.value &&
+    selectedImageModelType.value === 'gpt-image' &&
+    /^gpt-image-2\b/i.test(effectiveSelectedModel.value.trim())
+)
+
 const supportsImageSizeConfig = computed(() => {
     const modelText = selectedModelProfileText.value
     if (!modelText) return false
@@ -3392,20 +3704,75 @@ const baseAspectRatioOptions = [
 ]
 
 const availableAspectRatios = computed(() => {
+    if (selectedModelSupportedSizes.value.length > 0) {
+        return selectedModelSupportedSizes.value.map(size => ({
+            value: size,
+            label: formatModelSizeOptionLabel(size)
+        }))
+    }
+
     const sizeData = selectedImageModelType.value === 'gemini-3-pro-image'
         ? geminiAspectRatioResolutionData[gemini3ImageSize.value]
         : selectedImageModelType.value === 'gpt-image'
           ? (requestProviderType.value === 'grsai' || requestProviderType.value === 'grsai-draw')
             ? grsaiGptImageAspectRatioResolutionData[gemini3ImageSize.value]
-            : openAiAspectRatioResolutionData[gemini3ImageSize.value]
+            : shouldUseDoraverseGptImageSize.value
+              ? doraverseGptImageAspectRatioResolutionMap
+              : openAiAspectRatioResolutionData[gemini3ImageSize.value]
           : null
 
     return sizeData ? buildAspectRatioOptions(sizeData) : baseAspectRatioOptions
 })
 
 const showImageSizeConfig = computed(() => {
+    if (selectedModelOption.value && (
+        selectedModelSupportedSizes.value.length > 0 ||
+        selectedModelSupportedResolutions.value.length > 0 ||
+        typeof selectedModelOption.value.hasResolution === 'boolean'
+    )) {
+        return selectedModelHasResolutionMetadata.value
+    }
+
     return supportsImageSizeConfig.value
 })
+
+const applySelectedModelParameterDefaults = () => {
+    const sizes = availableAspectRatios.value.map(option => option.value)
+    const defaultSize = selectedModelOption.value?.defaultSize || ''
+    if (sizes.length && defaultSize && sizes.includes(defaultSize)) {
+        selectedAspectRatio.value = defaultSize
+    } else if (sizes.length && !sizes.includes(selectedAspectRatio.value)) {
+        selectedAspectRatio.value = sizes[0]
+    }
+
+    const resolutions = imageSizeOptions.value.map(option => option.value)
+    const defaultResolution = selectedModelOption.value?.defaultResolution || ''
+    if (resolutions.length && defaultResolution && resolutions.includes(defaultResolution)) {
+        gemini3ImageSize.value = defaultResolution
+    } else if (resolutions.length && !resolutions.includes(gemini3ImageSize.value)) {
+        gemini3ImageSize.value = resolutions[0]
+    }
+
+    if (generationCount.value > selectedModelMaxGenerations.value) {
+        generationCount.value = selectedModelMaxGenerations.value
+    }
+}
+
+watch(
+    () => selectedModelOption.value?.id,
+    () => {
+        applySelectedModelParameterDefaults()
+    },
+    { immediate: false }
+)
+
+watch(
+    [availableAspectRatios, imageSizeOptions, selectedModelMaxGenerations],
+    () => {
+        applySelectedModelParameterDefaults()
+    },
+    { immediate: false }
+)
 
 const supportsGoogleSearch = computed(() => {
     const modelId = selectedModel.value.toLowerCase().trim()
