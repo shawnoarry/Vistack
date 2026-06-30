@@ -1873,6 +1873,7 @@ const mapModelsToOptions = (models: ApiModel[]): ModelOption[] => {
             (typeof (model as Record<string, unknown>).about === 'string' && String((model as Record<string, unknown>).about).trim()) ||
             ''
         const inferred = inferModelOptionMetadata(model.id, effectiveApiEndpoint.value)
+        const shouldUseInferredSizeMetadata = shouldPreferInferredSizeMetadata(model.id, effectiveApiEndpoint.value)
         const explicitHasResolution = (model as Record<string, unknown>).hasResolution
 
         options.push({
@@ -1880,16 +1881,28 @@ const mapModelsToOptions = (models: ApiModel[]): ModelOption[] => {
             label,
             description,
             supportsImages,
-            sizeFormat: readString((model as Record<string, unknown>).sizeFormat) || inferred.sizeFormat,
+            sizeFormat: shouldUseInferredSizeMetadata
+                ? inferred.sizeFormat
+                : readString((model as Record<string, unknown>).sizeFormat) || inferred.sizeFormat,
             maxGenerations: readPositiveInteger((model as Record<string, unknown>).maxGenerations) || inferred.maxGenerations,
             maxInputImages: readPositiveInteger((model as Record<string, unknown>).maxInputImages) || inferred.maxInputImages,
-            defaultSize: readString((model as Record<string, unknown>).defaultSize) || inferred.defaultSize,
-            defaultResolution: readString((model as Record<string, unknown>).defaultResolution) || inferred.defaultResolution,
-            supportedSizes: readStringArray((model as Record<string, unknown>).supportedSizes) || inferred.supportedSizes,
-            supportedResolutions: readStringArray((model as Record<string, unknown>).supportedResolutions) || inferred.supportedResolutions,
-            hasResolution: typeof explicitHasResolution === 'boolean'
-                ? explicitHasResolution === true
-                : inferred.hasResolution
+            defaultSize: shouldUseInferredSizeMetadata
+                ? inferred.defaultSize
+                : readString((model as Record<string, unknown>).defaultSize) || inferred.defaultSize,
+            defaultResolution: shouldUseInferredSizeMetadata
+                ? inferred.defaultResolution
+                : readString((model as Record<string, unknown>).defaultResolution) || inferred.defaultResolution,
+            supportedSizes: shouldUseInferredSizeMetadata
+                ? inferred.supportedSizes
+                : readStringArray((model as Record<string, unknown>).supportedSizes) || inferred.supportedSizes,
+            supportedResolutions: shouldUseInferredSizeMetadata
+                ? inferred.supportedResolutions
+                : readStringArray((model as Record<string, unknown>).supportedResolutions) || inferred.supportedResolutions,
+            hasResolution: shouldUseInferredSizeMetadata && typeof inferred.hasResolution === 'boolean'
+                ? inferred.hasResolution
+                : typeof explicitHasResolution === 'boolean'
+                  ? explicitHasResolution === true
+                  : inferred.hasResolution
         })
     })
 
@@ -1953,11 +1966,17 @@ const readPositiveInteger = (value: unknown): number | undefined => {
 
 const ratioSizeOptions = ['21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16']
 
+const isGptImage2ModelId = (modelId: string): boolean =>
+    /(^|[/:\s_-])gpt[\s_-]*image[\s_-]*2\b/i.test(modelId.trim())
+
+const shouldPreferInferredSizeMetadata = (modelId: string, endpoint: string): boolean =>
+    isGptImage2ModelId(modelId) || (isDoraverseImageProxyEndpoint(endpoint) && isGptImage2ModelId(modelId))
+
 const inferModelOptionMetadata = (modelId: string, endpoint = effectiveApiEndpoint.value): Partial<ModelOption> => {
     const normalized = modelId.toLowerCase()
 
     if (/gpt[\s_-]*image|gptimage/.test(normalized)) {
-        if (isDoraverseImageProxyEndpoint(endpoint) && /^gpt-image-2\b/i.test(modelId.trim())) {
+        if (isDoraverseImageProxyEndpoint(endpoint) && isGptImage2ModelId(modelId)) {
             return {
                 sizeFormat: 'absolute',
                 maxGenerations: 4,
@@ -2098,7 +2117,7 @@ const normalizeCachedModelOptions = (options: ModelOption[], endpoint: string): 
         const inferred = inferModelOptionMetadata(option.id, endpoint)
         const next = { ...option }
 
-        if (shouldRefreshEndpointSpecificMetadata(option, endpoint) || isLikelyLegacyGptImageMetadata(option, endpoint)) {
+        if (shouldRefreshInferredSizeMetadata(option, endpoint) || isLikelyLegacyGptImageMetadata(option, endpoint)) {
             next.sizeFormat = inferred.sizeFormat
             next.defaultSize = inferred.defaultSize
             next.defaultResolution = inferred.defaultResolution
@@ -2112,12 +2131,12 @@ const normalizeCachedModelOptions = (options: ModelOption[], endpoint: string): 
         return next
     })
 
-const shouldRefreshEndpointSpecificMetadata = (option: ModelOption, endpoint: string): boolean =>
-    isDoraverseImageProxyEndpoint(endpoint) && /^gpt-image-2\b/i.test(option.id.trim())
+const shouldRefreshInferredSizeMetadata = (option: ModelOption, endpoint: string): boolean =>
+    shouldPreferInferredSizeMetadata(option.id, endpoint)
 
 const isLikelyLegacyGptImageMetadata = (option: ModelOption, endpoint: string): boolean => {
     if (!/gpt[\s_-]*image|gptimage/i.test(option.id)) return false
-    if (isDoraverseImageProxyEndpoint(endpoint) && /^gpt-image-2\b/i.test(option.id.trim())) return false
+    if (isDoraverseImageProxyEndpoint(endpoint) && isGptImage2ModelId(option.id)) return false
 
     const sizes = option.supportedSizes || []
     return option.sizeFormat === 'absolute' &&
