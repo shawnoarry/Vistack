@@ -83,10 +83,27 @@ export function isOpenAiImageModelId(model?: string): boolean {
 export function isDoraverseImageProxyEndpoint(endpoint: string): boolean {
     try {
         const url = new URL(endpoint)
-        return url.hostname.toLowerCase() === DORAVERSE_METAPI_HOST &&
-            normalizePath(url.pathname).includes('/imageproxy')
+        if (url.hostname.toLowerCase() !== DORAVERSE_METAPI_HOST) {
+            return false
+        }
+
+        const path = normalizePath(url.pathname)
+        return path === '' ||
+            path === '/' ||
+            path === '/v1' ||
+            path.includes('/imageproxy') ||
+            path.endsWith('/images/generations') ||
+            path.endsWith('/images/edits')
     } catch {
-        return endpoint.toLowerCase().includes(`${DORAVERSE_METAPI_HOST}/imageproxy`)
+        const normalized = endpoint.toLowerCase().replace(/\/+$/, '')
+        return normalized === `https://${DORAVERSE_METAPI_HOST}` ||
+            normalized === `http://${DORAVERSE_METAPI_HOST}` ||
+            normalized === `${DORAVERSE_METAPI_HOST}` ||
+            normalized === `https://${DORAVERSE_METAPI_HOST}/v1` ||
+            normalized === `http://${DORAVERSE_METAPI_HOST}/v1` ||
+            normalized.includes(`${DORAVERSE_METAPI_HOST}/imageproxy`) ||
+            normalized.endsWith(`${DORAVERSE_METAPI_HOST}/v1/images/generations`) ||
+            normalized.endsWith(`${DORAVERSE_METAPI_HOST}/v1/images/edits`)
     }
 }
 

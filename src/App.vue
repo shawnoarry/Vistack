@@ -2098,7 +2098,7 @@ const normalizeCachedModelOptions = (options: ModelOption[], endpoint: string): 
         const inferred = inferModelOptionMetadata(option.id, endpoint)
         const next = { ...option }
 
-        if (isLikelyLegacyGptImageMetadata(option, endpoint)) {
+        if (shouldRefreshEndpointSpecificMetadata(option, endpoint) || isLikelyLegacyGptImageMetadata(option, endpoint)) {
             next.sizeFormat = inferred.sizeFormat
             next.defaultSize = inferred.defaultSize
             next.defaultResolution = inferred.defaultResolution
@@ -2111,6 +2111,9 @@ const normalizeCachedModelOptions = (options: ModelOption[], endpoint: string): 
         next.maxInputImages = next.maxInputImages || inferred.maxInputImages
         return next
     })
+
+const shouldRefreshEndpointSpecificMetadata = (option: ModelOption, endpoint: string): boolean =>
+    isDoraverseImageProxyEndpoint(endpoint) && /^gpt-image-2\b/i.test(option.id.trim())
 
 const isLikelyLegacyGptImageMetadata = (option: ModelOption, endpoint: string): boolean => {
     if (!/gpt[\s_-]*image|gptimage/i.test(option.id)) return false
@@ -2131,13 +2134,15 @@ const ensureSelectedOptionPresent = () => {
 
     const exists = modelOptions.value.some(option => option.id === currentId)
     if (!exists) {
+        const inferred = inferModelOptionMetadata(currentId, effectiveApiEndpoint.value)
         modelOptions.value = [
             ...modelOptions.value,
             {
                 id: currentId,
                 label: buildFallbackLabel(currentId),
                 description: '',
-                supportsImages: true
+                supportsImages: true,
+                ...inferred
             }
         ]
     }
