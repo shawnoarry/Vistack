@@ -1872,7 +1872,7 @@ const mapModelsToOptions = (models: ApiModel[]): ModelOption[] => {
         const description = (typeof model.description === 'string' && model.description.trim()) ||
             (typeof (model as Record<string, unknown>).about === 'string' && String((model as Record<string, unknown>).about).trim()) ||
             ''
-        const inferred = inferModelOptionMetadata(model.id)
+        const inferred = inferModelOptionMetadata(model.id, effectiveApiEndpoint.value)
         const explicitHasResolution = (model as Record<string, unknown>).hasResolution
 
         options.push({
@@ -1953,19 +1953,31 @@ const readPositiveInteger = (value: unknown): number | undefined => {
 
 const ratioSizeOptions = ['21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16']
 
-const inferModelOptionMetadata = (modelId: string): Partial<ModelOption> => {
+const inferModelOptionMetadata = (modelId: string, endpoint = effectiveApiEndpoint.value): Partial<ModelOption> => {
     const normalized = modelId.toLowerCase()
 
     if (/gpt[\s_-]*image|gptimage/.test(normalized)) {
+        if (isDoraverseImageProxyEndpoint(endpoint) && /^gpt-image-2\b/i.test(modelId.trim())) {
+            return {
+                sizeFormat: 'absolute',
+                maxGenerations: 4,
+                maxInputImages: 4,
+                defaultSize: '1024x1024',
+                defaultResolution: '720p',
+                supportedSizes: ['1024x1024', '1536x1024', '1024x1536'],
+                supportedResolutions: ['720p'],
+                hasResolution: false
+            }
+        }
+
         return {
-            sizeFormat: 'absolute',
+            sizeFormat: 'ratio',
             maxGenerations: 4,
             maxInputImages: 4,
-            defaultSize: '1024x1024',
-            defaultResolution: '720p',
-            supportedSizes: ['1024x1024', '1536x1024', '1024x1536'],
-            supportedResolutions: ['720p'],
-            hasResolution: false
+            defaultSize: '1:1',
+            defaultResolution: '1K',
+            supportedResolutions: ['1K', '2K', '4K'],
+            hasResolution: true
         }
     }
 
@@ -2077,8 +2089,40 @@ const restoreModelOptionsFromCache = (endpoint: string) => {
     const cached = LocalStorage.getModelCache(modelCacheKey(trimmedEndpoint))
     if (!cached.length) return
 
-    modelOptions.value = cached
+    modelOptions.value = normalizeCachedModelOptions(cached, trimmedEndpoint)
     ensureSelectedOptionPresent()
+}
+
+const normalizeCachedModelOptions = (options: ModelOption[], endpoint: string): ModelOption[] =>
+    options.map(option => {
+        const inferred = inferModelOptionMetadata(option.id, endpoint)
+        const next = { ...option }
+
+        if (isLikelyLegacyGptImageMetadata(option, endpoint)) {
+            next.sizeFormat = inferred.sizeFormat
+            next.defaultSize = inferred.defaultSize
+            next.defaultResolution = inferred.defaultResolution
+            next.supportedSizes = inferred.supportedSizes
+            next.supportedResolutions = inferred.supportedResolutions
+            next.hasResolution = inferred.hasResolution
+        }
+
+        next.maxGenerations = next.maxGenerations || inferred.maxGenerations
+        next.maxInputImages = next.maxInputImages || inferred.maxInputImages
+        return next
+    })
+
+const isLikelyLegacyGptImageMetadata = (option: ModelOption, endpoint: string): boolean => {
+    if (!/gpt[\s_-]*image|gptimage/i.test(option.id)) return false
+    if (isDoraverseImageProxyEndpoint(endpoint) && /^gpt-image-2\b/i.test(option.id.trim())) return false
+
+    const sizes = option.supportedSizes || []
+    return option.sizeFormat === 'absolute' &&
+        sizes.length === 3 &&
+        sizes.includes('1024x1024') &&
+        sizes.includes('1536x1024') &&
+        sizes.includes('1024x1536') &&
+        option.hasResolution === false
 }
 
 const ensureSelectedOptionPresent = () => {

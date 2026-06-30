@@ -928,10 +928,6 @@ function resolveOpenAiImageSize(endpoint: string, modelId: string, aspectRatio: 
         return aspectRatio || 'auto'
     }
 
-    if (shouldUseDoraverseGptImageSize(endpoint, modelId)) {
-        return aspectRatioToDoraverseGptImageSize(aspectRatio)
-    }
-
     return aspectRatioToOpenAiImageSize(aspectRatio, imageSize)
 }
 
