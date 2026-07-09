@@ -7,6 +7,7 @@ const IMAGE_GENERATIONS_SUFFIX = ['images', 'generations']
 const IMAGE_EDITS_SUFFIX = ['images', 'edits']
 const MODELS_SUFFIX = ['models']
 const DORAVERSE_METAPI_HOST = 'metapi.lilililwan.xyz'
+const LJQCLUB_HOST = 'ljqclub.com'
 
 export function resolveChatCompletionsEndpoint(endpoint: string, fallback = DEFAULT_PROMPT_ASSISTANT_ENDPOINT): string {
     return resolveEndpoint(endpoint, 'chat', fallback)
@@ -107,8 +108,22 @@ export function isDoraverseImageProxyEndpoint(endpoint: string): boolean {
     }
 }
 
+export function isLjqclubImageEndpoint(endpoint: string): boolean {
+    try {
+        const url = new URL(endpoint)
+        return isLjqclubHost(url.hostname)
+    } catch {
+        return endpoint.toLowerCase().includes(LJQCLUB_HOST)
+    }
+}
+
 export function normalizeEndpointPath(pathname: string): string {
     return normalizePath(pathname)
+}
+
+function isLjqclubHost(hostname: string): boolean {
+    const host = hostname.toLowerCase()
+    return host === LJQCLUB_HOST || host.endsWith(`.${LJQCLUB_HOST}`)
 }
 
 function resolveEndpoint(endpoint: string, purpose: EndpointPurpose, fallback: string): string {

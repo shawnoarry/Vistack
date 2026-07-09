@@ -5,6 +5,7 @@ import {
     getEndpointPath,
     isDoraverseImageProxyEndpoint,
     isGrsaiEndpoint,
+    isLjqclubImageEndpoint,
     isOpenAiImageModelId,
     resolveChatCompletionsEndpoint,
     resolveImageGenerationEndpoint,
@@ -927,6 +928,10 @@ function isDallEModelId(modelId: string): boolean {
 }
 
 function resolveOpenAiImageSize(endpoint: string, modelId: string, aspectRatio: string, imageSize?: string): string {
+    if (isLjqclubImageEndpoint(endpoint)) {
+        return aspectRatio || 'auto'
+    }
+
     if (isDoraverseImageProxyEndpoint(endpoint)) {
         if (shouldUseDoraverseGptImageSize(endpoint, modelId)) {
             return aspectRatioToDoraverseGptImageSize(aspectRatio)

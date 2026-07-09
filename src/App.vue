@@ -1267,7 +1267,7 @@ import { styleTemplates } from './data/templates'
 import { promptPoolGroups } from './data/promptPool'
 import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
 import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
-import { getEndpointPath, isDoraverseImageProxyEndpoint, isGrsaiEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint, resolveImageGenerationEndpoint } from './utils/apiEndpoint'
+import { getEndpointPath, isDoraverseImageProxyEndpoint, isGrsaiEndpoint, isLjqclubImageEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint, resolveImageGenerationEndpoint } from './utils/apiEndpoint'
 import {
     aspectRatioToDoraverseGptImageSize,
     aspectRatioToGrsaiGptImageSize,
@@ -2029,6 +2029,9 @@ const isKnownDynamicResolutionImageModelId = (modelId: string): boolean => {
         normalized.includes('gemini-3.1-pro')
 }
 
+const isLjqclubCodexImageModel = (modelId: string, endpoint: string): boolean =>
+    isLjqclubImageEndpoint(endpoint) && /gpt[\s_-]*image|gptimage/.test(modelId.toLowerCase())
+
 const shouldPreferInferredSizeMetadata = (modelId: string, endpoint: string): boolean =>
     isKnownDynamicResolutionImageModelId(modelId) ||
     (isDoraverseImageProxyEndpoint(endpoint) && isGptImage2ModelId(modelId))
@@ -2037,6 +2040,17 @@ const inferModelOptionMetadata = (modelId: string, endpoint = effectiveApiEndpoi
     const normalized = modelId.toLowerCase()
 
     if (/gpt[\s_-]*image|gptimage/.test(normalized)) {
+        if (isLjqclubCodexImageModel(modelId, endpoint)) {
+            return {
+                sizeFormat: 'ratio',
+                maxGenerations: 4,
+                maxInputImages: 4,
+                defaultSize: '4:5',
+                hasResolution: false,
+                supportedSizes: ratioSizeOptions
+            }
+        }
+
         if (isDoraverseImageProxyEndpoint(endpoint) && isGptImage2ModelId(modelId)) {
             return {
                 sizeFormat: 'absolute',
@@ -3655,6 +3669,10 @@ const requestRouteWarning = computed(() => {
         return '当前完整 Chat endpoint 将通过 messages[].content[].image_url 发送参考图，不会使用 Images Edit multipart。'
     }
 
+    if (isCurrentLjqclubImageEndpoint.value && isCurrentGptImageModel.value) {
+        return 'ljqclub.com channel sends ratio only; upstream uses auto resolution and does not support custom pixels / 2K / 4K.'
+    }
+
     return ''
 })
 
@@ -3700,6 +3718,9 @@ const requestDiagnostic = computed(() => {
 
 const getDiagnosticOutputSize = (provider: string, modelType: string, aspectRatio: string, imageSize: string) => {
     if (!aspectRatio) return ''
+    if ((provider === 'openai-image' || provider === 'openai-image-edit') && isCurrentLjqclubImageEndpoint.value) {
+        return 'auto'
+    }
     if (provider === 'openai-image' || provider === 'openai-image-edit' || modelType === 'gpt-image') {
         if (provider === 'grsai' || provider === 'grsai-draw') {
             return aspectRatioToGrsaiGptImageSize(aspectRatio, imageSize || '1K')
@@ -3794,6 +3815,7 @@ const selectedModelProfileText = computed(() => [
 ].filter(Boolean).join(' ').toLowerCase())
 
 const isCurrentGrsaiEndpoint = computed(() => isGrsaiEndpoint(effectiveApiEndpoint.value))
+const isCurrentLjqclubImageEndpoint = computed(() => isLjqclubImageEndpoint(effectiveApiEndpoint.value))
 const isCurrentGptImageModel = computed(() => isOpenAiImageModelId(selectedModelProfileText.value))
 const isCurrentDoraverseMetapiEndpoint = computed(() =>
     isDoraverseImageProxyEndpoint(effectiveApiEndpoint.value)
@@ -3836,6 +3858,7 @@ const shouldUseDoraverseGptImageSize = computed(() =>
 const supportsImageSizeConfig = computed(() => {
     const modelText = selectedModelProfileText.value
     if (!modelText) return false
+    if (isCurrentLjqclubImageEndpoint.value && isCurrentGptImageModel.value) return false
     if (isCurrentGptImageModel.value) return true
     if (selectedImageModelType.value === 'nano-banana' || selectedImageModelType.value === 'gemini-3-pro-image') return true
     if (/\b[24]k\b/i.test(modelText)) return true
@@ -3857,6 +3880,10 @@ const buildResolutionAwareAspectRatioOptions = (sizes: string[], sizeData: Recor
 
 const getCurrentAspectRatioResolutionData = (): Record<string, string> | null => {
     const imageSize = normalizeImageResolution(gemini3ImageSize.value)
+
+    if (isCurrentLjqclubImageEndpoint.value && selectedImageModelType.value === 'gpt-image') {
+        return null
+    }
 
     if (selectedImageModelType.value === 'gemini-3-pro-image' || selectedImageModelType.value === 'nano-banana') {
         return geminiAspectRatioResolutionData[imageSize] || null
