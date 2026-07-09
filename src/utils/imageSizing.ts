@@ -9,6 +9,14 @@ const OPENAI_IMAGE_MAX_EDGE = 3840
 const OPENAI_IMAGE_MAX_SIDE_RATIO = 3
 const OPENAI_IMAGE_SIZE_UNIT = 16
 
+export function normalizeImageResolution(imageSize = ''): string {
+    const normalized = imageSize.trim()
+    if (/^\d+k$/i.test(normalized)) {
+        return normalized.toUpperCase()
+    }
+    return normalized
+}
+
 export function aspectRatioToOpenAiImageSize(aspectRatio: string, imageSize = '1K'): string {
     if (imageSize.toLowerCase() === 'auto') {
         return 'auto'
@@ -20,9 +28,10 @@ export function aspectRatioToOpenAiImageSize(aspectRatio: string, imageSize = '1
     }
 
     const ratio = clampAspectRatio(parseAspectRatio(aspectRatio) || { width: 1, height: 1 })
-    const targetPixels = imageSize.toUpperCase() === '4K'
+    const normalizedImageSize = normalizeImageResolution(imageSize)
+    const targetPixels = normalizedImageSize === '4K'
         ? OPENAI_IMAGE_MAX_PIXELS
-        : imageSize.toUpperCase() === '2K'
+        : normalizedImageSize === '2K'
           ? 2048 * 2048
           : 1024 * 1024
     const scale = Math.sqrt(targetPixels / (ratio.width * ratio.height))
@@ -53,7 +62,7 @@ export function aspectRatioToGrsaiGptImageSize(aspectRatio: string, imageSize = 
         return aspectRatio.toLowerCase()
     }
 
-    const sizeData = grsaiGptImageAspectRatioResolutionData[imageSize.toUpperCase()]
+    const sizeData = grsaiGptImageAspectRatioResolutionData[normalizeImageResolution(imageSize)]
         || grsaiGptImageAspectRatioResolutionData['1K']
 
     return sizeData[aspectRatio] || sizeData['1:1']
@@ -330,9 +339,10 @@ function scaleSize(size: string, imageSize = '1K'): string {
     const match = size.match(/^(\d+)x(\d+)$/i)
     if (!match) return size
 
-    const multiplier = imageSize.toUpperCase() === '4K'
+    const normalizedImageSize = normalizeImageResolution(imageSize)
+    const multiplier = normalizedImageSize === '4K'
         ? 4
-        : imageSize.toUpperCase() === '2K'
+        : normalizedImageSize === '2K'
           ? 2
           : 1
 

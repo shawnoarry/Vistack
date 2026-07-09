@@ -353,7 +353,13 @@ async function generateWithProfile(profile: ApiProfile, request: GenerateRequest
 
 async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
     const modelId = request.model?.trim() || DEFAULT_MODEL_ID
-    const isGemini3ProImage = modelId.toLowerCase().includes('gemini-3-pro-image')
+    const normalizedModelId = modelId.toLowerCase()
+    const isGemini3ProImage = normalizedModelId.includes('gemini-3-pro-image') ||
+        normalizedModelId.includes('gemini-3-pro') ||
+        normalizedModelId.includes('gemini-3.1-pro')
+    const isGeminiSizeImageModel = isGemini3ProImage ||
+        normalizedModelId.includes('nano-banana') ||
+        normalizedModelId.includes('gemini-2.5-flash-image')
     const isOpenAiImageModel = isOpenAiImageModelId(modelId)
 
     const messageContent = request.images.length === 0
@@ -387,10 +393,11 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
         imageConfig.aspect_ratio = request.aspectRatio
     }
 
-    if (isGemini3ProImage) {
-        if (request.imageSize) {
-            imageConfig.image_size = request.imageSize
-        }
+    if (request.imageSize && !isOpenAiImageModel) {
+        imageConfig.image_size = request.imageSize
+    }
+
+    if (isGeminiSizeImageModel) {
         imageConfig.size = aspectRatioToGeminiSize(request.aspectRatio || '1:1', request.imageSize)
     } else if (isOpenAiImageModel) {
         imageConfig.size = resolveOpenAiImageSize(apiEndpoint, modelId, request.aspectRatio || '1:1', request.imageSize)

@@ -1278,6 +1278,7 @@ import {
     doraverseGptImageAspectRatioResolutionMap,
     geminiAspectRatioResolutionData,
     grsaiGptImageAspectRatioResolutionData,
+    normalizeImageResolution,
     openAiAspectRatioResolutionData
 } from './utils/imageSizing'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
@@ -1867,14 +1868,20 @@ const mapModelsToOptions = (models: ApiModel[]): ModelOption[] => {
         if (!model?.id || uniqueIds.has(model.id)) return
         uniqueIds.add(model.id)
 
+        const modelRecord = model as Record<string, unknown>
         const supportsImages = detectImageSupport(model)
         const label = buildModelLabel(model)
         const description = (typeof model.description === 'string' && model.description.trim()) ||
-            (typeof (model as Record<string, unknown>).about === 'string' && String((model as Record<string, unknown>).about).trim()) ||
+            (typeof modelRecord.about === 'string' && String(modelRecord.about).trim()) ||
             ''
         const inferred = inferModelOptionMetadata(model.id, effectiveApiEndpoint.value)
         const shouldUseInferredSizeMetadata = shouldPreferInferredSizeMetadata(model.id, effectiveApiEndpoint.value)
-        const explicitHasResolution = (model as Record<string, unknown>).hasResolution
+        const explicitSizeFormat = readStringFromFields(modelRecord, ['sizeFormat', 'size_format'])
+        const explicitDefaultSize = readStringFromFields(modelRecord, ['defaultSize', 'default_size'])
+        const explicitDefaultResolution = normalizeImageResolution(readStringFromFields(modelRecord, ['defaultResolution', 'default_resolution']))
+        const explicitSupportedSizes = readStringArrayFromFields(modelRecord, ['supportedSizes', 'supported_sizes', 'aspectRatios', 'aspect_ratios'])
+        const explicitSupportedResolutions = normalizeResolutionValues(readStringArrayFromFields(modelRecord, ['supportedResolutions', 'supported_resolutions', 'resolutions', 'imageSizes', 'image_sizes']))
+        const explicitHasResolution = readBooleanFromFields(modelRecord, ['hasResolution', 'has_resolution'])
 
         options.push({
             id: model.id,
@@ -1883,25 +1890,25 @@ const mapModelsToOptions = (models: ApiModel[]): ModelOption[] => {
             supportsImages,
             sizeFormat: shouldUseInferredSizeMetadata
                 ? inferred.sizeFormat
-                : readString((model as Record<string, unknown>).sizeFormat) || inferred.sizeFormat,
-            maxGenerations: readPositiveInteger((model as Record<string, unknown>).maxGenerations) || inferred.maxGenerations,
-            maxInputImages: readPositiveInteger((model as Record<string, unknown>).maxInputImages) || inferred.maxInputImages,
+                : explicitSizeFormat || inferred.sizeFormat,
+            maxGenerations: readPositiveIntegerFromFields(modelRecord, ['maxGenerations', 'max_generations', 'maxN', 'max_n']) || inferred.maxGenerations,
+            maxInputImages: readPositiveIntegerFromFields(modelRecord, ['maxInputImages', 'max_input_images', 'maxImages', 'max_images']) || inferred.maxInputImages,
             defaultSize: shouldUseInferredSizeMetadata
                 ? inferred.defaultSize
-                : readString((model as Record<string, unknown>).defaultSize) || inferred.defaultSize,
+                : explicitDefaultSize || inferred.defaultSize,
             defaultResolution: shouldUseInferredSizeMetadata
-                ? inferred.defaultResolution
-                : readString((model as Record<string, unknown>).defaultResolution) || inferred.defaultResolution,
+                ? normalizeImageResolution(inferred.defaultResolution || '')
+                : explicitDefaultResolution || normalizeImageResolution(inferred.defaultResolution || ''),
             supportedSizes: shouldUseInferredSizeMetadata
                 ? inferred.supportedSizes
-                : readStringArray((model as Record<string, unknown>).supportedSizes) || inferred.supportedSizes,
+                : explicitSupportedSizes || inferred.supportedSizes,
             supportedResolutions: shouldUseInferredSizeMetadata
-                ? inferred.supportedResolutions
-                : readStringArray((model as Record<string, unknown>).supportedResolutions) || inferred.supportedResolutions,
+                ? normalizeResolutionValues(inferred.supportedResolutions)
+                : explicitSupportedResolutions || normalizeResolutionValues(inferred.supportedResolutions),
             hasResolution: shouldUseInferredSizeMetadata && typeof inferred.hasResolution === 'boolean'
                 ? inferred.hasResolution
                 : typeof explicitHasResolution === 'boolean'
-                  ? explicitHasResolution === true
+                  ? explicitHasResolution
                   : inferred.hasResolution
         })
     })
@@ -1953,6 +1960,41 @@ const readStringArray = (value: unknown): string[] | undefined => {
     return values.length ? values : undefined
 }
 
+const readStringFromFields = (record: Record<string, unknown>, fields: string[]): string => {
+    for (const field of fields) {
+        const value = readString(record[field])
+        if (value) return value
+    }
+    return ''
+}
+
+const readStringArrayFromFields = (record: Record<string, unknown>, fields: string[]): string[] | undefined => {
+    for (const field of fields) {
+        const values = readStringArray(record[field])
+        if (values?.length) return values
+    }
+    return undefined
+}
+
+const readBooleanFromFields = (record: Record<string, unknown>, fields: string[]): boolean | undefined => {
+    for (const field of fields) {
+        const value = record[field]
+        if (typeof value === 'boolean') return value
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase()
+            if (normalized === 'true') return true
+            if (normalized === 'false') return false
+        }
+    }
+    return undefined
+}
+
+const normalizeResolutionValues = (values?: string[]): string[] | undefined => {
+    if (!values?.length) return undefined
+    const normalized = [...new Set(values.map(value => normalizeImageResolution(value)).filter(Boolean))]
+    return normalized.length ? normalized : undefined
+}
+
 const readPositiveInteger = (value: unknown): number | undefined => {
     const normalized = typeof value === 'number'
         ? value
@@ -1964,13 +2006,32 @@ const readPositiveInteger = (value: unknown): number | undefined => {
     return Math.floor(normalized)
 }
 
+const readPositiveIntegerFromFields = (record: Record<string, unknown>, fields: string[]): number | undefined => {
+    for (const field of fields) {
+        const value = readPositiveInteger(record[field])
+        if (value) return value
+    }
+    return undefined
+}
+
 const ratioSizeOptions = ['21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16']
 
 const isGptImage2ModelId = (modelId: string): boolean =>
     /(^|[/:\s_-])gpt[\s_-]*image[\s_-]*2\b/i.test(modelId.trim())
 
+const isKnownDynamicResolutionImageModelId = (modelId: string): boolean => {
+    const normalized = modelId.toLowerCase()
+    return /gpt[\s_-]*image|gptimage/.test(normalized) ||
+        normalized.includes('nano-banana-2') ||
+        normalized.includes('nano-banana-pro') ||
+        normalized.includes('gemini-3-pro-image') ||
+        normalized.includes('gemini-3-pro') ||
+        normalized.includes('gemini-3.1-pro')
+}
+
 const shouldPreferInferredSizeMetadata = (modelId: string, endpoint: string): boolean =>
-    isGptImage2ModelId(modelId) || (isDoraverseImageProxyEndpoint(endpoint) && isGptImage2ModelId(modelId))
+    isKnownDynamicResolutionImageModelId(modelId) ||
+    (isDoraverseImageProxyEndpoint(endpoint) && isGptImage2ModelId(modelId))
 
 const inferModelOptionMetadata = (modelId: string, endpoint = effectiveApiEndpoint.value): Partial<ModelOption> => {
     const normalized = modelId.toLowerCase()
@@ -2019,9 +2080,22 @@ const inferModelOptionMetadata = (modelId: string, endpoint = effectiveApiEndpoi
             maxGenerations: 4,
             maxInputImages: 2,
             defaultSize: '21:9',
+            defaultResolution: normalized.includes('4k') ? '4K' : '1K',
+            supportedSizes: ratioSizeOptions,
+            supportedResolutions: normalized.includes('4k') ? ['1K', '2K', '4K'] : ['1K', '2K'],
+            hasResolution: true
+        }
+    }
+
+    if (normalized.includes('gemini-3-pro-image') || normalized.includes('gemini-3-pro') || normalized.includes('gemini-3.1-pro')) {
+        return {
+            sizeFormat: 'ratio',
+            maxGenerations: 4,
+            maxInputImages: 4,
+            defaultSize: '1:1',
             defaultResolution: '1K',
             supportedSizes: ratioSizeOptions,
-            supportedResolutions: ['1K', '2K'],
+            supportedResolutions: ['1K', '2K', '4K'],
             hasResolution: true
         }
     }
@@ -2082,9 +2156,8 @@ const inferModelOptionMetadata = (modelId: string, endpoint = effectiveApiEndpoi
 }
 
 const formatResolutionOptionLabel = (value: string): string => {
-    const normalized = value.trim()
+    const normalized = normalizeImageResolution(value)
     if (!normalized) return value
-    if (/^\d+k$/i.test(normalized)) return normalized.toUpperCase()
     return normalized
 }
 
@@ -2120,12 +2193,14 @@ const normalizeCachedModelOptions = (options: ModelOption[], endpoint: string): 
         if (shouldRefreshInferredSizeMetadata(option, endpoint) || isLikelyLegacyGptImageMetadata(option, endpoint)) {
             next.sizeFormat = inferred.sizeFormat
             next.defaultSize = inferred.defaultSize
-            next.defaultResolution = inferred.defaultResolution
+            next.defaultResolution = normalizeImageResolution(inferred.defaultResolution || '')
             next.supportedSizes = inferred.supportedSizes
-            next.supportedResolutions = inferred.supportedResolutions
+            next.supportedResolutions = normalizeResolutionValues(inferred.supportedResolutions)
             next.hasResolution = inferred.hasResolution
         }
 
+        next.defaultResolution = normalizeImageResolution(next.defaultResolution || '')
+        next.supportedResolutions = normalizeResolutionValues(next.supportedResolutions)
         next.maxGenerations = next.maxGenerations || inferred.maxGenerations
         next.maxInputImages = next.maxInputImages || inferred.maxInputImages
         return next
@@ -2237,7 +2312,7 @@ const buildGenerateRequest = (prompt: string, images: string[], count = generati
     }
 
     if (showImageSizeConfig.value) {
-        request.imageSize = gemini3ImageSize.value
+        request.imageSize = normalizeImageResolution(gemini3ImageSize.value)
     }
 
     if (supportsGoogleSearch.value) {
@@ -2269,7 +2344,7 @@ const createGenerationTask = (source: GenerationTask['source'], prompt: string, 
         resolvedEndpoint: resolvedGenerationEndpoint.value,
         requestProvider: requestProviderType.value,
         aspectRatio: selectedAspectRatio.value,
-        imageSize: gemini3ImageSize.value,
+        imageSize: normalizeImageResolution(gemini3ImageSize.value),
         count: recipe.count,
         batchMode: recipe.batchMode,
         images: [],
@@ -3634,7 +3709,7 @@ const getDiagnosticOutputSize = (provider: string, modelType: string, aspectRati
         }
         return aspectRatioToOpenAiImageSize(aspectRatio, imageSize || '1K')
     }
-    if (modelType === 'gemini-3-pro-image') {
+    if (modelType === 'gemini-3-pro-image' || modelType === 'nano-banana') {
         return aspectRatioToGeminiSize(aspectRatio, imageSize || '1K')
     }
     return ''
@@ -3658,11 +3733,11 @@ const selectedModelMaxInputImages = computed(() =>
 )
 
 const selectedModelSupportedSizes = computed(() =>
-    selectedModelOption.value?.supportedSizes?.filter(Boolean) || []
+    [...new Set((selectedModelOption.value?.supportedSizes || []).map(size => size.trim()).filter(Boolean))]
 )
 
 const selectedModelSupportedResolutions = computed(() =>
-    selectedModelOption.value?.supportedResolutions?.filter(Boolean) || []
+    normalizeResolutionValues(selectedModelOption.value?.supportedResolutions) || []
 )
 
 const selectedModelSizeFormat = computed(() =>
@@ -3771,23 +3846,58 @@ const baseAspectRatioOptions = [
     ...buildAspectRatioOptions(baseAspectRatioResolutionMap)
 ]
 
+const isAspectRatioSize = (size: string): boolean =>
+    /^\d+(?:\.\d+)?:\d+(?:\.\d+)?$/.test(size.trim())
+
+const buildResolutionAwareAspectRatioOptions = (sizes: string[], sizeData: Record<string, string>) =>
+    sizes.map(size => ({
+        value: size,
+        label: sizeData[size] ? `${size} - ${sizeData[size]}` : formatModelSizeOptionLabel(size)
+    }))
+
+const getCurrentAspectRatioResolutionData = (): Record<string, string> | null => {
+    const imageSize = normalizeImageResolution(gemini3ImageSize.value)
+
+    if (selectedImageModelType.value === 'gemini-3-pro-image' || selectedImageModelType.value === 'nano-banana') {
+        return geminiAspectRatioResolutionData[imageSize] || null
+    }
+
+    if (selectedImageModelType.value === 'gpt-image') {
+        if (requestProviderType.value === 'grsai' || requestProviderType.value === 'grsai-draw') {
+            return grsaiGptImageAspectRatioResolutionData[imageSize] || null
+        }
+
+        if (shouldUseDoraverseGptImageSize.value) {
+            return doraverseGptImageAspectRatioResolutionMap
+        }
+
+        return openAiAspectRatioResolutionData[imageSize] || null
+    }
+
+    if (selectedModelSizeFormat.value === 'ratio' && selectedModelHasResolutionMetadata.value) {
+        return geminiAspectRatioResolutionData[imageSize] || baseAspectRatioResolutionMap
+    }
+
+    return null
+}
+
 const availableAspectRatios = computed(() => {
+    const sizeData = getCurrentAspectRatioResolutionData()
+
     if (selectedModelSupportedSizes.value.length > 0) {
+        if (
+            sizeData &&
+            selectedModelSupportedResolutions.value.length > 0 &&
+            selectedModelSupportedSizes.value.every(isAspectRatioSize)
+        ) {
+            return buildResolutionAwareAspectRatioOptions(selectedModelSupportedSizes.value, sizeData)
+        }
+
         return selectedModelSupportedSizes.value.map(size => ({
             value: size,
             label: formatModelSizeOptionLabel(size)
         }))
     }
-
-    const sizeData = selectedImageModelType.value === 'gemini-3-pro-image'
-        ? geminiAspectRatioResolutionData[gemini3ImageSize.value]
-        : selectedImageModelType.value === 'gpt-image'
-          ? (requestProviderType.value === 'grsai' || requestProviderType.value === 'grsai-draw')
-            ? grsaiGptImageAspectRatioResolutionData[gemini3ImageSize.value]
-            : shouldUseDoraverseGptImageSize.value
-              ? doraverseGptImageAspectRatioResolutionMap
-              : openAiAspectRatioResolutionData[gemini3ImageSize.value]
-          : null
 
     return sizeData ? buildAspectRatioOptions(sizeData) : baseAspectRatioOptions
 })
@@ -3804,21 +3914,24 @@ const showImageSizeConfig = computed(() => {
     return supportsImageSizeConfig.value
 })
 
-const applySelectedModelParameterDefaults = () => {
+const applySelectedModelParameterDefaults = (preferDefaults = false) => {
     const sizes = availableAspectRatios.value.map(option => option.value)
     const defaultSize = selectedModelOption.value?.defaultSize || ''
-    if (sizes.length && defaultSize && sizes.includes(defaultSize)) {
+    if (preferDefaults && sizes.length && defaultSize && sizes.includes(defaultSize)) {
         selectedAspectRatio.value = defaultSize
     } else if (sizes.length && !sizes.includes(selectedAspectRatio.value)) {
-        selectedAspectRatio.value = sizes[0]
+        selectedAspectRatio.value = defaultSize && sizes.includes(defaultSize) ? defaultSize : sizes[0]
     }
 
     const resolutions = imageSizeOptions.value.map(option => option.value)
-    const defaultResolution = selectedModelOption.value?.defaultResolution || ''
-    if (resolutions.length && defaultResolution && resolutions.includes(defaultResolution)) {
+    const defaultResolution = normalizeImageResolution(selectedModelOption.value?.defaultResolution || '')
+    const currentResolution = normalizeImageResolution(gemini3ImageSize.value)
+    if (preferDefaults && resolutions.length && defaultResolution && resolutions.includes(defaultResolution)) {
         gemini3ImageSize.value = defaultResolution
-    } else if (resolutions.length && !resolutions.includes(gemini3ImageSize.value)) {
-        gemini3ImageSize.value = resolutions[0]
+    } else if (resolutions.length && currentResolution && resolutions.includes(currentResolution)) {
+        gemini3ImageSize.value = currentResolution
+    } else if (resolutions.length && !resolutions.includes(currentResolution)) {
+        gemini3ImageSize.value = defaultResolution && resolutions.includes(defaultResolution) ? defaultResolution : resolutions[0]
     }
 
     if (generationCount.value > selectedModelMaxGenerations.value) {
@@ -3829,7 +3942,7 @@ const applySelectedModelParameterDefaults = () => {
 watch(
     () => selectedModelOption.value?.id,
     () => {
-        applySelectedModelParameterDefaults()
+        applySelectedModelParameterDefaults(true)
     },
     { immediate: false }
 )
