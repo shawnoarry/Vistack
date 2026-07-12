@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-12 20:30 (Asia/Shanghai)
+Last updated: 2026-07-12 20:59 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -26,7 +26,7 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - The only current runtime-source change is diagnostic report generation and secret redaction; generation requests and provider routing are unchanged.
 - The user-owned untracked `排查/` directory exists and must not be modified or removed.
 - Production build succeeds with Vite 5.4.19.
-- Current production bundle is approximately 365.89 kB JS / 127.57 kB gzip and 46.92 kB CSS / 7.75 kB gzip.
+- Current production bundle is approximately 366.20 kB JS / 127.62 kB gzip and 46.99 kB CSS / 7.76 kB gzip.
 
 ## Completed Work
 
@@ -58,6 +58,14 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Added tolerant formatting for invalid legacy history timestamps.
 - Did not change Clarity, generation requests, model routing, API payloads, or stored history data.
 
+### 4. Asset history preview header fix
+
+- Created diagnostic checkpoint commit `19c6c8f` (`feat: improve diagnostic reports`) before starting UI work.
+- Fixed the asset-history preview modal header that could become hundreds of pixels tall when the prompt and nine action buttons competed in one horizontal flex row.
+- Kept the title/prompt in its own row and moved actions into a stable toolbar below it.
+- Grouped common actions separately from delete/close actions and prevented button labels from breaking into vertical text.
+- Preserved every existing action and the image, thumbnail, prompt, and batch-information areas.
+
 ## Verification Baseline
 
 Latest successful command:
@@ -73,6 +81,8 @@ Latest result:
 - Tests: 30 passed.
 - Production build: passed.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
+- UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
+- Browser console errors during the UI fixture check: none.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
 
@@ -100,8 +110,8 @@ The diagnostic enhancement was saved as a separate checkpoint before starting UI
 
 ## Next TODO
 
-1. Address the user-reported asset-history preview modal sizing and hierarchy issue as a bounded UI fix.
-2. Design and implement canvas storage v2 after the UI fix checkpoint.
+1. Continue collecting and fixing the user's concrete UI pain points as bounded changes, keeping each visual checkpoint separate.
+2. Design and implement canvas storage v2 after the current UI review pass.
    - Store large image data in IndexedDB rather than `localStorage`.
    - Read v2 first and fall back to the existing format.
    - Do not delete legacy data during the first migration release.
@@ -127,6 +137,7 @@ Deferred by user decision:
 - The review should cover, in order: composition, density and spacing, typography, component consistency, interaction states, color/contrast, depth, motion, and mobile behavior.
 - Preserve the current information density, workflows, and domain-specific controls. Do not redesign the product into a generic landing page or remove deliberate functionality.
 - Produce prioritized findings and a bounded visual direction before implementing UI changes. The user's concrete pain points take precedence over generic aesthetic preferences.
+- First reported issue fixed: the asset-history preview title/prompt container no longer expands because the action toolbar wraps vertically beside it.
 
 ## Resume Checklist
 
@@ -137,6 +148,16 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-12 20:59 (Asia/Shanghai)
+
+- User provided screenshots showing a confusingly tall title/prompt container in the asset-history preview modal.
+- Root cause: the long prompt block and nine buttons shared one horizontal flex row; the button area was squeezed into a narrow vertical column and expanded the entire header.
+- Implemented a bounded header/toolbar restructure in `src/App.vue`; all actions and behavior are preserved.
+- `npm run check` passed with 30 tests and a successful production build.
+- Verified wide and narrow layouts in the local browser using the application's compiled styles; no overflow, vertical button text, or console errors. The temporary visual fixture was deleted.
+- Saved the completed UI fix as a focused Git checkpoint; the only remaining untracked path is the user-owned `排查/` directory.
+- Local development server is running at `http://127.0.0.1:4173/` for user review.
 
 ### 2026-07-12 20:30 (Asia/Shanghai)
 

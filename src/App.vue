@@ -1143,7 +1143,7 @@
                         : 'border-brand-line bg-white text-brand-ink shadow-black/20'
                 ]"
             >
-                <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="mb-3 border-b border-brand-line pb-3 dark:border-night-muted/35">
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-brand-ink dark:text-brand-surface">
                             {{ historyPreviewItem.source === 'text' ? '文生图' : '参考图生成' }}
@@ -1151,27 +1151,31 @@
                         </p>
                         <p class="mt-1 line-clamp-1 text-xs text-brand-muted">{{ historyPreviewItem.recipe?.mainPrompt || historyPreviewItem.prompt }}</p>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            :class="[
-                                'rounded-md border px-3 py-1.5 text-xs font-semibold transition',
-                                historyPreviewOriginalMode
-                                    ? 'border-brand-accent bg-brand-accent text-brand-surface'
-                                    : 'border-brand-line text-brand-ink hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10'
-                            ]"
-                            @click="openOriginalImage(historyPreviewImage)"
-                        >
-                            原图模式
-                        </button>
-                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="handleDownloadResult(historyPreviewImage)">下载</button>
-                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="copyHistoryDiagnostic(historyPreviewItem, historyPreviewImage)">复制生成信息</button>
-                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="pushHistoryImages(historyPreviewItem)">结果作参考</button>
-                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="addHistoryItemToCanvas(historyPreviewItem, historyPreviewImage)">加入画布</button>
-                        <button type="button" class="rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="reuseHistoryRecipe(historyPreviewItem)">一键复用</button>
-                        <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryImageAt(historyPreviewItem, historyPreviewItem.images.indexOf(historyPreviewImage))">删除当前图</button>
-                        <button type="button" class="rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryItem(historyPreviewItem)">删除整组</button>
-                        <button type="button" class="rounded-md bg-brand-accent px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="historyPreviewItem = null">关闭</button>
+                    <div class="mt-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                :class="[
+                                    'whitespace-nowrap rounded-md border px-3 py-1.5 text-xs font-semibold transition',
+                                    historyPreviewOriginalMode
+                                        ? 'border-brand-accent bg-brand-accent text-brand-surface'
+                                        : 'border-brand-line text-brand-ink hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10'
+                                ]"
+                                @click="openOriginalImage(historyPreviewImage)"
+                            >
+                                原图模式
+                            </button>
+                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="handleDownloadResult(historyPreviewImage)">下载</button>
+                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="copyHistoryDiagnostic(historyPreviewItem, historyPreviewImage)">复制生成信息</button>
+                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="pushHistoryImages(historyPreviewItem)">结果作参考</button>
+                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="addHistoryItemToCanvas(historyPreviewItem, historyPreviewImage)">加入画布</button>
+                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="reuseHistoryRecipe(historyPreviewItem)">一键复用</button>
+                        </div>
+                        <div class="flex shrink-0 flex-wrap gap-2">
+                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryImageAt(historyPreviewItem, historyPreviewItem.images.indexOf(historyPreviewImage))">删除当前图</button>
+                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryItem(historyPreviewItem)">删除整组</button>
+                            <button type="button" class="whitespace-nowrap rounded-md bg-brand-accent px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="historyPreviewItem = null">关闭</button>
+                        </div>
                     </div>
                 </div>
                 <div class="min-h-0 flex-1 overflow-auto rounded-lg bg-brand-surface dark:bg-black/20">
