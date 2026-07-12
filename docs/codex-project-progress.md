@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-12 20:16 (Asia/Shanghai)
+Last updated: 2026-07-12 20:30 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -11,14 +11,22 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Make small, reversible changes with automated checks and migration fallbacks.
 - Explain work in plain Chinese because the user is a beginner.
 - Keep progress and next TODO items in this file so a truncated or new conversation can resume safely.
+- Continue through the agreed roadmap autonomously. Do not ask the user to approve routine implementation details or every checkpoint.
+
+## Execution Policy
+
+- For each phase: inspect current behavior, add or update tests, make the smallest compatible change, run `npm run check`, update this file, and create a focused Git checkpoint.
+- Continue automatically to the next agreed phase after a successful checkpoint.
+- Stop and ask the user only when an action would delete or migrate data without fallback, change a familiar workflow, require credentials/payment/deployment, expose private information, or when tests reveal an ambiguous behavior choice.
+- Send concise progress updates while working, but do not require the user to make routine technical decisions.
 
 ## Current State
 
 - Branch: `main`, tracking `origin/main`.
-- The original application runtime source has not been changed during the current safety-work phase.
+- The only current runtime-source change is diagnostic report generation and secret redaction; generation requests and provider routing are unchanged.
 - The user-owned untracked `排查/` directory exists and must not be modified or removed.
 - Production build succeeds with Vite 5.4.19.
-- Current production bundle remains unchanged at approximately 364.46 kB JS / 126.98 kB gzip and 46.92 kB CSS / 7.75 kB gzip.
+- Current production bundle is approximately 365.89 kB JS / 127.57 kB gzip and 46.92 kB CSS / 7.75 kB gzip.
 
 ## Completed Work
 
@@ -41,6 +49,15 @@ This file is the durable handoff record for future Codex conversations. Read it 
   - proxy token checks, unsafe literal target rejection, header filtering, JSON POST, and GET behavior.
 - No application runtime module was changed by this phase.
 
+### 3. Diagnostic report hardening
+
+- Created safety checkpoint commit `ffda75c` (`test: add safety baseline checks`).
+- Preserved both existing copy-diagnostic buttons and all prior diagnostic fields.
+- Added capture time, visible error, browser, online state, current view, configured endpoint, resolved endpoint, and history creation time.
+- Added redaction for Bearer credentials, API keys, proxy tokens, sensitive URL query parameters, and URL credentials.
+- Added tolerant formatting for invalid legacy history timestamps.
+- Did not change Clarity, generation requests, model routing, API payloads, or stored history data.
+
 ## Verification Baseline
 
 Latest successful command:
@@ -52,16 +69,16 @@ npm run check
 Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
-- Test files: 3 passed.
-- Tests: 24 passed.
+- Test files: 4 passed.
+- Tests: 30 passed.
 - Production build: passed.
-- Runtime source diff: empty.
+- Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
 
 ## Safety Baseline Checkpoint
 
-The safety checkpoint created on 2026-07-12 contains:
+The safety checkpoint commit `ffda75c` created on 2026-07-12 contains:
 
 - `docs/codex-project-progress.md`
 - `package.json`
@@ -79,26 +96,37 @@ User-owned unrelated state:
 
 - `排查/` is untracked and untouched.
 
+The diagnostic enhancement was saved as a separate checkpoint before starting UI work.
+
 ## Next TODO
 
-1. Review and strengthen the application's own diagnostic export.
-   - Preserve current error messages and the existing "copy diagnostic information" workflow.
-   - Add tests around diagnostic content before changing it.
-   - Add useful non-secret context such as time, model, endpoint route, proxy mode, browser, and exact visible error while masking API keys and proxy tokens.
-2. Design and implement canvas storage v2 only after the diagnostic baseline is protected.
+1. Address the user-reported asset-history preview modal sizing and hierarchy issue as a bounded UI fix.
+2. Design and implement canvas storage v2 after the UI fix checkpoint.
    - Store large image data in IndexedDB rather than `localStorage`.
    - Read v2 first and fall back to the existing format.
    - Do not delete legacy data during the first migration release.
+   - Preserve the current canvas UI and all existing images during migration.
 3. Add proxy security in compatibility mode.
    - Preserve the current mode initially.
    - Add optional strict mode, per-hop redirect validation, DNS/private-IP validation, configurable limits, and timeouts.
    - Retain compatibility for existing custom public endpoints.
-4. Expand tests before touching provider payload construction or task recovery.
-5. Upgrade vulnerable build dependencies separately; do not use `npm audit fix --force` blindly.
+4. Upgrade vulnerable build dependencies in small groups.
+   - Do not use `npm audit fix --force` blindly.
+   - Run the provider-routing and sizing tests after every dependency group.
+5. Expand tests around provider payload construction and task recovery before any related refactor.
+6. Only then extract small state modules from `App.vue`; do not redesign the UI or provider behavior.
 
 Deferred by user decision:
 
 - Do not change or disable Microsoft Clarity yet. Reconsider opt-in loading only after local diagnostics are demonstrably sufficient for future bug investigation.
+
+## UI Review Track
+
+- The user has additional visual/UI concerns and asked whether to state them first or request a general audit.
+- Recommended workflow: collect the user's concrete pain points first in plain language, then perform a systematic full-interface review before editing.
+- The review should cover, in order: composition, density and spacing, typography, component consistency, interaction states, color/contrast, depth, motion, and mobile behavior.
+- Preserve the current information density, workflows, and domain-specific controls. Do not redesign the product into a generic landing page or remove deliberate functionality.
+- Produce prioritized findings and a bounded visual direction before implementing UI changes. The user's concrete pain points take precedence over generic aesthetic preferences.
 
 ## Resume Checklist
 
@@ -109,6 +137,27 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-12 20:30 (Asia/Shanghai)
+
+- User introduced a UI/visual review track and asked how to start.
+- Applied the UI aesthetics review workflow and recommended a hybrid process: user describes the felt problems first, then Codex audits the entire interface systematically.
+- No UI or runtime code was changed. Awaiting the user's initial visual pain points or screenshots before beginning the audit.
+
+### 2026-07-12 20:25 (Asia/Shanghai)
+
+- User requested a complete roadmap and authorized autonomous progress without approval at every routine step.
+- Added the standing execution policy: test first, make small compatible changes, run the full check, update handoff, checkpoint, and continue.
+- Defined the limited conditions that still require user input: destructive data changes, workflow changes, credentials/payment/deployment, privacy exposure, or genuinely ambiguous behavior.
+- No runtime code changed in this turn. Current diagnostic work remains verified and ready for its checkpoint; next major phase is fallback-safe canvas storage v2.
+
+### 2026-07-12 20:21 (Asia/Shanghai)
+
+- Created verified safety checkpoint commit `ffda75c`; only Codex-owned test, package, and handoff files were committed.
+- Implemented tested diagnostic report building and credential redaction without modifying generation or provider behavior.
+- `npm run check` passed: 4 test files, 30 tests, both TypeScript checks, and production build.
+- Current diagnostic changes remain uncommitted for review. The user-owned `排查/` directory remains untouched.
+- Next action after approval: save the diagnostic enhancement as its own checkpoint, then begin the fallback-safe canvas storage v2 work.
 
 ### 2026-07-12 20:16 (Asia/Shanghai)
 

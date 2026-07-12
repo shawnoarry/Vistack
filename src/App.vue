@@ -1282,6 +1282,7 @@ import {
     openAiAspectRatioResolutionData
 } from './utils/imageSizing'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
+import { buildDiagnosticReport, formatDiagnosticTimestamp, sanitizeDiagnosticUrl } from './utils/diagnostics'
 import {
     deleteGenerationHistoryItem,
     deletePendingGenerationTaskItem,
@@ -3589,28 +3590,35 @@ const buildRequestDiagnosticText = () => {
         return `${index + 1}. ${roleLabel(meta.role)} / ${meta.label}${meta.note ? ` / ${meta.note}` : ''}`
     })
 
-    return [
-        'Vistack 请求诊断',
-        `endpoint: ${diagnostic.endpoint}`,
-        `provider: ${diagnostic.provider}`,
-        `proxy: ${apiUseProxy.value ? 'on' : 'off'}`,
-        diagnostic.proxyStream ? `proxyStream: ${diagnostic.proxyStream}` : '',
-        `model: ${effectiveSelectedModel.value}`,
-        `referenceCount: ${selectedImages.value.length}`,
-        `referencePayloadField: ${diagnostic.payloadField}`,
-        `batchMode: ${generationBatchMode.value}`,
-        `generationRequests: ${generationRequestLimit.value}`,
-        `n: ${requestImageCountParam.value}`,
-        `aspectRatio: ${diagnostic.sentAspectRatio || 'not sent'}`,
-        `imageSize: ${diagnostic.sentImageSize || 'not sent'}`,
-        showDoraverseImageProxyControls.value ? `quality: ${imageQuality.value}` : '',
-        showDoraverseImageProxyControls.value ? `autoPrompt: ${imageAutoPrompt.value}` : '',
-        showDoraverseImageProxyControls.value ? `translate: ${imageTranslate.value}` : '',
-        diagnostic.outputSize ? `outputSize: ${diagnostic.outputSize}` : '',
-        diagnostic.warning ? `warning: ${diagnostic.warning}` : '',
-        references.length ? `references:\n${references.join('\n')}` : 'references: none',
-        `promptPreview:\n${promptPreview.value || ''}`
-    ].filter(Boolean).join('\n')
+    return buildDiagnosticReport({
+        title: 'Vistack 请求诊断',
+        visibleError: displayError.value,
+        userAgent: navigator.userAgent,
+        details: [
+            `view: ${currentView.value}/${workspaceMode.value}`,
+            `online: ${navigator.onLine ? 'yes' : 'no'}`,
+            `configuredEndpoint: ${sanitizeDiagnosticUrl(effectiveApiEndpoint.value)}`,
+            `endpoint: ${sanitizeDiagnosticUrl(diagnostic.endpoint)}`,
+            `provider: ${diagnostic.provider}`,
+            `proxy: ${apiUseProxy.value ? 'on' : 'off'}`,
+            diagnostic.proxyStream ? `proxyStream: ${diagnostic.proxyStream}` : '',
+            `model: ${effectiveSelectedModel.value}`,
+            `referenceCount: ${selectedImages.value.length}`,
+            `referencePayloadField: ${diagnostic.payloadField}`,
+            `batchMode: ${generationBatchMode.value}`,
+            `generationRequests: ${generationRequestLimit.value}`,
+            `n: ${requestImageCountParam.value}`,
+            `aspectRatio: ${diagnostic.sentAspectRatio || 'not sent'}`,
+            `imageSize: ${diagnostic.sentImageSize || 'not sent'}`,
+            showDoraverseImageProxyControls.value ? `quality: ${imageQuality.value}` : '',
+            showDoraverseImageProxyControls.value ? `autoPrompt: ${imageAutoPrompt.value}` : '',
+            showDoraverseImageProxyControls.value ? `translate: ${imageTranslate.value}` : '',
+            diagnostic.outputSize ? `outputSize: ${diagnostic.outputSize}` : '',
+            diagnostic.warning ? `warning: ${diagnostic.warning}` : '',
+            references.length ? `references:\n${references.join('\n')}` : 'references: none',
+            `promptPreview:\n${promptPreview.value || ''}`
+        ]
+    })
 }
 
 const copyRequestDiagnostic = async () => {
@@ -4353,25 +4361,29 @@ const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string)
         return `${index + 1}. ${roleLabel(meta.role)} / ${meta.label}${meta.note ? ` / ${meta.note}` : ''}`
     }) || []
 
-    const text = [
-        'Vistack 历史生成信息',
-        `historyId: ${item.id}`,
-        `selectedImageIndex: ${imageIndex + 1}`,
-        `source: ${item.source}`,
-        `configuredEndpoint: ${item.endpoint}`,
-        `resolvedEndpoint: ${item.resolvedEndpoint || item.endpoint}`,
-        `provider: ${item.requestProvider || 'unknown'}`,
-        `model: ${item.model}`,
-        `proxy: ${item.useProxy ? 'on' : 'off'}`,
-        `aspectRatio: ${item.aspectRatio}`,
-        `imageSize: ${item.imageSize}`,
-        `count: ${item.count || item.images.length}`,
-        `batchMode: ${item.batchMode || item.recipe?.batchMode || 'fill'}`,
-        `referenceCount: ${item.recipe?.referenceImages?.length || 0}`,
-        references.length ? `references:\n${references.join('\n')}` : 'references: none',
-        item.imagePersistenceWarnings?.length ? `saveWarnings:\n${item.imagePersistenceWarnings.join('\n')}` : '',
-        `prompt:\n${item.prompt}`
-    ].filter(Boolean).join('\n')
+    const text = buildDiagnosticReport({
+        title: 'Vistack 历史生成信息',
+        userAgent: navigator.userAgent,
+        details: [
+            `historyId: ${item.id}`,
+            `historyCreatedAt: ${formatDiagnosticTimestamp(item.createdAt)}`,
+            `selectedImageIndex: ${imageIndex + 1}`,
+            `source: ${item.source}`,
+            `configuredEndpoint: ${sanitizeDiagnosticUrl(item.endpoint)}`,
+            `resolvedEndpoint: ${sanitizeDiagnosticUrl(item.resolvedEndpoint || item.endpoint)}`,
+            `provider: ${item.requestProvider || 'unknown'}`,
+            `model: ${item.model}`,
+            `proxy: ${item.useProxy ? 'on' : 'off'}`,
+            `aspectRatio: ${item.aspectRatio}`,
+            `imageSize: ${item.imageSize}`,
+            `count: ${item.count || item.images.length}`,
+            `batchMode: ${item.batchMode || item.recipe?.batchMode || 'fill'}`,
+            `referenceCount: ${item.recipe?.referenceImages?.length || 0}`,
+            references.length ? `references:\n${references.join('\n')}` : 'references: none',
+            item.imagePersistenceWarnings?.length ? `saveWarnings:\n${item.imagePersistenceWarnings.join('\n')}` : '',
+            `prompt:\n${item.prompt}`
+        ]
+    })
 
     try {
         await navigator.clipboard.writeText(text)
