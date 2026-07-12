@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-12 20:59 (Asia/Shanghai)
+Last updated: 2026-07-13 00:39 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -148,6 +148,13 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-13 00:39 (Asia/Shanghai)
+
+- User requested a commit.
+- Confirmed the asset-history preview fix was already committed as `aa33145` and the branch was synchronized with `origin/main` at the start of this turn.
+- No application code was changed and no build rerun was needed; the latest verified baseline remains 30 passing tests plus a successful production build.
+- Added only this handoff status update. The user-owned untracked `排查/` directory remains untouched and excluded.
 
 ### 2026-07-12 20:59 (Asia/Shanghai)
 
