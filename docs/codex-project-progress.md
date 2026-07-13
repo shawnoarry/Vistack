@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-13 16:45 (Asia/Shanghai)
+Last updated: 2026-07-13 16:55 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -190,6 +190,7 @@ The diagnostic enhancement was saved as a separate checkpoint before starting UI
 4. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
 5. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
 6. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
+7. Use `docs/gpt-image-playground-integration-plan.md` for selective integration after the current UI work has a verified checkpoint; the fork roadmap does not authorize implementing its P1-P3 items automatically.
 
 Deferred by user decision:
 
@@ -213,6 +214,15 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-13 16:55 (Asia/Shanghai)
+
+- Audited the user's `shawnoarry/gpt-image-playground` fork as a selective reference rather than a replacement for Vistack.
+- Fixed the cross-machine reference baseline at clean `main` commit `c4dd477c18ee7639a1e6de27bee7b2849e3ff9bd`; recorded clone, checkout, verification, and baseline-upgrade instructions.
+- Added `docs/gpt-image-playground-integration-plan.md` with a P0 UI stability gate, P1-P3 integration priorities, explicit deferred and parked items, source-reference links, acceptance boundaries, and an off-machine resume checklist.
+- Prioritized task-level actual parameters/diagnostics, an isolated Responses API adapter, and safe reference-image input after UI stabilization; placed native masks, backup/restore, Storage v2, and capability profiles behind later product briefs and safety prerequisites.
+- Deferred fal.ai, generic provider manifests, advanced selection interactions, and deployment/PWA work until real demand exists; explicitly rejected wholesale React/Zustand/UI migration and URL-carried API secrets.
+- Updated the documentation index. No runtime source, UI, API request, storage schema, dependency, or build configuration was changed, so no application test run was required.
 
 ### 2026-07-13 16:45 (Asia/Shanghai)
 
