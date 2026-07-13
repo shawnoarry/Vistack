@@ -648,31 +648,19 @@
                                 </label>
                                 <button
                                     type="button"
-                                    @click="handleGenerate"
-                                    :disabled="!canGenerate"
+                                    @click="handleGenerationAction"
+                                    :disabled="!canRunGeneration"
                                     :title="generationActionTitle"
                                     :class="[
-                                        'inline-flex min-h-[50px] items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
-                                        canGenerate
-                                            ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90 dark:border-night-muted dark:bg-night-panel'
+                                        'col-span-2 inline-flex min-h-[50px] items-center justify-center rounded-lg px-3 text-xs font-semibold transition sm:col-span-1',
+                                        canRunGeneration
+                                            ? generationMode === 'image'
+                                                ? 'border border-brand-ink bg-brand-ink text-brand-surface hover:bg-brand-ink/90 dark:border-night-muted dark:bg-night-panel'
+                                                : 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90 dark:bg-night-accent'
                                             : 'cursor-not-allowed bg-brand-line text-brand-muted dark:bg-night-panel dark:text-night-muted'
                                     ]"
                                 >
-                                    {{ selectedImages.length ? (isLoading ? '继续生成' : '参考图生成') : '先传参考图' }}
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="handleTextToImageGenerate"
-                                    :disabled="!canGenerateTextImage"
-                                    :title="textGenerationActionTitle"
-                                    :class="[
-                                        'inline-flex min-h-[50px] items-center justify-center rounded-lg px-3 text-xs font-semibold transition',
-                                        canGenerateTextImage
-                                            ? 'bg-brand-accent text-brand-surface hover:bg-brand-accent/90 dark:bg-night-accent'
-                                            : 'cursor-not-allowed bg-brand-line text-brand-muted dark:bg-night-panel dark:text-night-muted'
-                                    ]"
-                                >
-                                    {{ selectedImages.length ? '需移除参考图' : (isTextToImageLoading ? '继续生成' : '无参考图生成') }}
+                                    {{ generationActionLabel }}
                                 </button>
                                 <p
                                     v-if="shouldShowGenerationBlockingReason"
@@ -1100,6 +1088,7 @@ import {
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
 import { buildDiagnosticReport, formatDiagnosticTimestamp, sanitizeDiagnosticUrl } from './utils/diagnostics'
 import { buildAssetDownloadFilename, buildHistoryAssets, type AssetSortOrder, type HistoryAsset } from './utils/assetLibrary'
+import { buildGenerationActionLabel, resolveGenerationMode } from './utils/generationAction'
 import {
     deleteGenerationHistoryItem,
     deletePendingGenerationTaskItem,
@@ -2427,6 +2416,20 @@ const canGenerate = computed(
         (textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim())
 )
 
+const generationMode = computed(() => resolveGenerationMode(selectedImages.value.length))
+
+const canRunGeneration = computed(() =>
+    generationMode.value === 'image' ? Boolean(canGenerate.value) : Boolean(canGenerateTextImage.value)
+)
+
+const hasRunningGenerationTask = computed(() =>
+    generationMode.value === 'image' ? isLoading.value : isTextToImageLoading.value
+)
+
+const generationActionLabel = computed(() =>
+    buildGenerationActionLabel(generationMode.value, hasRunningGenerationTask.value)
+)
+
 const generationBlockingReason = computed(() => {
     if (!apiKey.value.trim()) return '请先配置 API Key。'
     if (!effectiveApiEndpoint.value.trim()) return '请先配置生图 API 端点。'
@@ -2437,6 +2440,7 @@ const generationBlockingReason = computed(() => {
     if (selectedImages.value.length > 0 && !(textToImagePrompt.value.trim() || selectedStyle.value || customPrompt.value.trim())) {
         return '请先输入提示词或选择模板。'
     }
+    if (selectedImages.value.length === 0 && !textToImagePrompt.value.trim()) return '请先输入提示词。'
     return ''
 })
 
@@ -2451,13 +2455,11 @@ const shouldShowGenerationBlockingReason = computed(() =>
 )
 
 const generationActionTitle = computed(() =>
-    generationBlockingReason.value || (selectedImages.value.length ? '使用当前参考图和提示词生成' : '左侧上传参考图后此按钮会启用')
-)
-
-const textGenerationActionTitle = computed(() =>
-    selectedImages.value.length
-        ? '已上传参考图，请使用参考图生成；移除参考图后可无参考图生成'
-        : '不使用参考图，直接按提示词生成'
+    generationBlockingReason.value || (
+        generationMode.value === 'image'
+            ? '使用当前参考图和提示词进行图生图'
+            : '不使用参考图，按当前提示词进行文生图'
+    )
 )
 
 const promptAssistantReady = computed(
@@ -4527,5 +4529,8 @@ const handleGenerate = async () => {
         syncGenerationLoadingState()
     }
 }
+
+const handleGenerationAction = () =>
+    generationMode.value === 'image' ? handleGenerate() : handleTextToImageGenerate()
 
 </script>

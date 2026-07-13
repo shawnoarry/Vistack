@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-13 14:28 (Asia/Shanghai)
+Last updated: 2026-07-13 15:32 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -41,6 +41,7 @@ This file is the durable handoff record for future Codex conversations. Read it 
 
 - Branch: `main`, tracking `origin/main`.
 - UI/UX Phase 1 is implemented: asset-library hierarchy, search/sort, separate-file selected downloads, and a responsive image-detail workspace.
+- Studio Phase 2A is implemented: the fixed PC prompt dock now has one dynamic `图生图 / 文生图` action while preserving the two existing internal request paths.
 - History storage formats, generation requests, and provider routing are unchanged.
 - Production build succeeds with Vite 5.4.19.
 - Current production bundle is approximately 377.28 kB JS / 132.07 kB gzip and 50.93 kB CSS / 8.30 kB gzip.
@@ -71,7 +72,7 @@ Proposed plan:
 
 The full draft is `docs/product-ui-ux-plan.md`. Phase 1 is implemented and recorded at `docs/phase-1-asset-library-brief.md`.
 
-No later phase is approved for implementation. The next product brief should cover Phase 2: the studio image-editing workflow and mobile ordering.
+The original broad Phase 2 studio restructure was not approved and has been withdrawn. Phase 2A is complete: the user selected one dynamic button labeled `图生图` with references and `文生图` without references, while the PC prompt dock remains fixed. Phase 2B is not approved; its next action is a product brief for moving the full couple-photo assistant behind a compact toolbar icon. Phrase/template icons, three-column layout, mobile ordering, canvas entry, result layout, request behavior, and local data remain unchanged.
 
 ## Completed Work
 
@@ -170,15 +171,16 @@ The diagnostic enhancement was saved as a separate checkpoint before starting UI
 
 ## Next TODO
 
-1. Prepare the Phase 2 product brief for the studio image-editing workflow and mobile ordering; do not implement it before explicit confirmation.
-2. After Phase 2, prepare Phase 3 for one current result, a persistent history-backed result list, and diagnostics tied to a selected generation.
-3. Prepare Phase 4 for compact API configuration and incremental provider/model capability profiles with a generic fallback.
-4. Design and implement storage v2 only after the core result design is agreed.
+1. Prepare the Phase 2B couple-photo icon-entry sketch and confirmation brief; do not infer implementation approval from Phase 2A.
+2. Only after Phase 2B is explicitly approved, implement and verify that bounded entry change without altering its prompt composition or request behavior.
+3. Prepare a separate result/history brief for one current result, persistent history-backed browsing, and diagnostics tied to a selected generation.
+4. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback.
+5. Design and implement storage v2 only after the core result design is agreed.
    - Store large image data in IndexedDB rather than `localStorage`.
    - Preserve existing history images, prompts, API presets, and canvas data during migration.
-5. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
-6. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
-7. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
+6. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
+7. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
+8. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
 
 Deferred by user decision:
 
@@ -202,6 +204,34 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-13 15:32 (Asia/Shanghai)
+
+- User selected Phase 2A option A and explicitly requested that the PC prompt dock remain fixed and visible.
+- Replaced the two mutually exclusive generation buttons with one dynamic action: `图生图` when references exist and `文生图` without references.
+- Preserved the existing internal request paths, concurrent-task behavior, prompt dock, tool icons, parameter controls, couple-photo assistant, canvas, result layout, and stored data.
+- Added a small generation-mode/label utility with two tests covering both modes and their `继续...` states.
+- `npm run check` passed with 6 test files and 36 tests, plus successful type checks and production build.
+- Verified at 1440×900 that the dock stays fixed after scrolling 700 px, only one `文生图` button appears without references, legacy button labels are absent, and the browser console has no warnings/errors.
+- Phase 2B remains unapproved; the next step is its product brief only.
+
+### 2026-07-13 15:13 (Asia/Shanghai)
+
+- User rejected the broad Phase 2 interpretation and clarified that they do not want the whole studio interface restructured.
+- Recorded that `图生图` and `文生图` terminology should remain; the remaining ambiguity is one dynamic button versus two independently visible buttons.
+- Confirmed from code that phrase, template, save-template, AI-improve, and translate actions are already compact icons in the fixed bottom toolbar; these entries and the toolbar now remain unchanged.
+- Recorded that low usage means the phrase/template capabilities need later product follow-up, not that their entries should be hidden.
+- Split the couple-photo assistant into a separately confirmed Phase 2B candidate: move its existing full controls behind a compact toolbar icon without deleting behavior.
+- Removed canvas entry changes from Phase 2. Canvas and toolbox require separate product-goal/workflow planning before any UI decision.
+- Replaced the previous confirmation draft with a small-batch clarification brief; no runtime source or stored data was changed.
+
+### 2026-07-13 14:59 (Asia/Shanghai)
+
+- Continued with the next authorized planning step and prepared the Phase 2 studio workflow brief without modifying runtime source.
+- Confirmed the current desktop three-column plus fixed-bottom-composer structure, the mobile stacking order, two mutually exclusive generation buttons, equal canvas mode weight, persistent prompt preview, and irrelevant parameter placeholders.
+- Recommended one dynamic generation action, a normal-flow composer above results, recomposed mobile ordering, collapsed low-use helpers/runtime information, a secondary canvas entry, and only hiding parameters already covered by current model logic.
+- Explicitly deferred persistent result/history unification to Phase 3 and API/model capability redesign to Phase 4; generation requests, storage schemas, history, prompts, API presets, and canvas data remain unchanged.
+- Added `docs/phase-2-studio-workflow-brief.md`; Phase 2 implementation is waiting for explicit approval of its five product decisions.
 
 ### 2026-07-13 14:28 (Asia/Shanghai)
 
