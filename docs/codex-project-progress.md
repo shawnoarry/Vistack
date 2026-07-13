@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-13 16:55 (Asia/Shanghai)
+Last updated: 2026-07-13 17:10 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -207,13 +207,20 @@ Deferred by user decision:
 
 ## Resume Checklist
 
-1. Read this file and `AGENTS.md`.
+1. Read `docs/resume-quickstart.md`, this file, and `AGENTS.md`.
 2. Run `git status --short --branch` and preserve unknown/user changes.
 3. Run `npm run check` before and after the next runtime change.
 4. Work on only one TODO area at a time.
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-13 17:10 (Asia/Shanghai)
+
+- Added `docs/resume-quickstart.md` as a beginner-friendly, one-page cross-machine startup guide.
+- Included first-time clone commands, the fixed playground reference commit, dirty-worktree stop conditions, required reading order, a copy-ready Codex kickoff prompt, verification commands, integration priorities, local preview, completion handoff, and prohibited destructive actions.
+- Added the guide to the current documentation index and the resume checklist.
+- No runtime source, UI, API, storage, dependency, or build configuration changed; no application test run was required.
 
 ### 2026-07-13 16:55 (Asia/Shanghai)
 
