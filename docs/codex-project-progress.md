@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-13 17:10 (Asia/Shanghai)
+Last updated: 2026-07-13 17:27 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -43,6 +43,7 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - UI/UX Phase 1 is implemented: asset-library hierarchy, search/sort, separate-file selected downloads, and a responsive image-detail workspace.
 - Studio Phase 2A is implemented: the fixed PC prompt dock now has one dynamic `图生图 / 文生图` action while preserving the two existing internal request paths.
 - Studio Phase 2B is implemented: the couple-photo assistant now opens from a compact toolbar icon as a PC popover/mobile bottom sheet, while preserving its prompt behavior.
+- The playground integration P0 gate is satisfied at runtime checkpoint `4d2bb94`; the sole next planning task is the result/history brief that incorporates task-level actual parameters and selected-generation diagnostics.
 - History storage formats, generation requests, and provider routing are unchanged.
 - Production build succeeds with Vite 5.4.19.
 - Current production bundle is approximately 386.62 kB JS / 135.35 kB gzip and 51.54 kB CSS / 8.43 kB gzip.
@@ -207,13 +208,22 @@ Deferred by user decision:
 
 ## Resume Checklist
 
-1. Read `docs/resume-quickstart.md`, this file, and `AGENTS.md`.
+1. Read `docs/resume-quickstart.md`, this file, `docs/gpt-image-playground-integration-plan.md`, the product document named by the current TODO, and `AGENTS.md` when present.
 2. Run `git status --short --branch` and preserve unknown/user changes.
 3. Run `npm run check` before and after the next runtime change.
 4. Work on only one TODO area at a time.
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-13 17:27 (Asia/Shanghai)
+
+- Reconciled the cross-machine quickstart and playground integration plan with the completed Phase 2B runtime baseline.
+- Marked the P0 UI stability gate complete at `4d2bb94` and explicitly prohibited another machine from repeating the finished UI work.
+- Declared one next task across all handoff documents: prepare the result/history product brief, incorporating optional task-level actual parameters and diagnostics tied to the selected generation.
+- Kept Responses API and reference-image paste/sort as separately confirmed later P1 items; the roadmap still does not authorize runtime implementation.
+- Changed first-time dependency installation to `npm ci`, corrected the default Vite preview port to `5173`, added absolute-path replacement guidance, and expanded the required reading order.
+- No runtime source, dependency, API, storage, or UI file was changed; documentation consistency checks are sufficient for this pass.
 
 ### 2026-07-13 17:10 (Asia/Shanghai)
 
