@@ -950,280 +950,73 @@
             @back-to-studio="currentView = 'studio'"
         />
 
-        <main v-if="currentView === 'assets'" class="wb-shell py-4 pb-10">
-            <section class="min-h-[calc(100vh-170px)] rounded-lg border border-brand-line bg-brand-surface p-4 shadow-sm shadow-black/5">
-                <div class="mb-4 flex flex-col gap-3 border-b border-brand-line pb-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <p class="wb-label text-brand-accent">Local asset library</p>
-                        <h1 class="mt-1 text-2xl font-semibold text-brand-ink">资产库</h1>
-                        <p class="mt-1 text-sm text-brand-muted">管理本地生成历史、收藏和自定义收藏夹。数据保存在当前浏览器。</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" class="wb-secondary" @click="currentView = 'studio'">返回创作台</button>
-                        <button
-                            v-if="generationHistory.length"
-                            type="button"
-                            class="wb-secondary"
-                            @click="toggleAssetSelectionMode"
-                        >
-                            {{ assetSelectionMode ? '退出选择' : '批量选择' }}
-                        </button>
-                        <button
-                            v-if="assetSelectionMode && selectedAssetIds.length"
-                            type="button"
-                            class="wb-secondary text-brand-accent"
-                            @click="showBulkDeleteDialog = true"
-                        >
-                            删除所选 {{ selectedAssetIds.length }}
-                        </button>
-                    </div>
-                </div>
-
-                <div class="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]">
-                    <aside class="space-y-3">
-                        <div class="rounded-lg border border-brand-line bg-white p-3">
-                            <label class="wb-label mb-2 block">筛选</label>
-                            <select v-model="historyFilter" class="wb-input w-full min-h-10 py-2 text-xs">
-                                <option value="all">全部记录</option>
-                                <option value="favorite">收藏</option>
-                                <option value="text">文生图</option>
-                                <option value="image">参考图生成</option>
-                                <option v-for="category in historyCategories" :key="category" :value="`category:${category}`">{{ category }}</option>
-                            </select>
-                        </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-3">
-                            <div class="mb-2 flex items-center justify-between gap-2">
-                                <span class="wb-label">收藏夹</span>
-                                <button type="button" class="rounded-md bg-brand-accent px-2.5 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="showCollectionDialog = true">
-                                    新建
-                                </button>
-                            </div>
-                            <div v-if="collectionOptions.length" class="flex flex-wrap gap-2">
-                                <button
-                                    v-for="category in collectionOptions"
-                                    :key="category"
-                                    type="button"
-                                    :class="[
-                                        'rounded-md border px-2.5 py-1.5 text-xs font-semibold transition',
-                                        historyFilter === `category:${category}`
-                                            ? 'border-brand-accent bg-brand-accent text-brand-surface'
-                                            : 'border-brand-line bg-brand-surface text-brand-muted hover:text-brand-ink'
-                                    ]"
-                                    @click="historyFilter = `category:${category}`"
-                                >
-                                    {{ category }}
-                                </button>
-                            </div>
-                            <p v-else class="text-xs leading-5 text-brand-muted">还没有收藏夹。新建后，可在资产卡片中归类。</p>
-                        </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-3">
-                            <div class="wb-label mb-2">概览</div>
-                            <div class="grid grid-cols-3 gap-2 text-center text-xs lg:grid-cols-1">
-                                <button type="button" class="rounded-md bg-brand-surface p-2 transition hover:bg-brand-line" @click="historyFilter = 'all'">
-                                    <div class="text-brand-muted">全部</div>
-                                    <div class="mt-1 font-semibold text-brand-ink">{{ generationHistory.length }}</div>
-                                </button>
-                                <button type="button" class="rounded-md bg-brand-surface p-2 transition hover:bg-brand-line" @click="historyFilter = 'favorite'">
-                                    <div class="text-brand-muted">收藏</div>
-                                    <div class="mt-1 font-semibold text-brand-ink">{{ favoriteHistory.length }}</div>
-                                </button>
-                                <button type="button" class="rounded-md bg-brand-surface p-2 transition hover:bg-brand-line" @click="historyFilter = historyCategories[0] ? `category:${historyCategories[0]}` : 'all'">
-                                    <div class="text-brand-muted">收藏夹</div>
-                                    <div class="mt-1 font-semibold text-brand-ink">{{ historyCategories.length }}</div>
-                                </button>
-                            </div>
-                            <div v-if="historyCategories.length" class="mt-3 flex flex-wrap gap-2">
-                                <button
-                                    v-for="category in historyCategories"
-                                    :key="category"
-                                    type="button"
-                                    :class="[
-                                        'rounded-md border px-2.5 py-1.5 text-xs font-semibold transition',
-                                        historyFilter === `category:${category}`
-                                            ? 'border-brand-accent bg-brand-accent text-brand-surface'
-                                            : 'border-brand-line bg-brand-surface text-brand-muted hover:text-brand-ink'
-                                    ]"
-                                    @click="historyFilter = `category:${category}`"
-                                >
-                                    {{ category }}
-                                </button>
-                            </div>
-                        </div>
-                    </aside>
-
-                    <section>
-                        <div v-if="filteredHistoryAssets.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-                            <article
-                                v-for="asset in filteredHistoryAssets"
-                                :key="asset.id"
-                                :class="[
-                                    'overflow-hidden rounded-lg border bg-white',
-                                    selectedAssetIds.includes(asset.id) ? 'border-brand-accent ring-2 ring-brand-accent/15' : 'border-brand-line'
-                                ]"
-                            >
-                                <button
-                                    type="button"
-                                    class="relative block aspect-square w-full bg-brand-surface dark:bg-night-panel"
-                                    @click="assetSelectionMode ? toggleAssetSelection(asset.id) : openHistoryPreview(asset.item, asset.image)"
-                                >
-                                    <img :src="asset.image" :alt="`历史资产 ${asset.index + 1}`" class="h-full w-full object-cover" />
-                                    <span v-if="assetSelectionMode" class="absolute left-2 top-2 rounded-md border border-white/60 bg-brand-ink/75 px-2 py-1 text-xs font-semibold text-brand-surface">
-                                        {{ selectedAssetIds.includes(asset.id) ? '已选' : '选择' }}
-                                    </span>
-                                    <span class="absolute right-2 top-2 rounded-md bg-brand-ink/70 px-2 py-1 text-[11px] font-semibold text-brand-surface">
-                                        {{ asset.item.aspectRatio }}
-                                    </span>
-                                </button>
-                                <div class="space-y-2 p-3">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div class="min-w-0">
-                                            <p class="truncate text-xs font-semibold text-brand-ink">
-                                                {{ asset.item.source === 'text' ? '文生图' : '参考图生成' }}
-                                                <span class="text-brand-muted"> · {{ asset.index + 1 }}/{{ asset.item.images.length }}</span>
-                                            </p>
-                                            <p class="mt-1 line-clamp-2 text-xs leading-5 text-brand-muted">{{ asset.item.recipe?.mainPrompt || asset.item.prompt }}</p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            :aria-pressed="asset.item.favorite === true"
-                                            :title="asset.item.favorite ? '取消收藏' : '收藏这张图'"
-                                            :class="[
-                                                'shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold transition',
-                                                asset.item.favorite
-                                                    ? 'border-brand-accent/30 bg-brand-accent/10 text-brand-accent'
-                                                    : 'border-brand-line bg-brand-surface text-brand-muted hover:border-brand-accent/35 hover:text-brand-accent'
-                                            ]"
-                                            @click="toggleHistoryFavorite(asset.item)"
-                                        >
-                                            {{ asset.item.favorite ? '已收藏' : '收藏' }}
-                                        </button>
-                                    </div>
-                                    <div class="flex flex-wrap gap-2">
-                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="openHistoryPreview(asset.item, asset.image)">详情</button>
-                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushImageToUpload(asset.image)">作参考</button>
-                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="addHistoryItemToCanvas(asset.item, asset.image)">加入画布</button>
-                                        <button type="button" class="wb-secondary min-h-8 px-2 text-xs text-brand-accent" @click="deleteHistoryImageAt(asset.item, asset.index)">删除</button>
-                                    </div>
-                                    <select
-                                        :value="asset.item.category || ''"
-                                        class="wb-input min-h-9 w-full py-1.5 text-xs"
-                                        @change="setHistoryCategory(asset.item, ($event.target as HTMLSelectElement).value)"
-                                    >
-                                        <option value="">未归类</option>
-                                        <option v-for="category in collectionOptions" :key="category" :value="category">{{ category }}</option>
-                                    </select>
-                                </div>
-                            </article>
-                        </div>
-
-                        <p v-else-if="historyLoading" class="rounded-lg border border-dashed border-brand-line bg-white p-6 text-sm text-brand-muted">正在读取本地历史...</p>
-                        <p v-else class="rounded-lg border border-dashed border-brand-line bg-white p-6 text-sm text-brand-muted">{{ generationHistory.length ? '当前筛选下没有记录。' : '成功生成后，资产会出现在这里。' }}</p>
-                    </section>
-                </div>
-            </section>
-        </main>
+        <AssetLibraryView
+            v-if="currentView === 'assets'"
+            :assets="filteredHistoryAssets"
+            :all-history-count="allHistoryAssets.length"
+            :favorite-count="favoriteHistoryAssetCount"
+            :collections="collectionOptions"
+            :loading="historyLoading"
+            :filter="historyFilter"
+            :search="assetSearch"
+            :sort="assetSort"
+            :selection-mode="assetSelectionMode"
+            :selected-ids="selectedAssetIds"
+            :downloading="isBatchDownloadingAssets"
+            :download-status="assetDownloadStatus"
+            @back="currentView = 'studio'"
+            @update:filter="historyFilter = $event"
+            @update:search="assetSearch = $event"
+            @update:sort="assetSort = $event"
+            @toggle-selection-mode="toggleAssetSelectionMode"
+            @toggle-selection="toggleAssetSelection"
+            @new-collection="showCollectionDialog = true"
+            @open="openHistoryPreview($event.item, $event.image)"
+            @download="downloadHistoryAsset"
+            @reference="pushImageToUpload($event.image)"
+            @reuse="reuseHistoryRecipe"
+            @canvas="addHistoryItemToCanvas($event.item, $event.image)"
+            @favorite="toggleHistoryFavorite"
+            @category="setHistoryCategory"
+            @delete-image="requestDeleteHistoryImage"
+            @download-selected="downloadSelectedAssets"
+            @delete-selected="showBulkDeleteDialog = true"
+        />
 
         <div class="wb-shell pb-10">
             <Footer />
         </div>
 
-        <div
+        <AssetDetailWorkspace
             v-if="historyPreviewItem"
-            :class="[
-                'fixed inset-0 z-[80] flex items-center justify-center p-4',
-                themeMode === 'dark' ? 'bg-black/82' : 'bg-brand-ink/30'
-            ]"
-            @click.self="historyPreviewItem = null"
-        >
-            <div
-                :class="[
-                    'flex max-h-full w-full max-w-6xl flex-col rounded-lg border p-3 shadow-2xl',
-                    themeMode === 'dark'
-                        ? 'border-night-muted/35 bg-[#232326] text-brand-surface shadow-black/50'
-                        : 'border-brand-line bg-white text-brand-ink shadow-black/20'
-                ]"
-            >
-                <div class="mb-3 border-b border-brand-line pb-3 dark:border-night-muted/35">
-                    <div class="min-w-0">
-                        <p class="text-sm font-semibold text-brand-ink dark:text-brand-surface">
-                            {{ historyPreviewItem.source === 'text' ? '文生图' : '参考图生成' }}
-                            <span v-if="historyPreviewItem.category" class="text-brand-muted"> · {{ historyPreviewItem.category }}</span>
-                        </p>
-                        <p class="mt-1 line-clamp-1 text-xs text-brand-muted">{{ historyPreviewItem.recipe?.mainPrompt || historyPreviewItem.prompt }}</p>
-                    </div>
-                    <div class="mt-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                :class="[
-                                    'whitespace-nowrap rounded-md border px-3 py-1.5 text-xs font-semibold transition',
-                                    historyPreviewOriginalMode
-                                        ? 'border-brand-accent bg-brand-accent text-brand-surface'
-                                        : 'border-brand-line text-brand-ink hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10'
-                                ]"
-                                @click="openOriginalImage(historyPreviewImage)"
-                            >
-                                原图模式
-                            </button>
-                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="handleDownloadResult(historyPreviewImage)">下载</button>
-                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="copyHistoryDiagnostic(historyPreviewItem, historyPreviewImage)">复制生成信息</button>
-                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="pushHistoryImages(historyPreviewItem)">结果作参考</button>
-                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="addHistoryItemToCanvas(historyPreviewItem, historyPreviewImage)">加入画布</button>
-                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-surface dark:border-night-muted/45 dark:text-brand-surface dark:hover:bg-white/10" @click="reuseHistoryRecipe(historyPreviewItem)">一键复用</button>
-                        </div>
-                        <div class="flex shrink-0 flex-wrap gap-2">
-                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryImageAt(historyPreviewItem, historyPreviewItem.images.indexOf(historyPreviewImage))">删除当前图</button>
-                            <button type="button" class="whitespace-nowrap rounded-md border border-brand-accent/50 px-3 py-1.5 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/10" @click="deleteHistoryItem(historyPreviewItem)">删除整组</button>
-                            <button type="button" class="whitespace-nowrap rounded-md bg-brand-accent px-3 py-1.5 text-xs font-semibold text-brand-surface transition hover:bg-brand-accent/90" @click="historyPreviewItem = null">关闭</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="min-h-0 flex-1 overflow-auto rounded-lg bg-brand-surface dark:bg-black/20">
-                    <img
-                        :src="historyPreviewImage"
-                        alt="历史结果预览"
-                        :class="[
-                            'mx-auto w-auto object-contain',
-                            historyPreviewOriginalMode ? 'max-w-none' : 'max-h-[74vh] max-w-full'
-                        ]"
-                    />
-                </div>
-                <div v-if="historyPreviewItem.images.length > 1" class="mt-3 flex gap-2 overflow-x-auto">
-                    <button
-                        v-for="(image, index) in historyPreviewItem.images"
-                        :key="`${historyPreviewItem.id}-preview-${index}`"
-                        type="button"
-                        :class="[
-                            'h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-brand-surface dark:bg-night-panel',
-                            historyPreviewImage === image ? 'border-brand-accent' : 'border-brand-surface/20'
-                        ]"
-                        @click="historyPreviewImage = image; historyPreviewOriginalMode = false"
-                    >
-                        <img :src="image" :alt="`历史结果 ${index + 1}`" class="h-full w-full object-cover" />
-                    </button>
-                </div>
-                <div class="mt-3 grid gap-3 text-xs leading-5 text-brand-muted lg:grid-cols-[minmax(0,1fr)_260px]">
-                    <div class="rounded-lg border border-brand-line bg-brand-surface p-3 dark:border-night-muted/35 dark:bg-night-panel">
-                        <div class="mb-1 font-semibold text-brand-ink dark:text-brand-surface">生成提示词</div>
-                        <p class="max-h-24 overflow-y-auto whitespace-pre-wrap">{{ historyPreviewItem.prompt }}</p>
-                    </div>
-                    <div class="rounded-lg border border-brand-line bg-brand-surface p-3 dark:border-night-muted/35 dark:bg-night-panel">
-                        <div class="mb-1 font-semibold text-brand-ink dark:text-brand-surface">批次信息</div>
-                        <p>生成组：{{ historyPreviewItem.images.length }} 张</p>
-                        <p>比例：{{ historyPreviewItem.aspectRatio }} · 分辨率：{{ historyPreviewItem.imageSize }}</p>
-                        <p>模型：{{ historyPreviewItem.model }}</p>
-                        <p>代理：{{ historyPreviewItem.useProxy ? '开启' : '关闭' }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+            :item="historyPreviewItem"
+            :image="historyPreviewImage"
+            :original-mode="historyPreviewOriginalMode"
+            :collections="collectionOptions"
+            :theme-mode="themeMode"
+            :diagnostic-status="diagnosticCopyStatus"
+            :prompt-copy-status="historyPromptCopyStatus"
+            @close="closeHistoryPreview"
+            @select-image="historyPreviewImage = $event; historyPreviewOriginalMode = false"
+            @download="downloadHistoryPreview"
+            @reference="pushImageToUpload(historyPreviewImage)"
+            @reuse="reuseHistoryRecipe(historyPreviewItem)"
+            @toggle-original="historyPreviewOriginalMode = !historyPreviewOriginalMode"
+            @favorite="toggleHistoryFavorite(historyPreviewItem)"
+            @copy-prompt="copyHistoryPrompt(historyPreviewItem)"
+            @category="setHistoryCategory(historyPreviewItem, $event)"
+            @copy-diagnostic="copyHistoryDiagnostic(historyPreviewItem, historyPreviewImage)"
+            @canvas="addHistoryItemToCanvas(historyPreviewItem, historyPreviewImage)"
+            @delete-image="requestDeleteHistoryImage({ id: `${historyPreviewItem.id}-${historyPreviewItem.images.indexOf(historyPreviewImage)}`, item: historyPreviewItem, image: historyPreviewImage, index: historyPreviewItem.images.indexOf(historyPreviewImage) })"
+            @delete-group="requestDeleteHistoryGroup(historyPreviewItem)"
+        />
 
         <div v-if="showCollectionDialog" class="fixed inset-0 z-[90] flex items-center justify-center bg-brand-ink/70 p-4" @click.self="showCollectionDialog = false">
             <form class="w-full max-w-sm rounded-lg border border-brand-line bg-white p-4 shadow-2xl" @submit.prevent="createCollection">
                 <div class="mb-4">
                     <p class="wb-label text-brand-accent">Collection</p>
                     <h2 class="mt-1 text-base font-semibold text-brand-ink">新建收藏夹</h2>
-                    <p class="mt-1 text-xs leading-5 text-brand-muted">命名后会出现在资产库侧栏，之后可把单张资产归入这个收藏夹。</p>
+                    <p class="mt-1 text-xs leading-5 text-brand-muted">命名后会出现在资产库筛选中；当前同一批生成的图片会一起归类。</p>
                 </div>
                 <label class="block">
                     <span class="mb-1 block wb-label">收藏夹名称</span>
@@ -1234,6 +1027,23 @@
                     <button type="submit" class="wb-primary" :disabled="!newCollectionName.trim()">创建</button>
                 </div>
             </form>
+        </div>
+
+        <div v-if="pendingHistoryDelete" class="fixed inset-0 z-[94] flex items-center justify-center bg-brand-ink/75 p-4" @click.self="pendingHistoryDelete = null">
+            <section class="w-full max-w-md rounded-lg border border-brand-line bg-white p-4 shadow-2xl dark:bg-night-surface">
+                <p class="wb-label text-brand-accent">Danger zone</p>
+                <h2 class="mt-1 text-base font-semibold text-brand-ink">{{ pendingHistoryDelete.imageIndex === undefined ? '删除整组记录？' : '删除当前图片？' }}</h2>
+                <p class="mt-2 text-sm leading-6 text-brand-muted">
+                    {{ pendingHistoryDelete.imageIndex === undefined
+                        ? `将删除这次生成的全部 ${pendingHistoryDelete.item.images.length} 张图片和对应记录。`
+                        : '只删除当前图片；同批次的其他图片会保留。' }}
+                </p>
+                <p class="mt-2 text-xs leading-5 text-brand-accent">删除后无法从 Vistack 恢复。</p>
+                <div class="mt-4 flex justify-end gap-2">
+                    <button type="button" class="wb-secondary" @click="pendingHistoryDelete = null">取消</button>
+                    <button type="button" class="wb-primary" @click="confirmPendingHistoryDelete">确认删除</button>
+                </div>
+            </section>
         </div>
 
         <div v-if="showBulkDeleteDialog" class="fixed inset-0 z-[95] flex items-center justify-center bg-brand-ink/75 p-4" @click.self="showBulkDeleteDialog = false">
@@ -1266,6 +1076,8 @@ import CanvasWorkbench from './components/CanvasWorkbench.vue'
 import Footer from './components/Footer.vue'
 import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
 import ToolboxPanel from './components/ToolboxPanel.vue'
+import AssetLibraryView from './components/AssetLibraryView.vue'
+import AssetDetailWorkspace from './components/AssetDetailWorkspace.vue'
 import { fetchModels, generateImage, improvePrompt, pollGeneratedTask } from './services/api'
 import { styleTemplates } from './data/templates'
 import { promptPoolGroups } from './data/promptPool'
@@ -1287,6 +1099,7 @@ import {
 } from './utils/imageSizing'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
 import { buildDiagnosticReport, formatDiagnosticTimestamp, sanitizeDiagnosticUrl } from './utils/diagnostics'
+import { buildAssetDownloadFilename, buildHistoryAssets, type AssetSortOrder, type HistoryAsset } from './utils/assetLibrary'
 import {
     deleteGenerationHistoryItem,
     deletePendingGenerationTaskItem,
@@ -1427,16 +1240,22 @@ const imageTranslate = ref(false)
 const generationHistory = ref<GenerationHistoryItem[]>([])
 const historyLoading = ref(false)
 const historyFilter = ref('all')
+const assetSearch = ref('')
+const assetSort = ref<AssetSortOrder>('newest')
 const assetCollections = ref<string[]>([])
 const newCollectionName = ref('')
 const showCollectionDialog = ref(false)
 const historyPreviewItem = ref<GenerationHistoryItem | null>(null)
 const historyPreviewImage = ref('')
 const historyPreviewOriginalMode = ref(false)
+const historyPromptCopyStatus = ref('')
 const assetSelectionMode = ref(false)
 const selectedAssetIds = ref<string[]>([])
+const isBatchDownloadingAssets = ref(false)
+const assetDownloadStatus = ref('')
 const showBulkDeleteDialog = ref(false)
 const bulkDeleteConfirmText = ref('')
+const pendingHistoryDelete = ref<{ item: GenerationHistoryItem; imageIndex?: number } | null>(null)
 
 const effectiveApiEndpoint = computed(() => apiEndpoint.value.trim() || DEFAULT_API_ENDPOINT)
 const effectiveSelectedModel = computed(() => selectedModel.value.trim() || DEFAULT_MODEL_ID)
@@ -4239,32 +4058,21 @@ const collectionOptions = computed(() =>
 const favoriteHistory = computed(() => generationHistory.value.filter(item => item.favorite))
 const recentGenerationHistory = computed(() => generationHistory.value.slice(0, 3))
 
-const filteredGenerationHistory = computed(() => {
-    if (historyFilter.value === 'all') return generationHistory.value
-    if (historyFilter.value === 'favorite') return generationHistory.value.filter(item => item.favorite)
-    if (historyFilter.value === 'text' || historyFilter.value === 'image') {
-        return generationHistory.value.filter(item => item.source === historyFilter.value)
-    }
-    if (historyFilter.value.startsWith('category:')) {
-        const category = historyFilter.value.replace('category:', '')
-        return generationHistory.value.filter(item => item.category === category)
-    }
-    return generationHistory.value
-})
+const allHistoryAssets = computed(() => buildHistoryAssets(generationHistory.value, {
+    filter: 'all',
+    search: '',
+    sort: 'newest'
+}))
+const favoriteHistoryAssetCount = computed(() => allHistoryAssets.value.filter(asset => asset.item.favorite).length)
 
-const filteredHistoryAssets = computed(() =>
-    filteredGenerationHistory.value.flatMap(item =>
-        item.images.map((image, index) => ({
-            id: `${item.id}-${index}`,
-            item,
-            image,
-            index
-        }))
-    )
-)
+const filteredHistoryAssets = computed(() => buildHistoryAssets(generationHistory.value, {
+    filter: historyFilter.value,
+    search: assetSearch.value,
+    sort: assetSort.value
+}))
 
 const selectedHistoryAssets = computed(() =>
-    filteredHistoryAssets.value.filter(asset => selectedAssetIds.value.includes(asset.id))
+    allHistoryAssets.value.filter(asset => selectedAssetIds.value.includes(asset.id))
 )
 
 const updateHistoryItem = async (nextItem: GenerationHistoryItem) => {
@@ -4356,6 +4164,27 @@ const openHistoryPreview = (item: GenerationHistoryItem, image = item.images[0] 
     historyPreviewItem.value = item
     historyPreviewImage.value = image
     historyPreviewOriginalMode.value = false
+    historyPromptCopyStatus.value = ''
+}
+
+const closeHistoryPreview = () => {
+    historyPreviewItem.value = null
+    historyPreviewImage.value = ''
+    historyPreviewOriginalMode.value = false
+    historyPromptCopyStatus.value = ''
+}
+
+const copyHistoryPrompt = async (item: GenerationHistoryItem) => {
+    try {
+        await navigator.clipboard.writeText(item.prompt)
+        historyPromptCopyStatus.value = '已复制'
+    } catch {
+        historyPromptCopyStatus.value = '复制失败'
+    }
+
+    window.setTimeout(() => {
+        historyPromptCopyStatus.value = ''
+    }, 1800)
 }
 
 const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string) => {
@@ -4443,21 +4272,37 @@ const deleteHistoryImageAt = async (item: GenerationHistoryItem, imageIndex: num
     }
 }
 
-const openOriginalImage = (image: string) => {
-    if (!image) return
-    historyPreviewImage.value = image
-    historyPreviewOriginalMode.value = true
-}
-
 const toggleAssetSelectionMode = () => {
     assetSelectionMode.value = !assetSelectionMode.value
     selectedAssetIds.value = []
+    assetDownloadStatus.value = ''
 }
 
 const toggleAssetSelection = (assetId: string) => {
     selectedAssetIds.value = selectedAssetIds.value.includes(assetId)
         ? selectedAssetIds.value.filter(id => id !== assetId)
         : [...selectedAssetIds.value, assetId]
+}
+
+const requestDeleteHistoryImage = (asset: HistoryAsset) => {
+    pendingHistoryDelete.value = { item: asset.item, imageIndex: asset.index }
+}
+
+const requestDeleteHistoryGroup = (item: GenerationHistoryItem) => {
+    pendingHistoryDelete.value = { item }
+}
+
+const confirmPendingHistoryDelete = async () => {
+    const pending = pendingHistoryDelete.value
+    if (!pending) return
+
+    pendingHistoryDelete.value = null
+    if (pending.imageIndex === undefined) {
+        await deleteHistoryItem(pending.item)
+        return
+    }
+
+    await deleteHistoryImageAt(pending.item, pending.imageIndex)
 }
 
 const confirmBulkDeleteAssets = async () => {
@@ -4550,37 +4395,88 @@ const restoreTaskResult = (task: GenerationTask) => {
     workspaceMode.value = 'quick'
 }
 
-const handleDownloadResult = async (image: string) => {
-    if (!image) return
-    if (typeof window === 'undefined') return
+const imageExtension = (image: string, blob?: Blob) => {
+    const dataMatch = image.match(/^data:image\/([a-zA-Z0-9+.-]+);/)
+    if (dataMatch?.[1]) return dataMatch[1]
+    const blobMatch = blob?.type.match(/^image\/([a-zA-Z0-9+.-]+)$/)
+    return blobMatch?.[1] || 'png'
+}
+
+const downloadImageFile = async (
+    image: string,
+    timestamp: number,
+    sequence: number,
+    total: number,
+    openFallback: boolean
+) => {
+    if (!image || typeof window === 'undefined') return false
 
     let downloadUrl = image
     let revokeUrl: string | null = null
 
     try {
+        let downloadedBlob: Blob | undefined
         if (!image.startsWith('data:')) {
             const response = await fetchImageForDownload(image)
-            const blob = await response.blob()
-            downloadUrl = URL.createObjectURL(blob)
+            if (!response.ok) throw new Error(`图片下载失败：HTTP ${response.status}`)
+            downloadedBlob = await response.blob()
+            downloadUrl = URL.createObjectURL(downloadedBlob)
             revokeUrl = downloadUrl
         }
 
         const link = document.createElement('a')
-        const dataMatch = image.match(/^data:image\/([a-zA-Z0-9+]+);/)
-        const extension = dataMatch ? dataMatch[1] : 'png'
-
         link.href = downloadUrl
-        link.download = `vistack-${Date.now()}.${extension}`
+        link.download = buildAssetDownloadFilename(timestamp, sequence, total, imageExtension(image, downloadedBlob))
         link.rel = 'noopener'
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
+        return true
+    } catch {
+        if (openFallback) window.open(image, '_blank', 'noopener')
+        return false
+    } finally {
+        if (revokeUrl) URL.revokeObjectURL(revokeUrl)
+    }
+}
 
-        if (revokeUrl) {
-            URL.revokeObjectURL(revokeUrl)
+const handleDownloadResult = async (image: string) => {
+    await downloadImageFile(image, Date.now(), 1, 1, true)
+}
+
+const downloadHistoryAsset = async (asset: HistoryAsset) => {
+    await downloadImageFile(asset.image, asset.item.createdAt, asset.index + 1, asset.item.images.length, true)
+}
+
+const downloadHistoryPreview = async () => {
+    const item = historyPreviewItem.value
+    if (!item) return
+    const imageIndex = Math.max(item.images.indexOf(historyPreviewImage.value), 0)
+    await downloadImageFile(historyPreviewImage.value, item.createdAt, imageIndex + 1, item.images.length, true)
+}
+
+const downloadSelectedAssets = async () => {
+    if (isBatchDownloadingAssets.value || !selectedHistoryAssets.value.length) return
+
+    const assets = [...selectedHistoryAssets.value]
+    const timestamp = Date.now()
+    let initiated = 0
+    isBatchDownloadingAssets.value = true
+    assetDownloadStatus.value = assets.length > 1 ? '浏览器可能会询问是否允许多个文件下载。' : ''
+
+    try {
+        for (let index = 0; index < assets.length; index += 1) {
+            assetDownloadStatus.value = `正在发起 ${index + 1}/${assets.length}`
+            const succeeded = await downloadImageFile(assets[index].image, timestamp, index + 1, assets.length, false)
+            if (succeeded) initiated += 1
         }
-    } catch (downloadError) {
-        window.open(image, '_blank', 'noopener')
+
+        const failed = assets.length - initiated
+        assetDownloadStatus.value = failed
+            ? `已发起 ${initiated} 个，${failed} 个失败`
+            : `已发起 ${initiated} 个下载`
+    } finally {
+        isBatchDownloadingAssets.value = false
     }
 }
 

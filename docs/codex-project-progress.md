@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-13 00:39 (Asia/Shanghai)
+Last updated: 2026-07-13 14:28 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -11,22 +11,67 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Make small, reversible changes with automated checks and migration fallbacks.
 - Explain work in plain Chinese because the user is a beginner.
 - Keep progress and next TODO items in this file so a truncated or new conversation can resume safely.
-- Continue through the agreed roadmap autonomously. Do not ask the user to approve routine implementation details or every checkpoint.
+- Before implementing each roadmap item, explain the current experience, the problem, the proposed experience, alternatives, impact, and data risk in plain product language, then wait for explicit user confirmation.
+- After the product direction is confirmed, complete routine implementation details, tests, checks, documentation, and the agreed checkpoint without asking for approval on every technical decision.
+
+## Validated Product Direction
+
+- The primary workflow is image-to-image editing (usually understood as "改图"): enter endpoint/account information, fetch models, import images, enter a prompt, and generate.
+- Do not optimize secondary features at the expense of this path. The couple-photo assistant, prompt templates, and phrase library are currently low-use features and should be visually de-emphasized rather than expanded.
+- Diagnostic copying is occasionally important for upstream failures. The main-page diagnostic action currently represents only the latest generation; future work must allow selecting or copying diagnostics for a specific historical generation.
+- The single-asset history view needs a clearer information and action hierarchy.
+- The right-side prompt preview has no validated user value and must be reviewed for removal, collapse, or replacement within the core workflow.
+- The current main-image plus transient waterfall layout is visually redundant. A future result-browser design must define one clear current result and a persistent session/history strip or grid backed by saved history, not only in-memory page state.
+- Provider/model parameters vary and cannot be assumed to be universally discoverable. Adapt them incrementally through tested provider/model capability profiles with a generic fallback.
+- Generation images, prompts, and saved API connection presets are protected user data. No storage migration may delete or silently overwrite them.
+- The application is for personal and limited internal-team use with shared endpoint accounts, not broad public distribution. Compatibility and data reliability take priority over public multi-tenant hardening.
+- The toolbox and canvas workspace have not yet delivered practical value. Freeze incremental feature expansion until their information architecture and use cases are redesigned as a separate product phase.
 
 ## Execution Policy
 
-- For each phase: inspect current behavior, add or update tests, make the smallest compatible change, run `npm run check`, update this file, and create a focused Git checkpoint.
-- Continue automatically to the next agreed phase after a successful checkpoint.
-- Stop and ask the user only when an action would delete or migrate data without fallback, change a familiar workflow, require credentials/payment/deployment, expose private information, or when tests reveal an ambiguous behavior choice.
-- Send concise progress updates while working, but do not require the user to make routine technical decisions.
+- Before each implementation item, inspect the current code and behavior but do not change runtime source.
+- Present a short product brief covering: what users see today, why it is a problem, what it could become, available alternatives, what remains unchanged, data/migration risk, and acceptance criteria.
+- Use plain Chinese and distinguish confirmed facts from proposals. Include a simple layout sketch or interaction sequence when the change is visual or hard to explain in prose.
+- Wait for explicit user confirmation of the product direction before implementation. Silence or agreement with the overall roadmap is not approval for an individual item.
+- Once confirmed: add or update tests, make the smallest compatible change, run `npm run check`, verify the user-visible flow, update this file, and create the agreed focused Git checkpoint.
+- If implementation reveals a materially different user experience, destructive migration, privacy exposure, or ambiguous product choice, pause and return to confirmation instead of deciding silently.
+- Completing one item does not authorize starting the next item; prepare and confirm the next product brief separately.
 
 ## Current State
 
 - Branch: `main`, tracking `origin/main`.
-- The only current runtime-source change is diagnostic report generation and secret redaction; generation requests and provider routing are unchanged.
-- The user-owned untracked `排查/` directory exists and must not be modified or removed.
+- UI/UX Phase 1 is implemented: asset-library hierarchy, search/sort, separate-file selected downloads, and a responsive image-detail workspace.
+- History storage formats, generation requests, and provider routing are unchanged.
 - Production build succeeds with Vite 5.4.19.
-- Current production bundle is approximately 366.20 kB JS / 127.62 kB gzip and 46.99 kB CSS / 7.76 kB gzip.
+- Current production bundle is approximately 377.28 kB JS / 132.07 kB gzip and 50.93 kB CSS / 8.30 kB gzip.
+
+## Active Product Brief: Full UI/UX Plan
+
+Current facts:
+
+- The primary product task is image editing, but API configuration, reference setup, low-use couple-photo controls, result modules, diagnostics, prompt preview, recent assets, and the prompt dock compete within one studio screen.
+- The API configuration accordion pushes down every main view when open.
+- Desktop has three simultaneous columns plus a fixed prompt dock; mobile mostly stacks the desktop order, placing low-use controls before prompt/generate.
+- The asset library has nested surfaces and many equal-weight card actions. Direct single download exists only in details, while bulk selection supports deletion only.
+- Toolbox and canvas have high navigation/layout weight despite lacking validated regular use.
+
+Approved product choice:
+
+- User selected separate-file downloads (option B): selecting five assets should initiate five independent image downloads, not create an archive.
+
+Proposed plan:
+
+- Use the product direction "high-frequency image editing first, results are assets, low-frequency capabilities appear on demand."
+- Recompose the studio around references, prompt, relevant model parameters, generate, one current result, and a persistent result/history list.
+- Replace the generic prompt preview with context for the selected result: prompt, parameters, actions, and its own diagnostics.
+- Flatten and clarify the asset library, promote download/reuse, add separate-file selected downloads, and redesign single-asset details.
+- Move full API configuration out of the page-pushing accordion while keeping compact preset/model access available.
+- De-emphasize couple-photo, templates, phrases, canvas, and toolbox features without deleting them; plan toolbox/canvas separately.
+- Recompose mobile ordering so prompt/generate precede low-use assistants and diagnostics.
+
+The full draft is `docs/product-ui-ux-plan.md`. Phase 1 is implemented and recorded at `docs/phase-1-asset-library-brief.md`.
+
+No later phase is approved for implementation. The next product brief should cover Phase 2: the studio image-editing workflow and mobile ordering.
 
 ## Completed Work
 
@@ -66,6 +111,24 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Grouped common actions separately from delete/close actions and prevented button labels from breaking into vertical text.
 - Preserved every existing action and the image, thumbnail, prompt, and batch-information areas.
 
+### 5. Documentation organization
+
+- Added `docs/README.md` as the current documentation index.
+- Added `docs/archive/README.md` with archive status and provenance for historical documents.
+- Archived the completed 2025 UI compact-optimization specification, the superseded 2026 toolbox handoff, and the obsolete legacy README without rewriting their contents.
+- Replaced the root README with a concise project entry that matches the current scripts, features, and directory structure.
+- Kept this file as the only authoritative development progress and handoff record.
+
+### 6. Asset library and image details
+
+- Rebuilt the asset library as a flatter, image-first page with desktop navigation and mobile filters.
+- Added prompt/model search and newest/oldest sorting with pure behavior tests.
+- Promoted single-image download and reuse, while moving canvas, group categorization, and deletion into secondary actions.
+- Added selected-image downloads as separate files with stable names, progress, browser permission guidance, and partial-failure reporting.
+- Replaced the crowded history modal with a responsive image-detail workspace that groups image, batch thumbnails, prompt, parameters, group collection, diagnostics, and secondary actions.
+- Preserved group-level favorite/category storage and clarified it in visible labels; no history migration was performed.
+- Added confirmation for current-image and whole-group deletion while preserving the existing typed confirmation for bulk deletion.
+
 ## Verification Baseline
 
 Latest successful command:
@@ -77,12 +140,13 @@ npm run check
 Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
-- Test files: 4 passed.
-- Tests: 30 passed.
+- Test files: 5 passed.
+- Tests: 34 passed.
 - Production build: passed.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 - UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
 - Browser console errors during the UI fixture check: none.
+- Phase 1 browser verification: image-filled asset grid, search, two-item selection toolbar, desktop detail workspace, and 390×844 mobile detail all passed without horizontal overflow or console warnings/errors.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
 
@@ -102,29 +166,19 @@ Local collaboration instruction:
 - `AGENTS.md` exists locally and tells future Codex conversations to read and update this handoff file.
 - The repository's existing `.gitignore` intentionally ignores `AGENTS.md`; that ignore rule was preserved. The durable project record is this tracked-eligible file under `docs/`.
 
-User-owned unrelated state:
-
-- `排查/` is untracked and untouched.
-
 The diagnostic enhancement was saved as a separate checkpoint before starting UI work.
 
 ## Next TODO
 
-1. Continue collecting and fixing the user's concrete UI pain points as bounded changes, keeping each visual checkpoint separate.
-2. Design and implement canvas storage v2 after the current UI review pass.
+1. Prepare the Phase 2 product brief for the studio image-editing workflow and mobile ordering; do not implement it before explicit confirmation.
+2. After Phase 2, prepare Phase 3 for one current result, a persistent history-backed result list, and diagnostics tied to a selected generation.
+3. Prepare Phase 4 for compact API configuration and incremental provider/model capability profiles with a generic fallback.
+4. Design and implement storage v2 only after the core result design is agreed.
    - Store large image data in IndexedDB rather than `localStorage`.
-   - Read v2 first and fall back to the existing format.
-   - Do not delete legacy data during the first migration release.
-   - Preserve the current canvas UI and all existing images during migration.
-3. Add proxy security in compatibility mode.
-   - Preserve the current mode initially.
-   - Add optional strict mode, per-hop redirect validation, DNS/private-IP validation, configurable limits, and timeouts.
-   - Retain compatibility for existing custom public endpoints.
-4. Upgrade vulnerable build dependencies in small groups.
-   - Do not use `npm audit fix --force` blindly.
-   - Run the provider-routing and sizing tests after every dependency group.
-5. Expand tests around provider payload construction and task recovery before any related refactor.
-6. Only then extract small state modules from `App.vue`; do not redesign the UI or provider behavior.
+   - Preserve existing history images, prompts, API presets, and canvas data during migration.
+5. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
+6. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
+7. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
 
 Deferred by user decision:
 
@@ -148,6 +202,73 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-13 14:28 (Asia/Shanghai)
+
+- User explicitly approved the recommended Phase 1 asset-library plan.
+- Implemented the flatter asset page, prompt/model search, time sorting, image-first cards, direct download/reuse, and secondary action grouping.
+- Implemented separate-file downloads for arbitrary selected assets with stable filenames, progress, browser permission guidance, and partial-failure reporting.
+- Replaced the crowded history preview with responsive desktop/mobile image details and clarified group-level favorite/category semantics without migrating history data.
+- Added four behavior tests; `npm run check` passed with 5 files and 34 tests plus a successful production build.
+- Verified image-filled desktop/mobile fixtures, details, search, and two-item selection in the in-app browser with no horizontal overflow or console warnings/errors; temporary fixtures were removed.
+- Phase 2 is not approved; the next action is its product brief only.
+
+### 2026-07-13 12:12 (Asia/Shanghai)
+
+- Continued with the approved planning process and prepared the detailed Phase 1 product brief without modifying runtime source.
+- Confirmed from code that favorite/category currently apply to the whole generation group, while download and current-image deletion can apply to one image; exposed this as an explicit product decision.
+- Proposed a flatter asset page, simplified image-first cards, separate-file selected downloads, a focused image/detail workspace, prompt/model search, and time sorting.
+- Added `docs/phase-1-asset-library-brief.md`; implementation remains blocked on three explicit product confirmations.
+
+### 2026-07-13 11:41 (Asia/Shanghai)
+
+- User requested a complete UI/UX plan instead of adding download controls in isolation.
+- Reviewed the rendered studio, asset library, mobile layout, and toolbox using the UI hierarchy/component/state rubric; no runtime source was changed.
+- Added `docs/product-ui-ux-plan.md` with target information architecture, desktop/mobile layouts, result/history model, asset/download behavior, configuration direction, toolbox/canvas boundaries, phased delivery, and acceptance criteria.
+- Recorded separate-file selected downloads as confirmed, while all layout phases remain subject to individual product approval.
+
+### 2026-07-13 11:34 (Asia/Shanghai)
+
+- User chose option B for multiple selected assets: initiate separate image-file downloads rather than creating an archive.
+- Applied the UI component/state review workflow and prepared a bounded asset-card and selection-toolbar proposal; no UI implementation was started.
+- Proposed promoting Download to a visible card action, moving low-use/destructive actions to secondary controls, and adding local progress/error feedback for selected downloads.
+
+### 2026-07-13 11:28 (Asia/Shanghai)
+
+- User clarified that the priority is selectively downloading needed images, not exporting all project data as a package.
+- Verified that single-image download exists, while asset-library bulk selection currently supports deletion only.
+- Withdrew the complete-backup proposal as the next implementation item and separated daily image download from low-frequency disaster recovery.
+- No runtime source was changed.
+
+### 2026-07-13 11:24 (Asia/Shanghai)
+
+- Began the first approved discovery step for data protection; inspected current storage and restore behavior without changing runtime source.
+- Confirmed that history/images, API settings, canvas data, and toolbox assets are split across `localStorage` and two IndexedDB databases, with no unified backup.
+- Confirmed API presets include plaintext API keys/proxy tokens and some history images may retain expiring remote URLs when local persistence fails.
+- Added a complete, versioned, merge-only backup proposal and marked its three product choices as awaiting explicit confirmation.
+
+### 2026-07-13 11:15 (Asia/Shanghai)
+
+- User approved the overall reprioritization but replaced autonomous roadmap execution with an explicit per-item product confirmation process.
+- Recorded the required pre-implementation brief: current experience, problem, proposed experience, alternatives, unchanged behavior, risks, and acceptance criteria in plain Chinese.
+- Routine technical implementation and verification may proceed autonomously only after the corresponding product direction is explicitly confirmed.
+- No runtime source was changed.
+
+### 2026-07-13 11:10 (Asia/Shanghai)
+
+- User identified image-to-image editing as the primary workflow and provided the first complete product-priority review.
+- Recorded protected data requirements: generation images, prompts, and saved API connection presets must not be lost.
+- Reprioritized work around historical diagnostics, the single-asset history view, prompt-preview value, and a persistent history-backed result browser.
+- Recorded the limited personal/team deployment context and reduced the urgency of public multi-tenant hardening relative to compatibility and data reliability.
+- Froze toolbox/canvas feature expansion pending a separate architecture and use-case redesign.
+- No runtime source was changed in this feedback pass.
+
+### 2026-07-13 10:28 (Asia/Shanghai)
+
+- User requested that older plans and engineering notes be organized and archived.
+- Archived the completed UI compact-optimization specification, superseded toolbox handoff, and obsolete legacy README under `docs/archive/`, preserving their original contents.
+- Added current and archive documentation indexes, and rebuilt the root README from the actual project scripts and structure.
+- No application source, configuration, dependencies, or runtime behavior changed; documentation checks are sufficient for this pass.
 
 ### 2026-07-13 00:39 (Asia/Shanghai)
 
