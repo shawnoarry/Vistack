@@ -157,60 +157,6 @@
                         </p>
                     </div>
 
-                    <div class="my-4 border-t border-brand-line" />
-
-                    <div class="mb-3">
-                        <div class="flex items-center justify-between gap-3">
-                            <h3 class="text-sm font-semibold text-brand-ink">合影助手</h3>
-                            <span :class="[
-                                'rounded-md border px-2 py-1 text-[11px] font-semibold',
-                                portraitAssistEnabled && portraitAssistAvailable
-                                    ? 'border-brand-accent/20 bg-brand-accent/10 text-brand-accent'
-                                    : 'border-brand-line bg-brand-surface text-brand-muted'
-                            ]">
-                                {{ portraitAssistStatus }}
-                            </span>
-                        </div>
-                        <p class="mt-1 text-xs text-brand-muted">多张人物参考图时启用。它会把角色映射、合照动作和防混脸约束拼进最终提示词，不做真实图像预处理。</p>
-                    </div>
-                    <div class="space-y-3">
-                        <label :class="[
-                            'flex items-center gap-2 text-sm font-semibold',
-                            portraitAssistAvailable ? 'text-brand-ink' : 'text-brand-muted'
-                        ]">
-                            <input
-                                v-model="portraitAssistEnabled"
-                                type="checkbox"
-                                :disabled="!portraitAssistAvailable"
-                                class="h-4 w-4 rounded border-brand-line text-brand-accent focus:ring-brand-accent disabled:cursor-not-allowed disabled:opacity-50"
-                            />
-                            启用合影提示增强
-                        </label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <label class="min-w-0">
-                                <span class="wb-label mb-1 block">合影动作</span>
-                                <select v-model="portraitPose" :disabled="!portraitAssistAvailable" class="wb-input w-full disabled:cursor-not-allowed disabled:opacity-60">
-                                    <option v-for="pose in portraitPoseOptions" :key="pose.value" :value="pose.value">{{ pose.label }}</option>
-                                </select>
-                            </label>
-                            <label class="min-w-0">
-                                <span class="wb-label mb-1 block">场景关系</span>
-                                <select v-model="portraitRelation" :disabled="!portraitAssistAvailable" class="wb-input w-full disabled:cursor-not-allowed disabled:opacity-60">
-                                    <option v-for="relation in portraitRelationOptions" :key="relation.value" :value="relation.value">{{ relation.label }}</option>
-                                </select>
-                            </label>
-                        </div>
-                        <textarea
-                            v-model="portraitExtraPrompt"
-                            :disabled="!portraitAssistAvailable"
-                            class="wb-input min-h-[76px] w-full resize-none py-2 disabled:cursor-not-allowed disabled:opacity-60"
-                            placeholder="补充：例如看向镜头、保持角色服装、自然互动。"
-                        />
-                        <div v-if="portraitAssistEnabled && portraitAssistAvailable" class="rounded-lg border border-brand-line bg-brand-surface p-3 text-xs leading-5 text-brand-muted">
-                            {{ portraitAssistPrompt }}
-                        </div>
-                    </div>
-
                 </section>
             </aside>
 
@@ -452,7 +398,7 @@
                 themeMode === 'dark' ? 'border-night-muted/35 bg-[#232326]/95 shadow-black/30' : 'border-brand-line bg-white/95'
             ]"
         >
-            <div class="wb-shell py-2">
+            <div class="wb-shell relative py-2">
                 <div v-if="showPromptTools" class="absolute bottom-[calc(100%+10px)] left-1/2 z-40 w-[min(1040px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20 dark:border-night-muted/35 dark:bg-night-surface dark:text-brand-surface">
                     <PromptPhraseBuilder
                         :groups="mergedPromptPhraseGroups"
@@ -466,6 +412,94 @@
                         editable
                     />
                 </div>
+
+                <Teleport to="body" :disabled="isDesktopLayout">
+                    <div
+                        v-if="showPortraitAssistPanel"
+                        ref="portraitAssistOverlayRef"
+                        class="fixed inset-0 z-50 flex items-end bg-brand-ink/55 lg:absolute lg:inset-auto lg:bottom-[calc(100%+10px)] lg:right-4 lg:z-40 lg:block lg:w-[440px] lg:bg-transparent 2xl:right-6"
+                        @click.self="closePortraitAssistPanel()"
+                    >
+                        <section
+                            id="portrait-assist-panel"
+                            ref="portraitAssistPanelRef"
+                            role="dialog"
+                            aria-labelledby="portrait-assist-title"
+                            class="max-h-[85vh] w-full overflow-y-auto rounded-t-lg border border-brand-line bg-white p-4 shadow-2xl shadow-black/25 dark:border-night-muted/35 dark:bg-night-surface dark:text-brand-surface lg:max-h-[calc(100vh-280px)] lg:rounded-lg"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <h2 id="portrait-assist-title" class="text-sm font-semibold text-brand-ink">合影助手</h2>
+                                    <p class="mt-1 text-xs leading-5 text-brand-muted">为多人物参考图补充角色关系、合影动作和身份区分约束。</p>
+                                </div>
+                                <button
+                                    ref="portraitAssistCloseButtonRef"
+                                    type="button"
+                                    class="wb-icon-button"
+                                    title="关闭合影助手"
+                                    aria-label="关闭合影助手"
+                                    @click="closePortraitAssistPanel()"
+                                >
+                                    <X :size="16" :stroke-width="1.8" aria-hidden="true" />
+                                </button>
+                            </div>
+
+                            <div :class="[
+                                'mt-4 rounded-lg border px-3 py-2 text-xs leading-5',
+                                portraitAssistAvailable
+                                    ? 'border-brand-line bg-brand-surface text-brand-muted'
+                                    : 'border-brand-accent/25 bg-brand-accent/10 text-brand-accent'
+                            ]">
+                                {{ portraitAssistAvailable ? portraitAssistStatus : '添加至少 2 张人物参考图后可启用。' }}
+                            </div>
+
+                            <div class="mt-4 space-y-3">
+                                <label :class="[
+                                    'flex min-h-10 items-center gap-2 rounded-lg border border-brand-line bg-brand-surface px-3 text-sm font-semibold',
+                                    portraitAssistAvailable ? 'text-brand-ink' : 'text-brand-muted'
+                                ]">
+                                    <input
+                                        v-model="portraitAssistEnabled"
+                                        type="checkbox"
+                                        :disabled="!portraitAssistAvailable"
+                                        class="h-4 w-4 rounded border-brand-line text-brand-accent focus:ring-brand-accent disabled:cursor-not-allowed disabled:opacity-50"
+                                    />
+                                    启用合影提示增强
+                                </label>
+
+                                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    <label class="min-w-0">
+                                        <span class="wb-label mb-1 block">合影动作</span>
+                                        <select v-model="portraitPose" :disabled="!portraitAssistAvailable" class="wb-input w-full disabled:cursor-not-allowed disabled:opacity-60">
+                                            <option v-for="pose in portraitPoseOptions" :key="pose.value" :value="pose.value">{{ pose.label }}</option>
+                                        </select>
+                                    </label>
+                                    <label class="min-w-0">
+                                        <span class="wb-label mb-1 block">场景关系</span>
+                                        <select v-model="portraitRelation" :disabled="!portraitAssistAvailable" class="wb-input w-full disabled:cursor-not-allowed disabled:opacity-60">
+                                            <option v-for="relation in portraitRelationOptions" :key="relation.value" :value="relation.value">{{ relation.label }}</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <label class="block">
+                                    <span class="wb-label mb-1 block">补充要求</span>
+                                    <textarea
+                                        v-model="portraitExtraPrompt"
+                                        :disabled="!portraitAssistAvailable"
+                                        class="wb-input min-h-[76px] w-full resize-none py-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                        placeholder="例如：看向镜头、保持角色服装、自然互动。"
+                                    />
+                                </label>
+
+                                <div v-if="portraitAssistEnabled && portraitAssistAvailable" class="rounded-lg border border-brand-line bg-brand-surface p-3 text-xs leading-5 text-brand-muted">
+                                    <span class="wb-label mb-1 block">将拼入提示词</span>
+                                    {{ portraitAssistPrompt }}
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </Teleport>
 
                 <div class="rounded-lg border border-brand-line bg-white p-2 shadow-sm shadow-black/10 dark:border-night-muted/35 dark:bg-night-surface">
                     <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
@@ -503,7 +537,7 @@
                                 class="wb-icon-button"
                                 :title="showPromptTools ? '收起词组' : '打开词组'"
                                 :aria-label="showPromptTools ? '收起词组' : '打开词组'"
-                                @click="showPromptTools = !showPromptTools"
+                                @click="togglePromptTools"
                             >
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h10M4 18h7" />
@@ -519,6 +553,26 @@
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 4h14v16l-7-3-7 3V4z" />
                                 </svg>
+                            </button>
+                            <button
+                                ref="portraitAssistButtonRef"
+                                type="button"
+                                :aria-expanded="showPortraitAssistPanel"
+                                :aria-pressed="portraitAssistEnabled && portraitAssistAvailable"
+                                aria-controls="portrait-assist-panel"
+                                aria-label="合影助手"
+                                :title="portraitAssistButtonTitle"
+                                :class="[
+                                    'wb-icon-button',
+                                    !portraitAssistAvailable ? 'text-brand-muted dark:text-night-muted' : '',
+                                    showPortraitAssistPanel ? 'bg-brand-surface dark:bg-night-accent/25' : '',
+                                    portraitAssistEnabled && portraitAssistAvailable
+                                        ? 'border-brand-accent text-brand-accent dark:border-night-muted dark:text-brand-surface'
+                                        : ''
+                                ]"
+                                @click="togglePortraitAssistPanel"
+                            >
+                                <UsersRound :size="16" :stroke-width="1.8" aria-hidden="true" />
                             </button>
                             <button
                                 type="button"
@@ -1055,7 +1109,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
+import { UsersRound, X } from '@lucide/vue'
 import ApiKeyInput from './components/ApiKeyInput.vue'
 import ImageUpload from './components/ImageUpload.vue'
 import StylePromptSelector from './components/StylePromptSelector.vue'
@@ -1089,6 +1144,7 @@ import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canva
 import { buildDiagnosticReport, formatDiagnosticTimestamp, sanitizeDiagnosticUrl } from './utils/diagnostics'
 import { buildAssetDownloadFilename, buildHistoryAssets, type AssetSortOrder, type HistoryAsset } from './utils/assetLibrary'
 import { buildGenerationActionLabel, resolveGenerationMode } from './utils/generationAction'
+import { buildPortraitAssistPrompt, portraitAssistIconTitle, resolvePortraitAssistUiState } from './utils/portraitAssist'
 import {
     deleteGenerationHistoryItem,
     deletePendingGenerationTaskItem,
@@ -1143,6 +1199,12 @@ const themeMode = ref<ThemeMode>('light')
 const workspaceMode = ref<WorkspaceMode>('quick')
 const canvasItems = ref<CanvasWorkbenchItem[]>([])
 const showPromptTools = ref(false)
+const showPortraitAssistPanel = ref(false)
+const isDesktopLayout = ref(false)
+const portraitAssistButtonRef = ref<HTMLButtonElement | null>(null)
+const portraitAssistCloseButtonRef = ref<HTMLButtonElement | null>(null)
+const portraitAssistPanelRef = ref<HTMLElement | null>(null)
+const portraitAssistOverlayRef = ref<HTMLElement | null>(null)
 const showTemplatePanel = ref(false)
 const showApiSettings = ref(false)
 const customPromptPhraseGroups = ref<StoredPromptPhraseGroup[]>([])
@@ -1262,8 +1324,56 @@ const toggleThemeMode = () => {
     LocalStorage.saveThemeMode(themeMode.value)
 }
 
+const updateDesktopLayout = () => {
+    isDesktopLayout.value = window.matchMedia('(min-width: 1024px)').matches
+}
+
+const closePortraitAssistPanel = (restoreFocus = true) => {
+    if (!showPortraitAssistPanel.value) return
+    showPortraitAssistPanel.value = false
+    if (restoreFocus) {
+        nextTick(() => portraitAssistButtonRef.value?.focus())
+    }
+}
+
+const togglePortraitAssistPanel = () => {
+    if (showPortraitAssistPanel.value) {
+        closePortraitAssistPanel()
+        return
+    }
+
+    showPromptTools.value = false
+    showPortraitAssistPanel.value = true
+    nextTick(() => portraitAssistCloseButtonRef.value?.focus())
+}
+
+const togglePromptTools = () => {
+    closePortraitAssistPanel(false)
+    showPromptTools.value = !showPromptTools.value
+}
+
+const handlePortraitAssistPointerDown = (event: PointerEvent) => {
+    if (!showPortraitAssistPanel.value) return
+    const target = event.target
+    if (!(target instanceof Node)) return
+    if (target === portraitAssistOverlayRef.value) return
+    if (portraitAssistPanelRef.value?.contains(target) || portraitAssistButtonRef.value?.contains(target)) return
+    closePortraitAssistPanel(false)
+}
+
+const handlePortraitAssistKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && showPortraitAssistPanel.value) {
+        event.preventDefault()
+        closePortraitAssistPanel()
+    }
+}
+
 // 组件挂载时从本地存储读取API密钥
 onMounted(() => {
+    updateDesktopLayout()
+    window.addEventListener('resize', updateDesktopLayout)
+    document.addEventListener('pointerdown', handlePortraitAssistPointerDown)
+    document.addEventListener('keydown', handlePortraitAssistKeydown)
     loadGenerationHistory()
 
     const savedApiKey = LocalStorage.getApiKey()
@@ -1323,6 +1433,12 @@ onMounted(() => {
     // Mark initialization complete so later watcher updates are treated as user edits.
     hasSyncedInitialEndpoint = true
     restorePendingGenerationTasks()
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', updateDesktopLayout)
+    document.removeEventListener('pointerdown', handlePortraitAssistPointerDown)
+    document.removeEventListener('keydown', handlePortraitAssistKeydown)
 })
 
 // 监听API密钥变化，自动保存到本地存储
@@ -2518,26 +2634,32 @@ const portraitAssistStatus = computed(() => {
     if (!portraitAssistAvailable.value) return '需要 2 张以上人物参考图'
     return portraitAssistEnabled.value ? '将拼入提示词' : '未启用'
 })
+const portraitAssistUiState = computed(() =>
+    resolvePortraitAssistUiState(portraitAssistAvailable.value, portraitAssistEnabled.value)
+)
+const portraitAssistButtonTitle = computed(() => portraitAssistIconTitle(portraitAssistUiState.value))
 
 const portraitAssistPrompt = computed(() => {
-    if (!portraitAssistEnabled.value || !portraitAssistAvailable.value) return ''
-
     const characterRefs = selectedImages.value
         .map((_, index) => ({ index, meta: normalizeReferenceMeta(referenceImageMetadata.value[index], index) }))
         .filter(item => item.meta.role === 'character')
-    const roleText = (characterRefs.length ? characterRefs : selectedImages.value.map((_, index) => ({ index, meta: normalizeReferenceMeta(referenceImageMetadata.value[index], index) })))
-        .map(item => `${item.meta.label} from reference image ${item.index + 1}`)
-        .join(', ')
-    const extra = portraitExtraPrompt.value.trim()
+    const promptReferences = (characterRefs.length
+        ? characterRefs
+        : selectedImages.value.map((_, index) => ({ index, meta: normalizeReferenceMeta(referenceImageMetadata.value[index], index) })))
+        .map(item => ({ index: item.index, label: item.meta.label }))
 
-    return [
-        `Create a coherent group photo featuring ${roleText}.`,
-        `Interaction: ${portraitPose.value}.`,
-        `Relationship and mood: ${portraitRelation.value}.`,
-        'Keep each person visually distinct and faithful to their own reference image. Do not merge identities, swap faces, or duplicate one character into another.',
-        'Unify lighting, perspective, scale, and camera angle so the final image looks like one real shared scene.',
-        extra
-    ].filter(Boolean).join(' ')
+    return buildPortraitAssistPrompt({
+        enabled: portraitAssistEnabled.value,
+        available: portraitAssistAvailable.value,
+        references: promptReferences,
+        pose: portraitPose.value,
+        relation: portraitRelation.value,
+        extraPrompt: portraitExtraPrompt.value
+    })
+})
+
+watch(portraitAssistAvailable, available => {
+    if (!available) portraitAssistEnabled.value = false
 })
 
 const getPhraseId = (groupId: string, phrase: PromptPhrase) => phrase.id || `${groupId}:${phrase.label}:${phrase.value}`

@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-13 15:32 (Asia/Shanghai)
+Last updated: 2026-07-13 16:45 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -42,9 +42,10 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Branch: `main`, tracking `origin/main`.
 - UI/UX Phase 1 is implemented: asset-library hierarchy, search/sort, separate-file selected downloads, and a responsive image-detail workspace.
 - Studio Phase 2A is implemented: the fixed PC prompt dock now has one dynamic `图生图 / 文生图` action while preserving the two existing internal request paths.
+- Studio Phase 2B is implemented: the couple-photo assistant now opens from a compact toolbar icon as a PC popover/mobile bottom sheet, while preserving its prompt behavior.
 - History storage formats, generation requests, and provider routing are unchanged.
 - Production build succeeds with Vite 5.4.19.
-- Current production bundle is approximately 377.28 kB JS / 132.07 kB gzip and 50.93 kB CSS / 8.30 kB gzip.
+- Current production bundle is approximately 386.62 kB JS / 135.35 kB gzip and 51.54 kB CSS / 8.43 kB gzip.
 
 ## Active Product Brief: Full UI/UX Plan
 
@@ -72,7 +73,7 @@ Proposed plan:
 
 The full draft is `docs/product-ui-ux-plan.md`. Phase 1 is implemented and recorded at `docs/phase-1-asset-library-brief.md`.
 
-The original broad Phase 2 studio restructure was not approved and has been withdrawn. Phase 2A is complete: the user selected one dynamic button labeled `图生图` with references and `文生图` without references, while the PC prompt dock remains fixed. Phase 2B is not approved; its next action is a product brief for moving the full couple-photo assistant behind a compact toolbar icon. Phrase/template icons, three-column layout, mobile ordering, canvas entry, result layout, request behavior, and local data remain unchanged.
+The original broad Phase 2 studio restructure was not approved and has been withdrawn. Phase 2A and 2B are complete as separately approved small changes: one dynamic `图生图 / 文生图` action in the fixed PC dock, plus a couple-photo icon after Templates that opens a PC popover/mobile bottom sheet. Phrase/template icons, three-column layout, canvas entry, result layout, request behavior, history, API presets, and local data remain unchanged. No later product phase is approved.
 
 ## Completed Work
 
@@ -130,6 +131,15 @@ The original broad Phase 2 studio restructure was not approved and has been with
 - Preserved group-level favorite/category storage and clarified it in visible labels; no history migration was performed.
 - Added confirmation for current-image and whole-group deletion while preserving the existing typed confirmation for bulk deletion.
 
+### 7. Studio generation and couple-photo entry
+
+- Replaced two mutually exclusive generation buttons with one dynamic `图生图 / 文生图` action while preserving both request handlers.
+- Kept the PC prompt dock fixed and verified its height and position across 1440px, 1280px, and 1024px desktop widths.
+- Moved the couple-photo assistant from the left reference column to one toolbar icon after Templates.
+- Added a 440px desktop popover and a viewport-root mobile bottom sheet with click-outside, close-button, and `Esc` handling plus focus return.
+- Preserved all couple-photo options and exact composed-prompt text; no storage, history, provider, or request migration was performed.
+- Added the official Lucide Vue package for the new people and close icons.
+
 ## Verification Baseline
 
 Latest successful command:
@@ -141,13 +151,14 @@ npm run check
 Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
-- Test files: 5 passed.
-- Tests: 34 passed.
+- Test files: 7 passed.
+- Tests: 40 passed.
 - Production build: passed.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 - UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
 - Browser console errors during the UI fixture check: none.
 - Phase 1 browser verification: image-filled asset grid, search, two-item selection toolbar, desktop detail workspace, and 390×844 mobile detail all passed without horizontal overflow or console warnings/errors.
+- Phase 2B browser verification: PC dock remained 241px high at 1440×900, 1280×800, and 1024×768; the 440px popover stayed above it; the 390×844 bottom sheet fit the viewport with no horizontal overflow; fresh-page console logs were clean.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
 
@@ -171,16 +182,14 @@ The diagnostic enhancement was saved as a separate checkpoint before starting UI
 
 ## Next TODO
 
-1. Prepare the Phase 2B couple-photo icon-entry sketch and confirmation brief; do not infer implementation approval from Phase 2A.
-2. Only after Phase 2B is explicitly approved, implement and verify that bounded entry change without altering its prompt composition or request behavior.
-3. Prepare a separate result/history brief for one current result, persistent history-backed browsing, and diagnostics tied to a selected generation.
-4. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback.
-5. Design and implement storage v2 only after the core result design is agreed.
+1. Prepare a separate result/history product brief for one current result, persistent history-backed browsing, and diagnostics tied to a selected generation; do not implement before approval.
+2. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback.
+3. Design and implement storage v2 only after the core result design is agreed.
    - Store large image data in IndexedDB rather than `localStorage`.
    - Preserve existing history images, prompts, API presets, and canvas data during migration.
-6. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
-7. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
-8. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
+4. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
+5. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
+6. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
 
 Deferred by user decision:
 
@@ -204,6 +213,28 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-13 16:45 (Asia/Shanghai)
+
+- User explicitly approved all three recommended Phase 2B decisions.
+- Removed the always-visible couple-photo form from the left reference column and added a standard people icon after the Template toolbar action.
+- Implemented a 440px PC popover above the fixed dock and a viewport-root mobile bottom sheet; the root rendering avoids incorrect mobile positioning caused by the dock's backdrop filter.
+- Added unavailable, available, enabled, and expanded states, plus concise tooltips and the two-character-reference explanation.
+- Added close-button, click-outside, `Esc`, mutual exclusion with the phrase panel, and focus-return behavior without clearing current options.
+- Extracted and tested the exact couple-photo prompt composition; request routing, payloads, history, API presets, canvas, and other prompt tools are unchanged.
+- Added `@lucide/vue` for the new people and close icons; the 9 existing audit advisories remain 5 high and 4 moderate.
+- `npm run check` passed with 7 test files and 40 tests plus successful type checks and production build.
+- Verified 1440×900, 1280×800, 1024×768, and 390×844 layouts; dock height stayed stable, the mobile sheet fit exactly, no horizontal overflow occurred, and fresh-page browser logs were clean.
+- No later phase is approved; the next action is a result/history product brief only.
+
+### 2026-07-13 15:43 (Asia/Shanghai)
+
+- Continued with the next authorized planning step and prepared the Phase 2B couple-photo entry brief without changing runtime source.
+- Confirmed the current assistant always occupies the left reference column with its status, enable checkbox, two selectors, extra prompt, and optional composed-prompt preview, even when controls are unavailable.
+- Recommended placing one couple-photo icon after the existing Template icon, opening a 440px PC popover above the fixed dock and a mobile bottom sheet without resizing the dock.
+- Defined separate unavailable, available, enabled, and panel-open states; the unavailable icon remains clickable so the panel can explain the two-character-reference requirement.
+- Preserved all couple-photo options and prompt composition, plus the fixed PC dock, phrase/template tools, generation requests, history, API presets, canvas, and result layout.
+- Added `docs/phase-2b-couple-photo-entry-brief.md`; Phase 2B implementation is waiting for three explicit product confirmations.
 
 ### 2026-07-13 15:32 (Asia/Shanghai)
 
