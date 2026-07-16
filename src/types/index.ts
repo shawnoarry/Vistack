@@ -18,8 +18,33 @@ export interface GenerateRequest {
     translate?: boolean
 }
 
+export type GenerationParamValue = string | number | boolean | null
+
+export interface GenerationActualParams {
+    provider?: string
+    resolvedEndpoint?: string
+    requestCount?: number
+    n?: number | string
+    aspectRatio?: string
+    imageSize?: string
+    outputSize?: string
+    quality?: string
+    autoPrompt?: boolean
+    translate?: boolean
+    referenceCount?: number
+    referencePayloadField?: string
+}
+
+export interface GenerationImageDetail {
+    index: number
+    revisedPrompt?: string
+    actualParams?: Record<string, GenerationParamValue>
+}
+
 export interface GenerateResponse {
     imageUrls: string[]
+    imageDetails?: GenerationImageDetail[]
+    revisedPrompt?: string
 }
 
 export type GenerationTaskProvider = 'grsai' | 'grsai-draw'
@@ -188,6 +213,11 @@ export interface GenerationTask {
     toolboxReferences?: ToolboxReference[]
     toolboxAssetId?: string
     toolboxAssetName?: string
+    actualParams?: GenerationActualParams
+    imageDetails?: GenerationImageDetail[]
+    revisedPrompt?: string
+    durationMs?: number
+    redactedErrorSummary?: string
 }
 
 export interface ToolboxRolePushPayload {

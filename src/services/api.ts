@@ -157,6 +157,8 @@ export async function generateImage(request: GenerateRequest, _maxRetries: numbe
     const isSingleOutputEditRequest = profile.provider === 'openai-image-edit'
 
     const collectedUrls: string[] = []
+    const collectedImageDetails: NonNullable<GenerateResponse['imageDetails']> = []
+    let revisedPrompt = ''
     let lastError: Error | null = null
 
     for (let requestIndex = 1; requestIndex <= requestLimit && collectedUrls.length < targetCount; requestIndex += 1) {
@@ -170,17 +172,23 @@ export async function generateImage(request: GenerateRequest, _maxRetries: numbe
             const response = await generateWithProfile(profile, { ...request, count: countForRequest }, options)
 
             if (response.imageUrls.length > 0) {
-                for (const imageUrl of response.imageUrls) {
+                for (let responseIndex = 0; responseIndex < response.imageUrls.length; responseIndex += 1) {
+                    const imageUrl = response.imageUrls[responseIndex]
                     if (!collectedUrls.includes(imageUrl)) {
                         collectedUrls.push(imageUrl)
+                        const detail = response.imageDetails?.[responseIndex]
+                        if (detail) {
+                            collectedImageDetails.push({ ...detail, index: collectedUrls.length - 1 })
+                        }
                     }
                     if (collectedUrls.length >= targetCount) break
                 }
+                revisedPrompt = response.revisedPrompt || revisedPrompt
 
                 console.log(`Generated ${collectedUrls.length}/${targetCount} image(s) after request ${requestIndex}`)
 
                 if (batchMode === 'single' || collectedUrls.length >= targetCount) {
-                    return { imageUrls: collectedUrls.slice(0, targetCount) }
+                    return finalizeGenerateResponse(collectedUrls, collectedImageDetails, revisedPrompt, targetCount)
                 }
 
                 continue
@@ -197,7 +205,7 @@ export async function generateImage(request: GenerateRequest, _maxRetries: numbe
     }
 
     if (collectedUrls.length > 0) {
-        return { imageUrls: collectedUrls.slice(0, targetCount) }
+        return finalizeGenerateResponse(collectedUrls, collectedImageDetails, revisedPrompt, targetCount)
     }
 
     if (isTerminalGenerationError(lastError)) {
@@ -417,7 +425,7 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
     const data = await postJson(apiEndpoint, request.apikey, payload, request.useProxy, request.proxyToken)
     const directImageUrls = extractImageUrls(data)
     if (directImageUrls.length > 0) {
-        return { imageUrls: directImageUrls }
+        return buildGenerateResponse(directImageUrls, data)
     }
 
     const message = getObject(getArray(getObject(data)?.choices)?.[0])?.message
@@ -430,7 +438,7 @@ async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequ
     const imageUrls = extractImageUrls(message)
 
     if (imageUrls.length > 0) {
-        return { imageUrls }
+        return buildGenerateResponse(imageUrls, message)
     }
 
     throwIfTerminalTaskResponse(data, 'Image generation request')
@@ -466,7 +474,7 @@ async function generateWithOpenAiImage(apiEndpoint: string, request: GenerateReq
     const imageUrls = extractImageUrls(data)
 
     if (imageUrls.length > 0) {
-        return { imageUrls }
+        return buildGenerateResponse(imageUrls, data)
     }
 
     throwIfTerminalTaskResponse(data, 'Image generation request')
@@ -500,7 +508,7 @@ async function generateWithGrsai(apiEndpoint: string, request: GenerateRequest, 
     const directUrls = extractImageUrls(data)
 
     if (directUrls.length > 0) {
-        return { imageUrls: directUrls }
+        return buildGenerateResponse(directUrls, data)
     }
 
     throwIfTerminalTaskResponse(data, 'Grsai image generation request')
@@ -536,7 +544,7 @@ async function generateWithOpenAiImageEdit(apiEndpoint: string, request: Generat
     const imageUrls = extractImageUrls(data)
 
     if (imageUrls.length > 0) {
-        return { imageUrls }
+        return buildGenerateResponse(imageUrls, data)
     }
 
     throwIfTerminalTaskResponse(data, 'Image edit request')
@@ -575,7 +583,7 @@ async function generateWithGrsaiDraw(apiEndpoint: string, request: GenerateReque
     const directUrls = extractImageUrls(data)
 
     if (directUrls.length > 0) {
-        return { imageUrls: directUrls }
+        return buildGenerateResponse(directUrls, data)
     }
 
     throwIfTerminalTaskResponse(data, 'Grsai draw request')
@@ -621,7 +629,7 @@ async function pollGrsaiResult(apiEndpoint: string, apikey: string, taskId: stri
         const imageUrls = extractImageUrls(data)
 
         if (imageUrls.length > 0) {
-            return { imageUrls }
+            return buildGenerateResponse(imageUrls, data)
         }
 
         throwIfTerminalTaskResponse(data, 'Grsai task')
@@ -1200,6 +1208,65 @@ function extractImageUrls(value: unknown): string[] {
 
     visit(value)
     return urls
+}
+
+function buildGenerateResponse(imageUrls: string[], source: unknown): GenerateResponse {
+    const revisedPrompts = extractRevisedPrompts(source)
+    const imageDetails = revisedPrompts.length === imageUrls.length
+        ? revisedPrompts.map((revisedPrompt, index) => ({ index, revisedPrompt }))
+        : undefined
+
+    return {
+        imageUrls,
+        imageDetails,
+        revisedPrompt: revisedPrompts[0]
+    }
+}
+
+function finalizeGenerateResponse(
+    imageUrls: string[],
+    imageDetails: NonNullable<GenerateResponse['imageDetails']>,
+    revisedPrompt: string,
+    targetCount: number
+): GenerateResponse {
+    const finalUrls = imageUrls.slice(0, targetCount)
+    const finalDetails = imageDetails.filter(detail => detail.index < finalUrls.length)
+    return {
+        imageUrls: finalUrls,
+        imageDetails: finalDetails.length ? finalDetails : undefined,
+        revisedPrompt: revisedPrompt || undefined
+    }
+}
+
+function extractRevisedPrompts(value: unknown): string[] {
+    const prompts: string[] = []
+    const seen = new Set<string>()
+
+    const visit = (item: unknown, depth = 0) => {
+        if (depth > 8 || !isRecord(item)) return
+
+        const revisedPrompt = getString(item.revised_prompt) || getString(item.revisedPrompt)
+        if (revisedPrompt && !seen.has(revisedPrompt)) {
+            seen.add(revisedPrompt)
+            prompts.push(revisedPrompt)
+        }
+
+        for (const key of ['data', 'images', 'output', 'outputs', 'result', 'results', 'content']) {
+            const nested = item[key]
+            if (Array.isArray(nested)) {
+                nested.forEach(entry => visit(entry, depth + 1))
+            } else if (isRecord(nested)) {
+                visit(nested, depth + 1)
+            }
+        }
+    }
+
+    if (Array.isArray(value)) {
+        value.forEach(entry => visit(entry))
+    } else {
+        visit(value)
+    }
+    return prompts
 }
 
 function extractTextContent(value: unknown): string {

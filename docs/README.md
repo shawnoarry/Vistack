@@ -10,6 +10,7 @@
 - [阶段 1：资产库与单张详情](phase-1-asset-library-brief.md)：已实施的资产页、卡片、选择下载和详情工作区方案与验收记录。
 - [阶段 2：创作台小步调整](phase-2-studio-workflow-brief.md)：已完成动态图生图/文生图按钮，并记录合影助手入口的下一步确认边界。
 - [阶段 2B：合影助手图标入口](phase-2b-couple-photo-entry-brief.md)：已将左侧常驻表单移动到底栏图标浮层，并记录桌面/手机验收结果。
+- [阶段 3：结果与历史统一](phase-3-result-history-brief.md)：已完成当前结果、持久历史、所选生成诊断和兼容数据字段，并记录验证结果。
 - [GPT Image Playground 优化整合计划](gpt-image-playground-integration-plan.md)：以用户 fork 的固定 commit 为异机参考基线，记录可整合能力、优先级、后置/搁置项和分阶段安全门禁。
 
 ## 历史归档

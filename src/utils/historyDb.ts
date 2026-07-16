@@ -1,4 +1,4 @@
-import type { GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle } from '../types'
+import type { GenerateRequest, GenerationActualParams, GenerationBatchMode, GenerationImageDetail, GenerationRecipe, GenerationTask, GenerationTaskHandle } from '../types'
 import { LocalStorage } from './storage'
 
 export type GenerationHistorySource = 'text' | 'image'
@@ -24,6 +24,11 @@ export interface GenerationHistoryItem {
     category?: string
     favorite?: boolean
     recipe?: GenerationRecipe
+    actualParams?: GenerationActualParams
+    imageDetails?: GenerationImageDetail[]
+    revisedPrompt?: string
+    durationMs?: number
+    redactedErrorSummary?: string
 }
 
 export interface StoredImage {

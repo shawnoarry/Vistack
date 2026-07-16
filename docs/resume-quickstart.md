@@ -53,7 +53,8 @@ c4dd477c18ee7639a1e6de27bee7b2849e3ff9bd
 1. `docs/codex-project-progress.md`：现在做到哪里、下一步是什么。
 2. `docs/gpt-image-playground-integration-plan.md`：哪些能力优先、后置或搁置。
 3. `docs/product-ui-ux-plan.md`：结果/历史等产品问题的整体背景；其中未批准构想不能直接实施。
-4. 主进度 `Next TODO` 指向的当前产品简报；没有简报时，下一步只能先写简报。
+4. `docs/phase-3-result-history-brief.md`：已完成的结果/历史方案、兼容边界和验证记录。
+5. 主进度 `Next TODO` 指向的当前产品简报；没有简报时，下一步只能先写简报。
 
 只看整合计划不够；当前是否可以开工，以项目进度记录和用户本次明确批准为准。
 
@@ -67,6 +68,7 @@ c4dd477c18ee7639a1e6de27bee7b2849e3ff9bd
 2. docs/gpt-image-playground-integration-plan.md
 3. docs/resume-quickstart.md
 4. docs/product-ui-ux-plan.md
+5. docs/phase-3-result-history-brief.md
 
 然后执行只读检查：
 - git status --short --branch
@@ -99,7 +101,8 @@ npm run check
 ## 当前整合顺序
 
 - `P0`：已在 Vistack 提交 `4d2bb94` 完成，不要在异机重复施工。
-- 当前唯一下一步：准备“结果与历史”产品确认稿，把选中历史诊断与 P1 的实际参数字段一起规划；尚未授权运行时实现。
+- 阶段 3 已完成，不要在异机重复施工。
+- 当前唯一下一步：准备模型参数与供应商能力配置的独立产品简报；尚未授权运行时实现。
 - 后续 `P1`：独立 Responses API、参考图粘贴与安全排序；必须分别重新确认，不能并行启动。
 - `P2`：原生遮罩、完整备份、Storage v2、模型能力配置。
 - `P3`：fal.ai、自定义服务商、高级批量操作、Docker/PWA；有真实需求再做。

@@ -120,7 +120,7 @@
             </div>
         </section>
 
-        <main v-if="currentView === 'studio'" class="wb-shell grid items-start gap-4 py-4 lg:pb-[132px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
+        <main v-if="currentView === 'studio'" class="wb-shell grid items-start gap-4 py-4 lg:pb-[300px] xl:grid-cols-[minmax(320px,0.72fr)_minmax(520px,1.7fr)_minmax(300px,0.62fr)] 2xl:grid-cols-[minmax(340px,0.66fr)_minmax(720px,1.9fr)_minmax(320px,0.58fr)]">
             <aside class="space-y-4">
                 <section class="wb-panel">
                     <div class="mb-3 flex items-center justify-between gap-3">
@@ -232,11 +232,21 @@
                         :loading="displayLoading"
                         :error="displayError"
                         :can-push="canPushDisplayResult"
-                        :can-reuse="Boolean(displayResults.length)"
+                        :can-reuse="Boolean(displayResults.length || selectedFailedTask)"
+                        :selected-index="selectedGenerationImageIndex"
+                        :selected-task-id="selectedFailedTaskId"
+                        :result-title="selectedResultTitle"
+                        :result-prompt="selectedResultPrompt"
+                        :result-revised-prompt="selectedResultRevisedPrompt"
+                        :result-meta="selectedResultMeta"
+                        :result-created-at="selectedResultCreatedAt"
                         @restore-task="restoreTaskResult"
                         @download="handleDownloadResult"
                         @push="handlePushDisplayResult"
                         @reuse="handleReuseCurrentRecipe"
+                        @select-image="selectDisplayImage"
+                        @select-task="selectFailedTask"
+                        @dismiss-task="dismissGenerationTask"
                         @reuse-task="reuseTaskPrompt"
                         @push-task="pushTaskImages"
                         @canvas-task="addTaskToCanvas"
@@ -272,13 +282,13 @@
                             <dd class="mt-1 text-brand-ink">{{ supportsGoogleSearch ? (gemini3EnableGoogleSearch ? '已启用' : '可启用') : '当前模型不支持' }}</dd>
                         </div>
                         <div>
-                            <dt class="wb-label">请求诊断</dt>
+                            <dt class="wb-label" data-testid="generation-diagnostic-title">{{ selectedDiagnosticTitle }}</dt>
                             <dd class="mt-1 space-y-1 text-xs leading-5 text-brand-muted">
-                                <p>路由：{{ requestDiagnostic.providerLabel }} · {{ apiUseProxy ? '代理' : '直连' }}</p>
-                                <p>参考图：{{ requestDiagnostic.referenceSummary }}</p>
-                                <p>请求：{{ requestDiagnostic.requestSummary }}</p>
-                                <p class="break-all">端点：{{ requestDiagnostic.endpoint }}</p>
-                                <button type="button" class="wb-secondary mt-2 min-h-8 px-2 text-xs" @click="copyRequestDiagnostic">
+                                <p>路由：{{ selectedDiagnosticProviderLabel }}<span v-if="!selectedDiagnosticRecord"> · {{ apiUseProxy ? '代理' : '直连' }}</span></p>
+                                <p>参考图：{{ selectedDiagnosticReferenceSummary }}</p>
+                                <p>请求：{{ selectedDiagnosticRequestSummary }}</p>
+                                <p class="break-all">端点：{{ selectedDiagnosticEndpoint }}</p>
+                                <button type="button" class="wb-secondary mt-2 min-h-10 px-3 text-xs" @click="copySelectedGenerationDiagnostic">
                                     {{ diagnosticCopyStatus || '复制诊断信息' }}
                                 </button>
                             </dd>
@@ -299,11 +309,11 @@
                     </div>
                 </section>
 
-                <section class="wb-panel">
+                <section class="wb-panel" data-testid="generation-history">
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <div>
-                            <h2 class="text-sm font-semibold text-brand-ink">近期资产</h2>
-                            <p class="mt-1 text-xs text-brand-muted">首页只展示近期和收藏入口；全量管理进入资产库。</p>
+                            <h2 class="text-sm font-semibold text-brand-ink">生成历史</h2>
+                            <p class="mt-1 text-xs text-brand-muted">选择记录只切换查看内容；复用时才回填创作台。</p>
                         </div>
                         <button
                             v-if="generationHistory.length"
@@ -315,78 +325,44 @@
                         </button>
                     </div>
 
-                    <div v-if="generationHistory.length" class="mb-3 grid grid-cols-3 gap-2 text-center text-xs">
-                        <div class="rounded-lg border border-brand-line bg-white p-2 dark:border-night-muted/35 dark:bg-night-panel">
-                            <div class="text-brand-muted">全部</div>
-                            <div class="mt-1 text-base font-semibold text-brand-ink">{{ generationHistory.length }}</div>
-                        </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-2 dark:border-night-muted/35 dark:bg-night-panel">
-                            <div class="text-brand-muted">收藏</div>
-                            <div class="mt-1 text-base font-semibold text-brand-ink">{{ favoriteHistory.length }}</div>
-                        </div>
-                        <div class="rounded-lg border border-brand-line bg-white p-2 dark:border-night-muted/35 dark:bg-night-panel">
-                            <div class="text-brand-muted">收藏夹</div>
-                            <div class="mt-1 text-base font-semibold text-brand-ink">{{ historyCategories.length }}</div>
-                        </div>
-                    </div>
+                    <div v-if="recentGenerationHistory.length" class="space-y-2">
+                        <button
+                            v-for="item in recentGenerationHistory"
+                            :key="item.id"
+                            type="button"
+                            :aria-current="selectedGenerationHistoryId === item.id ? 'true' : undefined"
+                            :class="[
+                                'grid min-h-20 w-full grid-cols-[64px_minmax(0,1fr)] gap-3 rounded-lg border p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent',
+                                selectedGenerationHistoryId === item.id
+                                    ? 'border-brand-accent bg-brand-accent/5 ring-2 ring-brand-accent/10'
+                                    : 'border-brand-line bg-white hover:border-brand-accent/35 dark:border-night-muted/35 dark:bg-night-panel'
+                            ]"
+                            @click="selectHistoryItem(item)"
+                        >
+                            <span class="relative h-16 w-16 overflow-hidden rounded-md border border-brand-line bg-brand-surface dark:border-night-muted/35">
+                                <img v-if="item.images[0]" :src="item.images[0]" :alt="`${item.source === 'image' ? '图生图' : '文生图'}历史缩略图`" class="h-full w-full object-cover" loading="lazy" />
+                                <span v-if="item.images.length > 1" class="absolute bottom-0 right-0 bg-brand-ink/80 px-1.5 py-0.5 text-[10px] text-brand-surface">{{ item.images.length }}</span>
+                            </span>
+                            <span class="min-w-0 py-0.5">
+                                <span class="flex items-center justify-between gap-2">
+                                    <span class="truncate text-xs font-semibold text-brand-ink">{{ item.source === 'image' ? '图生图' : '文生图' }}</span>
+                                    <span class="shrink-0 text-[11px] text-brand-muted">{{ formatHistoryListTime(item.createdAt) }}</span>
+                                </span>
+                                <span class="mt-1 block overflow-hidden text-ellipsis whitespace-nowrap text-xs text-brand-muted">{{ item.recipe?.mainPrompt || item.prompt }}</span>
+                                <span class="mt-1 flex flex-wrap gap-1.5 text-[11px] text-brand-muted">
+                                    <span>{{ item.model }}</span>
+                                    <span>· {{ item.aspectRatio }}</span>
+                                    <span v-if="item.favorite">· 已收藏</span>
+                                    <span v-if="item.category">· {{ item.category }}</span>
+                                </span>
+                            </span>
+                        </button>
 
-                    <div v-if="recentGenerationHistory.length" class="space-y-3">
-                        <article v-for="item in recentGenerationHistory" :key="item.id" class="rounded-lg border border-brand-line bg-white p-3 dark:border-night-muted/35 dark:bg-night-panel">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <p class="text-xs font-semibold text-brand-ink">
-                                        {{ item.source === 'text' ? '文生图' : '参考图生成' }}
-                                        <span v-if="item.recipe?.referenceImages?.length" class="text-brand-muted"> · {{ item.recipe.referenceImages.length }} 张参考图</span>
-                                        <span v-if="item.category" class="text-brand-muted"> · {{ item.category }}</span>
-                                    </p>
-                                    <p class="mt-1 truncate text-xs text-brand-muted">{{ item.recipe?.mainPrompt || item.prompt }}</p>
-                                </div>
-                                <div class="flex shrink-0 items-center gap-1">
-                                    <span class="rounded-md bg-brand-line/60 px-2 py-1 text-[11px] font-semibold text-brand-muted dark:bg-night-muted/20">
-                                        {{ item.aspectRatio }}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        :aria-pressed="item.favorite === true"
-                                        :title="item.favorite ? '取消收藏' : '收藏这组结果'"
-                                        :class="[
-                                            'rounded-md border px-2 py-1 text-[11px] font-semibold transition',
-                                            item.favorite
-                                                ? 'border-brand-accent/30 bg-brand-accent/10 text-brand-accent'
-                                                : 'border-brand-line bg-brand-surface text-brand-muted hover:border-brand-accent/35 hover:text-brand-accent'
-                                        ]"
-                                        @click="toggleHistoryFavorite(item)"
-                                    >
-                                        {{ item.favorite ? '已收藏' : '收藏' }}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="mt-3 grid grid-cols-4 gap-2">
-                                <button
-                                    v-for="(image, index) in item.images.slice(0, 4)"
-                                    :key="`${item.id}-${index}`"
-                                    type="button"
-                                    @click="restoreHistoryItem(item)"
-                                    class="aspect-square overflow-hidden rounded-md border border-brand-line bg-brand-surface"
-                                >
-                                    <img :src="image" :alt="`历史结果 ${index + 1}`" class="h-full w-full object-cover" />
-                                </button>
-                            </div>
-
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="restoreHistoryItem(item)">查看</button>
-                                <button type="button" class="wb-primary min-h-8 px-2 text-xs" @click="reuseHistoryRecipe(item)">一键复用</button>
-                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="pushHistoryImages(item)">结果作参考</button>
-                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="addHistoryItemToCanvas(item)">加入画布</button>
-                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="reuseHistoryPrompt(item)">仅提示词</button>
-                                <button type="button" class="wb-secondary min-h-8 px-2 text-xs" @click="toggleHistoryFavorite(item)">{{ item.favorite ? '取消收藏' : '收藏' }}</button>
-                            </div>
-                        </article>
+                        <p class="pt-1 text-[11px] text-brand-muted">共 {{ generationHistory.length }} 组 · 收藏 {{ favoriteHistory.length }} 组</p>
                     </div>
 
                     <p v-else-if="historyLoading" class="rounded-lg border border-dashed border-brand-line bg-white p-4 text-sm text-brand-muted">正在读取本地历史...</p>
-                    <p v-else class="rounded-lg border border-dashed border-brand-line bg-white p-4 text-sm text-brand-muted">成功生成后，近期资产会出现在这里。</p>
+                    <p v-else class="rounded-lg border border-dashed border-brand-line bg-white p-4 text-sm text-brand-muted">成功生成后，历史会保存在这里。</p>
                 </section>
             </aside>
         </main>
@@ -621,6 +597,7 @@
                     <div class="grid items-stretch gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
                         <textarea
                             v-model="textToImagePrompt"
+                            data-testid="prompt-input"
                             @input="handlePromptManualInput"
                             placeholder="描述你想生成或改动的画面。参考图会作为素材参与生成，可以写：让角色1穿着服装参考，在背景参考中拍摄产品级主视觉。"
                             class="wb-input h-full min-h-[132px] w-full resize-y py-3 text-sm leading-6"
@@ -984,6 +961,8 @@
             @apply-references="applyToolboxReferencesToStudio"
             @generate="handleToolboxGenerate"
             @download="handleDownloadResult"
+            @select-task="selectFailedTaskFromToolbox"
+            @dismiss-task="dismissGenerationTask"
             @restore-task="restoreTaskResult"
             @reuse-task="reuseTaskPrompt"
             @push-task="pushTaskImages"
@@ -1141,10 +1120,11 @@ import {
     openAiAspectRatioResolutionData
 } from './utils/imageSizing'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
-import { buildDiagnosticReport, formatDiagnosticTimestamp, sanitizeDiagnosticUrl } from './utils/diagnostics'
+import { buildDiagnosticReport, formatDiagnosticTimestamp, sanitizeDiagnosticUrl, summarizeDiagnosticError } from './utils/diagnostics'
 import { buildAssetDownloadFilename, buildHistoryAssets, type AssetSortOrder, type HistoryAsset } from './utils/assetLibrary'
 import { buildGenerationActionLabel, resolveGenerationMode } from './utils/generationAction'
 import { buildPortraitAssistPrompt, portraitAssistIconTitle, resolvePortraitAssistUiState } from './utils/portraitAssist'
+import { buildGenerationActualParams, clampHistoryImageIndex, selectInitialHistoryId } from './utils/generationRecords'
 import {
     deleteGenerationHistoryItem,
     deletePendingGenerationTaskItem,
@@ -1159,7 +1139,7 @@ import {
     type PendingGenerationTaskItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload, WorkspaceMode } from './types'
+import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerateResponse, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 type ThemeMode = 'light' | 'dark'
@@ -1189,6 +1169,9 @@ const isTextToImageLoading = ref(false)
 const latestResultSource = ref<'text' | 'image' | null>(null)
 const latestGenerationRecipe = ref<GenerationRecipe | null>(null)
 const generationTasks = ref<GenerationTask[]>([])
+const selectedGenerationHistoryId = ref('')
+const selectedGenerationImageIndex = ref(0)
+const selectedFailedTaskId = ref('')
 const toolboxGenerationResults = ref<string[]>([])
 const toolboxGenerationError = ref<string | null>(null)
 const pendingTaskHandles = new Map<string, GenerationTaskHandle[]>()
@@ -2397,8 +2380,10 @@ const syncImagesToCanvas = (images: string[], source: CanvasWorkbenchItemSource,
 }
 
 const addDisplayResultsToCanvas = () => {
-    const title = latestResultSource.value === 'text' ? '文生图结果' : '参考图结果'
-    addImagesToCanvas(displayResults.value, 'result', title, latestGenerationRecipe.value?.mainPrompt || textToImagePrompt.value)
+    const source = selectedHistoryItem.value?.source || latestResultSource.value
+    const title = source === 'text' ? '文生图结果' : '参考图结果'
+    const prompt = selectedHistoryItem.value?.prompt || latestGenerationRecipe.value?.mainPrompt || textToImagePrompt.value
+    addImagesToCanvas(displayResults.value, 'result', title, prompt)
 }
 
 const addReferencesToCanvas = () => {
@@ -2491,14 +2476,29 @@ const addTaskToCanvas = (task: GenerationTask) => {
 
 const activeGenerationTasks = computed(() => generationTasks.value.filter(task => task.status === 'running'))
 const displayLoading = computed(() => activeGenerationTasks.value.length > 0)
+const selectedHistoryItem = computed(() =>
+    generationHistory.value.find(item => item.id === selectedGenerationHistoryId.value) || null
+)
+const selectedFailedTask = computed(() =>
+    generationTasks.value.find(task => task.id === selectedFailedTaskId.value && task.status === 'error') || null
+)
 
 const displayResults = computed(() => {
+    if (selectedFailedTask.value) return []
+    if (selectedHistoryItem.value) return selectedHistoryItem.value.images
     if (latestResultSource.value === 'image') return result.value
     if (latestResultSource.value === 'text') return textToImageResult.value
     return result.value.length > 0 ? result.value : textToImageResult.value
 })
 
 const displayError = computed(() => {
+    if (selectedFailedTask.value) return selectedFailedTask.value.error || selectedFailedTask.value.redactedErrorSummary || '生成失败'
+    if (selectedHistoryItem.value) {
+        const warningCount = selectedHistoryItem.value.imagePersistenceWarnings?.length || 0
+        return warningCount
+            ? `这次生成有 ${warningCount} 张图片未能保存为本地副本，远端链接可能会过期。`
+            : null
+    }
     const latestErroredTask = generationTasks.value.find(task => task.status === 'error')
     if (latestErroredTask?.error && !displayResults.value.length) return latestErroredTask.error
     if (latestResultSource.value === 'image') return error.value
@@ -2507,6 +2507,39 @@ const displayError = computed(() => {
 })
 
 const canPushDisplayResult = computed(() => Boolean(displayResults.value.length > 0))
+const selectedCurrentImage = computed(() =>
+    displayResults.value[clampHistoryImageIndex(displayResults.value, selectedGenerationImageIndex.value)] || ''
+)
+const selectedResultTitle = computed(() => {
+    if (selectedFailedTask.value) return selectedFailedTask.value.title
+    if (selectedHistoryItem.value) return selectedHistoryItem.value.source === 'image' ? '图生图结果' : '文生图结果'
+    if (latestResultSource.value === 'image') return '图生图结果'
+    if (latestResultSource.value === 'text') return '文生图结果'
+    return ''
+})
+const selectedResultPrompt = computed(() =>
+    selectedFailedTask.value?.prompt || selectedHistoryItem.value?.prompt || latestGenerationRecipe.value?.compiledPrompt || ''
+)
+const selectedResultRevisedPrompt = computed(() => {
+    const item = selectedHistoryItem.value
+    if (item) {
+        return item.imageDetails?.[selectedGenerationImageIndex.value]?.revisedPrompt || item.revisedPrompt || ''
+    }
+    return selectedFailedTask.value?.imageDetails?.[selectedGenerationImageIndex.value]?.revisedPrompt || selectedFailedTask.value?.revisedPrompt || ''
+})
+const selectedResultCreatedAt = computed(() => selectedFailedTask.value?.createdAt || selectedHistoryItem.value?.createdAt || 0)
+const selectedResultMeta = computed(() => {
+    const record = selectedFailedTask.value || selectedHistoryItem.value
+    if (!record) return []
+
+    return [
+        record.model || '模型未记录',
+        record.aspectRatio || '比例未记录',
+        record.imageSize || '尺寸未记录',
+        `${record.count || record.images.length || 1} 张`,
+        record.durationMs !== undefined ? `${(record.durationMs / 1000).toFixed(1)} 秒` : '耗时未记录'
+    ]
+})
 
 const canGenerateTextImage = computed(
     () =>
@@ -3471,11 +3504,12 @@ const handleToolboxGenerate = async (payload: ToolboxGeneratePayload) => {
 
     try {
         const request = buildGenerateRequest(prompt, referenceImages, generationCount.value)
+        attachGenerationRequestSnapshot(task, request)
         await savePendingGenerationTask(task, request)
         const response = await generateImage(request, 1, {
             onTaskCreated: handle => trackGenerationTaskHandle(task, request, handle)
         })
-        await completeGenerationTask(task, response.imageUrls)
+        await completeGenerationTask(task, response)
         toolboxPanelRef.value?.setToolboxNotice('success', '工具箱生成完成，结果已进入历史记录。')
     } catch (toolboxError) {
         const message = toolboxError instanceof Error ? toolboxError.message : '工具箱生成失败'
@@ -3669,6 +3703,33 @@ const requestDiagnostic = computed(() => {
         payloadField: field,
         warning: requestRouteWarning.value || referenceLimitWarning || referenceRouteWarning
     }
+})
+
+const selectedDiagnosticRecord = computed(() => selectedFailedTask.value || selectedHistoryItem.value)
+const selectedDiagnosticTitle = computed(() => selectedDiagnosticRecord.value ? '所选生成诊断' : '下一次请求检查')
+const selectedDiagnosticProviderLabel = computed(() => {
+    const record = selectedDiagnosticRecord.value
+    if (!record) return requestDiagnostic.value.providerLabel
+    return record.requestProvider || record.actualParams?.provider || '未记录'
+})
+const selectedDiagnosticReferenceSummary = computed(() => {
+    const record = selectedDiagnosticRecord.value
+    if (!record) return requestDiagnostic.value.referenceSummary
+    const count = record.actualParams?.referenceCount ?? record.recipe?.referenceImages?.length
+    return count === undefined ? '未记录' : `${count} 张`
+})
+const selectedDiagnosticRequestSummary = computed(() => {
+    const record = selectedDiagnosticRecord.value
+    if (!record) return requestDiagnostic.value.requestSummary
+    const requestCount = record.actualParams?.requestCount
+    const countParam = record.actualParams?.n
+    if (requestCount === undefined && countParam === undefined) return '旧记录未保存实际请求参数'
+    return `${requestCount ?? 1} 次请求 · n=${countParam ?? '未记录'}`
+})
+const selectedDiagnosticEndpoint = computed(() => {
+    const record = selectedDiagnosticRecord.value
+    if (!record) return requestDiagnostic.value.endpoint
+    return record.actualParams?.resolvedEndpoint || sanitizeDiagnosticUrl(record.resolvedEndpoint || record.endpoint)
 })
 
 const getDiagnosticOutputSize = (provider: string, modelType: string, aspectRatio: string, imageSize: string) => {
@@ -3953,6 +4014,10 @@ const loadGenerationHistory = async () => {
     historyLoading.value = true
     try {
         generationHistory.value = await hydrateHistoryImages(await getGenerationHistoryItems())
+        if (!selectedGenerationHistoryId.value) {
+            selectedGenerationHistoryId.value = selectInitialHistoryId(generationHistory.value)
+            selectedGenerationImageIndex.value = 0
+        }
     } catch (historyError) {
         console.warn('无法读取生成历史:', historyError)
     } finally {
@@ -3989,10 +4054,18 @@ const addGenerationHistory = async (
         imageIds: persistence?.imageIds,
         rawImageUrls: persistence?.rawImageUrls,
         imagePersistenceWarnings: persistence?.warnings,
-        recipe
+        recipe,
+        actualParams: task?.actualParams,
+        imageDetails: task?.imageDetails,
+        revisedPrompt: task?.revisedPrompt,
+        durationMs: task?.durationMs,
+        redactedErrorSummary: task?.redactedErrorSummary
     }
 
     generationHistory.value = [item, ...generationHistory.value.filter(existing => existing.id !== item.id)]
+    selectedGenerationHistoryId.value = item.id
+    selectedGenerationImageIndex.value = 0
+    selectedFailedTaskId.value = ''
 
     try {
         await putGenerationHistoryItem(item)
@@ -4016,6 +4089,23 @@ const uniqueTaskHandles = (handles: GenerationTaskHandle[]) => {
         seen.add(key)
         return true
     })
+}
+
+const attachGenerationRequestSnapshot = (task: GenerationTask, request: GenerateRequest) => {
+    const provider = task.requestProvider || requestDiagnostic.value.provider
+    const isCompatibilityEdit = provider === 'openai-image-edit' &&
+        !isDoraverseImageProxyEndpoint(task.resolvedEndpoint || task.endpoint)
+    const actualParams = buildGenerationActualParams(request, {
+        provider,
+        resolvedEndpoint: task.resolvedEndpoint || requestDiagnostic.value.endpoint,
+        requestCount: request.batchMode === 'fill' ? request.count || 1 : 1,
+        n: isCompatibilityEdit ? 'not sent' : request.count || 1,
+        outputSize: requestDiagnostic.value.outputSize,
+        referencePayloadField: getReferencePayloadField(provider, request.images.length)
+    })
+
+    task.actualParams = actualParams
+    updateGenerationTask(task.id, { actualParams })
 }
 
 const savePendingGenerationTask = async (task: GenerationTask, request: GenerateRequest, handles = pendingTaskHandles.get(task.id) || []) => {
@@ -4058,8 +4148,9 @@ const trackGenerationTaskHandle = async (task: GenerationTask, request: Generate
     await savePendingGenerationTask(task, request, nextHandles)
 }
 
-const completeGenerationTask = async (task: GenerationTask, imageUrls: string[]) => {
-    const persisted = await persistGeneratedImages(imageUrls, task.useProxy, task.proxyToken)
+const completeGenerationTask = async (task: GenerationTask, response: GenerateResponse) => {
+    const persisted = await persistGeneratedImages(response.imageUrls, task.useProxy, task.proxyToken)
+    const durationMs = Math.max(Date.now() - task.createdAt, 0)
     const warningMessage = persisted.warnings.length
         ? `生成成功，但有 ${persisted.warnings.length} 张图片未能保存为本地副本，远端链接可能会过期。`
         : null
@@ -4081,12 +4172,24 @@ const completeGenerationTask = async (task: GenerationTask, imageUrls: string[])
         latestResultSource.value = task.source
         latestGenerationRecipe.value = task.recipe
     }
-    updateGenerationTask(task.id, { status: 'done', images: persisted.images, error: undefined })
+    task.imageDetails = response.imageDetails
+    task.revisedPrompt = response.revisedPrompt
+    task.durationMs = durationMs
+    updateGenerationTask(task.id, {
+        status: 'done',
+        images: persisted.images,
+        error: undefined,
+        imageDetails: response.imageDetails,
+        revisedPrompt: response.revisedPrompt,
+        durationMs
+    })
     await addGenerationHistory(task.source, task.prompt, persisted.images, task.recipe, persisted, task)
     await removePendingGenerationTask(task.id)
 }
 
 const failGenerationTask = async (task: GenerationTask, message: string) => {
+    const durationMs = Math.max(Date.now() - task.createdAt, 0)
+    const redactedErrorSummary = summarizeDiagnosticError(message)
     if (task.origin === 'toolbox') {
         toolboxGenerationError.value = message
     } else if (task.source === 'text') {
@@ -4095,7 +4198,14 @@ const failGenerationTask = async (task: GenerationTask, message: string) => {
         error.value = message
     }
 
-    updateGenerationTask(task.id, { status: 'error', error: message })
+    task.durationMs = durationMs
+    task.redactedErrorSummary = redactedErrorSummary
+    updateGenerationTask(task.id, { status: 'error', error: message, durationMs, redactedErrorSummary })
+    if (task.origin !== 'toolbox') {
+        selectedFailedTaskId.value = task.id
+        selectedGenerationHistoryId.value = ''
+        selectedGenerationImageIndex.value = 0
+    }
     await removePendingGenerationTask(task.id)
 }
 
@@ -4155,7 +4265,15 @@ const resumePendingGenerationTask = async (item: PendingGenerationTaskItem) => {
         const imageUrls = settled.flatMap(result => result.status === 'fulfilled' ? result.value.imageUrls : [])
 
         if (imageUrls.length > 0) {
-            await completeGenerationTask(task, imageUrls.slice(0, task.count || imageUrls.length))
+            const responses = settled
+                .filter((result): result is PromiseFulfilledResult<GenerateResponse> => result.status === 'fulfilled')
+                .map(result => result.value)
+            const imageDetails = responses.flatMap(response => response.imageDetails || [])
+            await completeGenerationTask(task, {
+                imageUrls: imageUrls.slice(0, task.count || imageUrls.length),
+                imageDetails: imageDetails.length ? imageDetails : undefined,
+                revisedPrompt: responses.find(response => response.revisedPrompt)?.revisedPrompt
+            })
             return
         }
 
@@ -4180,7 +4298,15 @@ const collectionOptions = computed(() =>
 )
 
 const favoriteHistory = computed(() => generationHistory.value.filter(item => item.favorite))
-const recentGenerationHistory = computed(() => generationHistory.value.slice(0, 3))
+const recentGenerationHistory = computed(() =>
+    generationHistory.value.filter(item => item.images.some(Boolean)).slice(0, 6)
+)
+const formatHistoryListTime = (timestamp: number) => new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+}).format(new Date(timestamp))
 
 const allHistoryAssets = computed(() => buildHistoryAssets(generationHistory.value, {
     filter: 'all',
@@ -4201,6 +4327,9 @@ const selectedHistoryAssets = computed(() =>
 
 const updateHistoryItem = async (nextItem: GenerationHistoryItem) => {
     generationHistory.value = generationHistory.value.map(item => (item.id === nextItem.id ? nextItem : item))
+    if (selectedGenerationHistoryId.value === nextItem.id) {
+        selectedGenerationImageIndex.value = clampHistoryImageIndex(nextItem.images, selectedGenerationImageIndex.value)
+    }
     try {
         await putGenerationHistoryItem(nextItem)
     } catch (historyError) {
@@ -4229,14 +4358,6 @@ const createCollection = () => {
     showCollectionDialog.value = false
 }
 
-const reuseHistoryPrompt = (item: GenerationHistoryItem) => {
-    textToImagePrompt.value = item.recipe?.mainPrompt || item.prompt
-    customPrompt.value = item.recipe?.customPrompt || ''
-    selectedStyle.value = item.recipe?.selectedStyle || ''
-    currentView.value = 'studio'
-    workspaceMode.value = 'quick'
-}
-
 const applyGenerationRecipe = (recipe: GenerationRecipe | undefined, fallbackPrompt = '') => {
     textToImagePrompt.value = recipe?.mainPrompt || fallbackPrompt
     customPrompt.value = recipe?.customPrompt || ''
@@ -4262,26 +4383,37 @@ const reuseHistoryRecipe = (item: GenerationHistoryItem) => {
     workspaceMode.value = 'quick'
 }
 
-const restoreHistoryItem = (item: GenerationHistoryItem) => {
-    latestResultSource.value = item.source
-    latestGenerationRecipe.value = item.recipe || null
-    if (item.source === 'text') {
-        textToImageResult.value = item.images
-        textToImagePrompt.value = item.recipe?.mainPrompt || item.prompt
-        textToImageError.value = null
-    } else {
-        result.value = item.images
-        textToImagePrompt.value = item.recipe?.mainPrompt || item.prompt
-        customPrompt.value = item.recipe?.customPrompt || ''
-        selectedStyle.value = item.recipe?.selectedStyle || ''
-        error.value = null
-    }
-    selectedAspectRatio.value = item.aspectRatio
-    gemini3ImageSize.value = item.imageSize
-    generationCount.value = item.count || item.recipe?.count || 1
-    generationBatchMode.value = item.batchMode || item.recipe?.batchMode || 'fill'
+const selectHistoryItem = (item: GenerationHistoryItem, imageIndex = 0) => {
+    selectedGenerationHistoryId.value = item.id
+    selectedGenerationImageIndex.value = clampHistoryImageIndex(item.images, imageIndex)
+    selectedFailedTaskId.value = ''
+}
+
+const selectFailedTask = (task: GenerationTask) => {
+    if (task.status !== 'error') return
+    selectedFailedTaskId.value = task.id
+    selectedGenerationHistoryId.value = ''
+    selectedGenerationImageIndex.value = 0
+}
+
+const selectFailedTaskFromToolbox = (task: GenerationTask) => {
+    selectFailedTask(task)
     currentView.value = 'studio'
     workspaceMode.value = 'quick'
+}
+
+const dismissGenerationTask = (task: GenerationTask) => {
+    generationTasks.value = generationTasks.value.filter(item => item.id !== task.id)
+    if (selectedFailedTaskId.value === task.id) {
+        selectedFailedTaskId.value = ''
+        selectedGenerationHistoryId.value = selectInitialHistoryId(generationHistory.value)
+        selectedGenerationImageIndex.value = 0
+    }
+    syncGenerationLoadingState()
+}
+
+const selectDisplayImage = (imageIndex: number) => {
+    selectedGenerationImageIndex.value = clampHistoryImageIndex(displayResults.value, imageIndex)
 }
 
 const openHistoryPreview = (item: GenerationHistoryItem, image = item.images[0] || '') => {
@@ -4313,6 +4445,7 @@ const copyHistoryPrompt = async (item: GenerationHistoryItem) => {
 
 const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string) => {
     const imageIndex = Math.max(item.images.indexOf(image), 0)
+    const imageDetail = item.imageDetails?.[imageIndex]
     const references = item.recipe?.referenceImages?.map((_, index) => {
         const meta = normalizeReferenceRecipeMeta(item.recipe?.referenceImageMetadata?.[index], index)
         return `${index + 1}. ${roleLabel(meta.role)} / ${meta.label}${meta.note ? ` / ${meta.note}` : ''}`
@@ -4336,8 +4469,13 @@ const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string)
             `count: ${item.count || item.images.length}`,
             `batchMode: ${item.batchMode || item.recipe?.batchMode || 'fill'}`,
             `referenceCount: ${item.recipe?.referenceImages?.length || 0}`,
+            item.durationMs !== undefined ? `durationMs: ${item.durationMs}` : 'durationMs: not recorded',
+            ...Object.entries(item.actualParams || {}).map(([key, value]) => `actual.${key}: ${String(value)}`),
             references.length ? `references:\n${references.join('\n')}` : 'references: none',
             item.imagePersistenceWarnings?.length ? `saveWarnings:\n${item.imagePersistenceWarnings.join('\n')}` : '',
+            item.redactedErrorSummary ? `redactedErrorSummary: ${item.redactedErrorSummary}` : '',
+            imageDetail?.revisedPrompt ? `imageRevisedPrompt:\n${imageDetail.revisedPrompt}` : '',
+            item.revisedPrompt ? `revisedPrompt:\n${item.revisedPrompt}` : '',
             `prompt:\n${item.prompt}`
         ]
     })
@@ -4354,8 +4492,59 @@ const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string)
     }, 1800)
 }
 
+const copyTaskDiagnostic = async (task: GenerationTask) => {
+    const text = buildDiagnosticReport({
+        title: 'Vistack 失败任务诊断',
+        capturedAt: formatDiagnosticTimestamp(task.createdAt),
+        visibleError: task.redactedErrorSummary || task.error,
+        userAgent: navigator.userAgent,
+        details: [
+            `taskId: ${task.id}`,
+            `source: ${task.source}`,
+            `configuredEndpoint: ${sanitizeDiagnosticUrl(task.endpoint)}`,
+            `resolvedEndpoint: ${sanitizeDiagnosticUrl(task.resolvedEndpoint || task.endpoint)}`,
+            `provider: ${task.requestProvider || task.actualParams?.provider || 'unknown'}`,
+            `model: ${task.model}`,
+            `aspectRatio: ${task.aspectRatio}`,
+            `imageSize: ${task.imageSize}`,
+            `count: ${task.count}`,
+            `batchMode: ${task.batchMode || task.recipe.batchMode || 'fill'}`,
+            task.durationMs !== undefined ? `durationMs: ${task.durationMs}` : 'durationMs: not recorded',
+            ...Object.entries(task.actualParams || {}).map(([key, value]) => `actual.${key}: ${String(value)}`),
+            `prompt:\n${task.prompt}`
+        ]
+    })
+
+    try {
+        await navigator.clipboard.writeText(text)
+        diagnosticCopyStatus.value = '已复制'
+    } catch {
+        diagnosticCopyStatus.value = '复制失败'
+    }
+
+    window.setTimeout(() => {
+        diagnosticCopyStatus.value = ''
+    }, 1800)
+}
+
+const copySelectedGenerationDiagnostic = () => {
+    if (selectedFailedTask.value) return copyTaskDiagnostic(selectedFailedTask.value)
+    if (selectedHistoryItem.value) return copyHistoryDiagnostic(selectedHistoryItem.value, selectedCurrentImage.value)
+    return copyRequestDiagnostic()
+}
+
 const deleteHistoryItem = async (item: GenerationHistoryItem) => {
     generationHistory.value = generationHistory.value.filter(historyItem => historyItem.id !== item.id)
+    if (selectedGenerationHistoryId.value === item.id) {
+        selectedGenerationHistoryId.value = selectInitialHistoryId(generationHistory.value)
+        selectedGenerationImageIndex.value = 0
+        if (!selectedGenerationHistoryId.value) {
+            result.value = []
+            textToImageResult.value = []
+            latestResultSource.value = null
+            latestGenerationRecipe.value = null
+        }
+    }
     if (historyPreviewItem.value?.id === item.id) {
         historyPreviewItem.value = null
         historyPreviewImage.value = ''
@@ -4458,12 +4647,6 @@ const confirmBulkDeleteAssets = async () => {
     bulkDeleteConfirmText.value = ''
 }
 
-const pushHistoryImages = (item: GenerationHistoryItem) => {
-    for (const image of [...item.images].reverse()) {
-        pushImageToUpload(image)
-    }
-}
-
 const handleTextToImageGenerate = async () => {
     if (!canGenerateTextImage.value) return
 
@@ -4477,11 +4660,12 @@ const handleTextToImageGenerate = async () => {
 
     try {
         const request = buildGenerateRequest(prompt, [], generationCount.value)
+        attachGenerationRequestSnapshot(task, request)
         await savePendingGenerationTask(task, request)
         const response = await generateImage(request, 1, {
             onTaskCreated: handle => trackGenerationTaskHandle(task, request, handle)
         })
-        await completeGenerationTask(task, response.imageUrls)
+        await completeGenerationTask(task, response)
     } catch (err) {
         const message = err instanceof Error ? err.message : '生成失败'
         await failGenerationTask(task, message)
@@ -4495,6 +4679,14 @@ const handlePushDisplayResult = (image: string) => {
 }
 
 const handleReuseCurrentRecipe = () => {
+    if (selectedHistoryItem.value) {
+        reuseHistoryRecipe(selectedHistoryItem.value)
+        return
+    }
+    if (selectedFailedTask.value) {
+        reuseTaskPrompt(selectedFailedTask.value)
+        return
+    }
     applyGenerationRecipe(latestGenerationRecipe.value || undefined, textToImagePrompt.value)
     currentView.value = 'studio'
     workspaceMode.value = 'quick'
@@ -4565,7 +4757,9 @@ const downloadImageFile = async (
 }
 
 const handleDownloadResult = async (image: string) => {
-    await downloadImageFile(image, Date.now(), 1, 1, true)
+    const item = selectedHistoryItem.value
+    const imageIndex = item ? Math.max(item.images.indexOf(image), 0) : 0
+    await downloadImageFile(image, item?.createdAt || Date.now(), imageIndex + 1, item?.images.length || 1, true)
 }
 
 const downloadHistoryAsset = async (asset: HistoryAsset) => {
@@ -4639,11 +4833,12 @@ const handleGenerate = async () => {
 
     try {
         const request = buildGenerateRequest(prompt, [...selectedImages.value], generationCount.value)
+        attachGenerationRequestSnapshot(task, request)
         await savePendingGenerationTask(task, request)
         const response = await generateImage(request, 1, {
             onTaskCreated: handle => trackGenerationTaskHandle(task, request, handle)
         })
-        await completeGenerationTask(task, response.imageUrls)
+        await completeGenerationTask(task, response)
     } catch (err) {
         const message = err instanceof Error ? err.message : '生成失败'
         await failGenerationTask(task, message)

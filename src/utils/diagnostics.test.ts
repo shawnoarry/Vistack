@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDiagnosticReport, formatDiagnosticTimestamp, redactSensitiveText, sanitizeDiagnosticUrl } from './diagnostics'
+import { buildDiagnosticReport, formatDiagnosticTimestamp, redactSensitiveText, sanitizeDiagnosticUrl, summarizeDiagnosticError } from './diagnostics'
 
 describe('diagnostic report', () => {
     it('adds stable capture context while preserving existing detail lines', () => {
@@ -35,6 +35,17 @@ describe('diagnostic report', () => {
 
         expect(report).toContain('visibleError: none')
     })
+
+    it('redacts secrets from arbitrary diagnostic detail lines', () => {
+        const report = buildDiagnosticReport({
+            title: 'Vistack 历史生成信息',
+            capturedAt: '2026-07-12T12:00:00.000Z',
+            details: ['endpoint: https://api.example.com/v1?token=private-token']
+        })
+
+        expect(report).not.toContain('private-token')
+        expect(report).toContain('[REDACTED]')
+    })
 })
 
 describe('diagnostic secret redaction', () => {
@@ -67,6 +78,14 @@ describe('diagnostic secret redaction', () => {
 
         expect(report).not.toContain('private-token')
         expect(report).toContain('Bearer [REDACTED]')
+    })
+
+    it('stores a compact redacted upstream error summary', () => {
+        const summary = summarizeDiagnosticError('  Authorization: Bearer private-token\nupstream failed  ', 48)
+
+        expect(summary).not.toContain('private-token')
+        expect(summary).toContain('[REDACTED]')
+        expect(summary.length).toBeLessThanOrEqual(48)
     })
 })
 

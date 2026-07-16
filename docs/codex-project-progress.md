@@ -141,6 +141,16 @@ The original broad Phase 2 studio restructure was not approved and has been with
 - Preserved all couple-photo options and exact composed-prompt text; no storage, history, provider, or request migration was performed.
 - Added the official Lucide Vue package for the new people and close icons.
 
+### 8. Result and persistent-history workflow
+
+- Replaced the multi-image large-result grid with one current image, stable same-generation thumbnails, fixed common actions, and record-bound prompt/parameter details.
+- Converted the right recent-assets cards into a compact persistent generation-history selector without changing the three-column studio or fixed prompt dock.
+- Separated browsing from reuse: history selection changes only the displayed record; `Reuse this generation` remains the explicit form-writing action.
+- Restores the newest readable history record after browser restart and safely clamps or advances selection after image/group deletion.
+- Limits the task area to running and session-failed work; successful tasks enter persistent history and failed tasks retain their own selectable diagnostics.
+- Added optional actual parameters, per-image details, revised prompts, duration, and redacted error summaries without migrating old records or changing request bodies.
+- Bound the diagnostic panel and clipboard report to the selected history record or failed task, with current-request inspection used only when no generation is selected.
+
 ## Verification Baseline
 
 Latest successful command:
@@ -152,14 +162,15 @@ npm run check
 Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
-- Test files: 7 passed.
-- Tests: 40 passed.
+- Test files: 8 passed.
+- Tests: 45 passed.
 - Production build: passed.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 - UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
 - Browser console errors during the UI fixture check: none.
 - Phase 1 browser verification: image-filled asset grid, search, two-item selection toolbar, desktop detail workspace, and 390×844 mobile detail all passed without horizontal overflow or console warnings/errors.
 - Phase 2B browser verification: PC dock remained 241px high at 1440×900, 1280×800, and 1024×768; the 440px popover stayed above it; the 390×844 bottom sheet fit the viewport with no horizontal overflow; fresh-page console logs were clean.
+- Phase 3 browser verification: 1440×900, 1280×800, 1024×768, and 390×844 had no horizontal overflow; one main result and one selected thumbnail/history state remained stable; history browsing preserved the unsaved prompt; selected-history diagnostics were copied with record ID/duration and token redaction; the 1024px fixed dock left history content fully reachable above it.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
 
@@ -183,15 +194,14 @@ The diagnostic enhancement was saved as a separate checkpoint before starting UI
 
 ## Next TODO
 
-1. Prepare a separate result/history product brief for one current result, persistent history-backed browsing, and diagnostics tied to a selected generation; do not implement before approval.
-2. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback.
-3. Design and implement storage v2 only after the core result design is agreed.
+1. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback; do not implement before approval.
+2. Design and implement storage v2 only after the model-parameter boundary and migration plan are agreed.
    - Store large image data in IndexedDB rather than `localStorage`.
    - Preserve existing history images, prompts, API presets, and canvas data during migration.
-4. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
-5. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
-6. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
-7. Use `docs/gpt-image-playground-integration-plan.md` for selective integration after the current UI work has a verified checkpoint; the fork roadmap does not authorize implementing its P1-P3 items automatically.
+3. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
+4. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
+5. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
+6. Use `docs/gpt-image-playground-integration-plan.md` for selective integration after the current UI work has a verified checkpoint; the fork roadmap does not authorize implementing its remaining P1-P3 items automatically.
 
 Deferred by user decision:
 
@@ -215,6 +225,28 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-16 17:03 (Asia/Shanghai)
+
+- User approved the complete recommended Phase 3 plan, and the result/history workflow was implemented without pausing for additional product choices.
+- Added independent selected-history/image and failed-task state so browsing no longer mutates the current prompt, references, model, or parameters; reuse remains explicit.
+- Rebuilt `ResultDisplay` around one current image, same-generation thumbnails, fixed visible actions, record metadata, and a queue limited to running/failed tasks.
+- Replaced verbose recent-asset cards with six compact persistent history rows and restored the newest readable record after reload.
+- Added backward-compatible task/history fields for safe actual parameters, per-image details, revised prompts, duration, and redacted errors; collected OpenAI-compatible `revised_prompt` values without changing request construction or routing.
+- Bound on-screen and clipboard diagnostics to the selected history record or failed task, redacted all detail lines, and verified that URL tokens do not reach the clipboard.
+- Added `generationRecords` behavior tests and expanded diagnostic tests; `npm run check` passed with 8 files and 45 tests plus type checks and production build.
+- Browser automation verified 1440×900, 1280×800, 1024×768, and 390×844 with no horizontal overflow, stable selection, prompt preservation, persistent reload, reachable content above the fixed dock, and clean primary fixture logs.
+- No existing history, prompt, API preset, canvas data, request payload, provider route, toolbox workflow, or asset-library behavior was migrated or removed.
+
+### 2026-07-16 16:18 (Asia/Shanghai)
+
+- Prepared `docs/phase-3-result-history-brief.md` as the single confirmation document for Phase 3; no runtime implementation has started.
+- Recommended one current image with same-generation thumbnails, compact persistent history browsing, a task area limited to running/session-failed work, and diagnostics bound to the selected history item or failed task.
+- Explicitly separated browsing from reuse: selecting history changes only the displayed result and its metadata, while `Reuse this generation` remains the only action that writes historical inputs back into the studio.
+- Added optional, backward-compatible history/task fields for actual parameters, per-image details, revised prompts, duration, and redacted error summaries; existing request payloads and provider routing remain unchanged.
+- Kept the three-column studio, fixed PC prompt dock, prompt tools, asset library behavior, API presets, existing local data, toolbox, and canvas outside this phase.
+- Updated the documentation index, UI/UX plan, playground integration plan, and cross-machine quickstart so every resume path points to the same pending brief.
+- Reduced the remaining product decision to one overall approval. Runtime work must still stop for any request-behavior change, destructive migration risk, or scope expansion.
 
 ### 2026-07-13 17:27 (Asia/Shanghai)
 

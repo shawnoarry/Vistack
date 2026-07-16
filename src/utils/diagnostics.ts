@@ -19,7 +19,7 @@ export function buildDiagnosticReport(options: DiagnosticReportOptions): string 
         `capturedAt: ${capturedAt}`,
         visibleError ? `visibleError: ${redactSensitiveText(visibleError)}` : 'visibleError: none',
         userAgent ? `browser: ${userAgent}` : '',
-        ...options.details
+        ...options.details.map(detail => typeof detail === 'string' ? redactSensitiveText(detail) : detail)
     ].filter(Boolean).join('\n')
 }
 
@@ -58,6 +58,12 @@ export function redactSensitiveText(value: string): string {
         .replace(/(bearer\s+)[a-z\d._~+\/-]+=*/gi, `$1${REDACTED}`)
         .replace(/([?&](?:api.?key|token|secret|password|authorization|auth)=)[^&#\s]+/gi, `$1${REDACTED}`)
         .replace(/((?:api[_-]?key|proxy[_-]?token|authorization|password|secret)\s*[:=]\s*["']?)[^"',\s&]+/gi, `$1${REDACTED}`)
+}
+
+export function summarizeDiagnosticError(value: string, maxLength = 2000): string {
+    const normalized = redactSensitiveText(value).replace(/\s+/g, ' ').trim()
+    if (normalized.length <= maxLength) return normalized
+    return `${normalized.slice(0, Math.max(maxLength - 1, 0)).trimEnd()}…`
 }
 
 function normalizeCapturedAt(value?: Date | string): string {

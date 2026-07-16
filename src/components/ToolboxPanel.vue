@@ -582,8 +582,10 @@
                 empty-title="等待工具箱生成"
                 empty-description="在自定义模特、换装或遮罩里点击直接生成，任务会留在这里。"
                 queue-title="工具箱任务队列"
-                queue-description="工具箱任务可以连续提交，完成后仍可恢复预览、结果作参考或加入画布。"
+                queue-description="这里只保留进行中和失败任务；成功结果会进入生成历史。"
                 @download="downloadToolboxImage"
+                @select-task="$emit('select-task', $event)"
+                @dismiss-task="$emit('dismiss-task', $event)"
                 @restore-task="restoreToolboxTask"
                 @reuse-task="reuseToolboxTask"
                 @push-task="pushToolboxTask"
@@ -746,6 +748,8 @@ const emit = defineEmits<{
     'apply-references': [payload: { prompt: string; references: ToolboxReference[] }]
     generate: [payload: ToolboxGeneratePayload]
     download: [image: string]
+    'select-task': [task: GenerationTask]
+    'dismiss-task': [task: GenerationTask]
     'restore-task': [task: GenerationTask]
     'reuse-task': [task: GenerationTask]
     'push-task': [task: GenerationTask]
