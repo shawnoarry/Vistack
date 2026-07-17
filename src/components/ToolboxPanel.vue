@@ -579,12 +579,14 @@
                 :loading="toolboxGenerationRunning"
                 :can-push="false"
                 :can-reuse="false"
+                :task-diagnostic-copy-task-id="taskDiagnosticCopyTaskId"
+                :task-diagnostic-copy-status="taskDiagnosticCopyStatus"
                 empty-title="等待工具箱生成"
                 empty-description="在自定义模特、换装或遮罩里点击直接生成，任务会留在这里。"
                 queue-title="工具箱任务队列"
                 queue-description="这里只保留进行中和失败任务；成功结果会进入生成历史。"
                 @download="downloadToolboxImage"
-                @select-task="$emit('select-task', $event)"
+                @copy-task-diagnostic="$emit('copy-task-diagnostic', $event)"
                 @dismiss-task="$emit('dismiss-task', $event)"
                 @restore-task="restoreToolboxTask"
                 @reuse-task="reuseToolboxTask"
@@ -739,6 +741,8 @@ const props = defineProps<{
     generationTasks: GenerationTask[]
     generationResults: string[]
     generationError?: string | null
+    taskDiagnosticCopyTaskId?: string
+    taskDiagnosticCopyStatus?: string
 }>()
 
 const emit = defineEmits<{
@@ -748,7 +752,7 @@ const emit = defineEmits<{
     'apply-references': [payload: { prompt: string; references: ToolboxReference[] }]
     generate: [payload: ToolboxGeneratePayload]
     download: [image: string]
-    'select-task': [task: GenerationTask]
+    'copy-task-diagnostic': [task: GenerationTask]
     'dismiss-task': [task: GenerationTask]
     'restore-task': [task: GenerationTask]
     'reuse-task': [task: GenerationTask]

@@ -133,6 +133,7 @@
                                 {{ selectedIds.includes(asset.id) ? '已选' : '选择' }}
                             </span>
                             <span class="absolute bottom-2 right-2 rounded bg-brand-ink/75 px-2 py-1 text-[11px] font-semibold text-brand-surface">{{ asset.item.aspectRatio }}</span>
+                            <span v-if="isHistoryImageHidden(asset.item, asset.index)" class="absolute bottom-2 left-2 rounded bg-white/90 px-2 py-1 text-[11px] font-semibold text-brand-ink shadow-sm dark:bg-night-surface/90">创作台已隐藏</span>
                         </button>
 
                         <div class="space-y-2.5 p-3">
@@ -167,6 +168,9 @@
                                     <div class="absolute bottom-11 right-0 z-20 w-44 rounded-lg border border-brand-line bg-white p-1.5 shadow-xl shadow-black/15 dark:bg-night-surface">
                                         <button type="button" class="block min-h-9 w-full rounded-md px-2 text-left text-xs font-semibold text-brand-ink hover:bg-brand-surface" @click="$emit('reuse', asset.item)">一键复用整组</button>
                                         <button type="button" class="block min-h-9 w-full rounded-md px-2 text-left text-xs font-semibold text-brand-ink hover:bg-brand-surface" @click="$emit('canvas', asset)">加入画布</button>
+                                        <button type="button" class="block min-h-9 w-full rounded-md px-2 text-left text-xs font-semibold text-brand-ink hover:bg-brand-surface" @click="$emit('toggle-studio-visibility', asset)">
+                                            {{ isHistoryImageHidden(asset.item, asset.index) ? '在创作台显示' : '从创作台隐藏' }}
+                                        </button>
                                         <label class="mt-1 block border-t border-brand-line px-2 pt-2">
                                             <span class="block text-[10px] font-semibold text-brand-muted">本组收藏夹</span>
                                             <select :value="asset.item.category || ''" class="mt-1 min-h-8 w-full rounded-md border border-brand-line bg-white px-2 text-xs" @change="$emit('category', asset.item, ($event.target as HTMLSelectElement).value)">
@@ -213,6 +217,7 @@
 import { computed } from 'vue'
 import type { GenerationHistoryItem } from '../utils/historyDb'
 import type { AssetSortOrder, HistoryAsset } from '../utils/assetLibrary'
+import { isHistoryImageHidden } from '../utils/generationRecords'
 
 const props = defineProps<{
     assets: HistoryAsset[]
@@ -242,6 +247,7 @@ defineEmits<{
     reference: [asset: HistoryAsset]
     reuse: [item: GenerationHistoryItem]
     canvas: [asset: HistoryAsset]
+    'toggle-studio-visibility': [asset: HistoryAsset]
     favorite: [item: GenerationHistoryItem]
     category: [item: GenerationHistoryItem, category: string]
     'delete-image': [asset: HistoryAsset]

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { GenerateRequest } from '../types'
-import { buildGenerationActualParams, clampHistoryImageIndex, selectInitialHistoryId } from './generationRecords'
+import {
+    buildGenerationActualParams,
+    clampHistoryImageIndex,
+    isHistoryImageHidden,
+    reindexHiddenImagesAfterDeletion,
+    selectInitialHistoryId,
+    selectInitialVisibleHistoryImage,
+    setHistoryImageHidden
+} from './generationRecords'
 
 const request: GenerateRequest = {
     prompt: 'edit this image',
@@ -58,5 +66,29 @@ describe('history result selection', () => {
         expect(clampHistoryImageIndex(['a', 'b'], 9)).toBe(1)
         expect(clampHistoryImageIndex(['a', 'b'], -2)).toBe(0)
         expect(clampHistoryImageIndex([], 1)).toBe(0)
+    })
+
+    it('tracks studio visibility without removing history images', () => {
+        const item: { images: string[]; hiddenImageIndexes?: number[] } = { images: ['a', 'b', 'c'] }
+        const hidden = setHistoryImageHidden(item, 1, true)
+
+        expect(hidden.images).toEqual(['a', 'b', 'c'])
+        expect(hidden.hiddenImageIndexes).toEqual([1])
+        expect(isHistoryImageHidden(hidden, 1)).toBe(true)
+        expect(setHistoryImageHidden(hidden, 1, false).hiddenImageIndexes).toBeUndefined()
+    })
+
+    it('restores the newest image that remains visible in the studio', () => {
+        expect(selectInitialVisibleHistoryImage([
+            { id: 'fully-hidden', images: ['a'], hiddenImageIndexes: [0] },
+            { id: 'partly-hidden', images: ['b', 'c'], hiddenImageIndexes: [0] }
+        ])).toEqual({ id: 'partly-hidden', imageIndex: 1 })
+    })
+
+    it('keeps hidden indexes aligned when an asset is deleted', () => {
+        expect(reindexHiddenImagesAfterDeletion({
+            images: ['a', 'b', 'c', 'd'],
+            hiddenImageIndexes: [1, 3]
+        }, 1)).toEqual([2])
     })
 })

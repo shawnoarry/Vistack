@@ -189,17 +189,18 @@
                     </div>
                 </div>
 
-                <div v-if="workspaceMode === 'quick'" class="wb-panel p-4">
+                <div v-if="workspaceMode === 'quick'" class="min-w-0">
                     <div class="mb-4 flex flex-col gap-3 border-b border-brand-line pb-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h2 class="text-base font-semibold text-brand-ink">生成结果</h2>
-                            <p class="mt-1 text-sm text-brand-muted">最新结果和多任务队列会显示在这里。完成后的任务可恢复预览、复用提示词、作参考图或加入画布。</p>
+                            <p class="mt-1 text-sm text-brand-muted">成功结果会持续保留在瀑布流中，隐藏图片仍可从资产库找到。</p>
                         </div>
                         <div class="flex flex-wrap gap-2 text-xs">
-                            <span class="wb-chip">{{ displayResults.length }} outputs</span>
+                            <span class="wb-chip">{{ studioHistoryAssets.length }} 张展示中</span>
+                            <span v-if="hiddenHistoryAssetCount" class="wb-chip">{{ hiddenHistoryAssetCount }} 张已隐藏</span>
                             <span v-if="activeGenerationTasks.length" class="rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2.5 py-1 text-brand-accent">{{ activeGenerationTasks.length }} 个任务生成中</span>
                             <span v-else class="wb-chip">待命</span>
-                            <button v-if="displayResults.length" type="button" class="wb-secondary min-h-7 px-2 text-xs" @click="addDisplayResultsToCanvas">加入画布</button>
+                            <button v-if="selectedHistoryItem" type="button" class="wb-secondary min-h-7 px-2 text-xs" @click="addDisplayResultsToCanvas">选中组加入画布</button>
                         </div>
                     </div>
                     <div v-if="selectedImages.length" class="mb-4 rounded-lg border border-brand-line bg-brand-surface p-3">
@@ -226,30 +227,32 @@
                             </div>
                         </div>
                     </div>
-                    <ResultDisplay
-                        :results="displayResults"
-                        :tasks="generationTasks"
-                        :loading="displayLoading"
-                        :error="displayError"
-                        :can-push="canPushDisplayResult"
-                        :can-reuse="Boolean(displayResults.length || selectedFailedTask)"
-                        :selected-index="selectedGenerationImageIndex"
+                    <StudioResultWaterfall
+                        :assets="studioHistoryAssets"
+                        :tasks="studioVisibleGenerationTasks"
+                        :failure-records="generationFailureRecords"
+                        :history-loading="historyLoading"
+                        :has-more-history="hasMoreStudioHistory"
+                        :hidden-notice="Boolean(hiddenHistoryUndo)"
+                        :selected-history-id="selectedGenerationHistoryId"
+                        :selected-image-index="selectedGenerationImageIndex"
                         :selected-task-id="selectedFailedTaskId"
-                        :result-title="selectedResultTitle"
-                        :result-prompt="selectedResultPrompt"
-                        :result-revised-prompt="selectedResultRevisedPrompt"
-                        :result-meta="selectedResultMeta"
-                        :result-created-at="selectedResultCreatedAt"
-                        @restore-task="restoreTaskResult"
-                        @download="handleDownloadResult"
-                        @push="handlePushDisplayResult"
-                        @reuse="handleReuseCurrentRecipe"
-                        @select-image="selectDisplayImage"
-                        @select-task="selectFailedTask"
+                        :task-diagnostic-copy-task-id="taskDiagnosticCopyTaskId"
+                        :task-diagnostic-copy-status="taskDiagnosticCopyStatus"
+                        :failure-diagnostic-copy-id="failureDiagnosticCopyId"
+                        :failure-diagnostic-copy-status="failureDiagnosticCopyStatus"
+                        @open="openStudioHistoryAsset"
+                        @hide="hideStudioHistoryAsset"
+                        @download="downloadHistoryAsset"
+                        @reference="pushImageToUpload($event.image)"
+                        @reuse="reuseHistoryRecipe"
+                        @undo-hide="undoHideStudioHistoryAsset"
+                        @load-more="studioHistoryGroupLimit += STUDIO_HISTORY_PAGE_SIZE"
+                        @copy-task-diagnostic="copyTaskDiagnostic"
                         @dismiss-task="dismissGenerationTask"
-                        @reuse-task="reuseTaskPrompt"
-                        @push-task="pushTaskImages"
-                        @canvas-task="addTaskToCanvas"
+                        @copy-failure-diagnostic="copyFailureDiagnostic"
+                        @reuse-failure="reuseFailureRecord"
+                        @delete-failure="deleteFailureRecord"
                     />
                 </div>
                 <CanvasWorkbench
@@ -313,7 +316,7 @@
                     <div class="mb-3 flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-sm font-semibold text-brand-ink">生成历史</h2>
-                            <p class="mt-1 text-xs text-brand-muted">选择记录只切换查看内容；复用时才回填创作台。</p>
+                            <p class="mt-1 text-xs text-brand-muted">定位瀑布流中的对应批次。</p>
                         </div>
                         <button
                             v-if="generationHistory.length"
@@ -337,11 +340,11 @@
                                     ? 'border-brand-accent bg-brand-accent/5 ring-2 ring-brand-accent/10'
                                     : 'border-brand-line bg-white hover:border-brand-accent/35 dark:border-night-muted/35 dark:bg-night-panel'
                             ]"
-                            @click="selectHistoryItem(item)"
+                            @click="focusHistoryItem(item)"
                         >
                             <span class="relative h-16 w-16 overflow-hidden rounded-md border border-brand-line bg-brand-surface dark:border-night-muted/35">
-                                <img v-if="item.images[0]" :src="item.images[0]" :alt="`${item.source === 'image' ? '图生图' : '文生图'}历史缩略图`" class="h-full w-full object-cover" loading="lazy" />
-                                <span v-if="item.images.length > 1" class="absolute bottom-0 right-0 bg-brand-ink/80 px-1.5 py-0.5 text-[10px] text-brand-surface">{{ item.images.length }}</span>
+                                <img v-if="firstVisibleHistoryImage(item)" :src="firstVisibleHistoryImage(item)" :alt="`${item.source === 'image' ? '图生图' : '文生图'}历史缩略图`" class="h-full w-full object-cover" loading="lazy" />
+                                <span v-if="item.images.length > 1" class="absolute bottom-0 right-0 bg-brand-ink/80 px-1.5 py-0.5 text-[10px] text-brand-surface">{{ visibleHistoryImageCount(item) }}/{{ item.images.length }}</span>
                             </span>
                             <span class="min-w-0 py-0.5">
                                 <span class="flex items-center justify-between gap-2">
@@ -477,6 +480,21 @@
                     </div>
                 </Teleport>
 
+                <CalendarPromptAssistant
+                    v-model:source-copy="calendarSourceCopy"
+                    v-model:time-context="calendarTimeContext"
+                    v-model:aspect-ratio="calendarAspectRatio"
+                    :open="showCalendarPromptPanel"
+                    :desktop="isDesktopLayout"
+                    :assistant-ready="promptAssistantReady"
+                    :loading="isCalendarPromptLoading"
+                    :error="calendarPromptError || ''"
+                    :options="calendarPromptOptions"
+                    @close="closeCalendarPromptPanel"
+                    @draw="handleCalendarPromptDraw"
+                    @apply="applyCalendarPromptOption"
+                />
+
                 <div class="rounded-lg border border-brand-line bg-white p-2 shadow-sm shadow-black/10 dark:border-night-muted/35 dark:bg-night-surface">
                     <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
                         <div class="min-w-0">
@@ -529,6 +547,19 @@
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 4h14v16l-7-3-7 3V4z" />
                                 </svg>
+                            </button>
+                            <button
+                                ref="calendarPromptButtonRef"
+                                type="button"
+                                class="wb-icon-button"
+                                :class="showCalendarPromptPanel ? 'border-brand-accent bg-brand-accent/10 text-brand-accent dark:border-night-muted dark:bg-night-accent/25 dark:text-brand-surface' : ''"
+                                :aria-expanded="showCalendarPromptPanel"
+                                aria-controls="calendar-prompt-assistant"
+                                aria-label="日历配图助手"
+                                title="日历配图助手"
+                                @click="toggleCalendarPromptPanel"
+                            >
+                                <CalendarDays :size="16" :stroke-width="1.8" aria-hidden="true" />
                             </button>
                             <button
                                 ref="portraitAssistButtonRef"
@@ -955,13 +986,15 @@
             :generation-tasks="generationTasks"
             :generation-results="toolboxGenerationResults"
             :generation-error="toolboxGenerationError"
+            :task-diagnostic-copy-task-id="taskDiagnosticCopyTaskId"
+            :task-diagnostic-copy-status="taskDiagnosticCopyStatus"
             @analyze="handleToolboxImageToPrompt"
             @send-to-studio="sendToolboxPromptToStudio"
             @save-template="openTemplateEditorFromToolboxPrompt"
             @apply-references="applyToolboxReferencesToStudio"
             @generate="handleToolboxGenerate"
             @download="handleDownloadResult"
-            @select-task="selectFailedTaskFromToolbox"
+            @copy-task-diagnostic="copyTaskDiagnostic"
             @dismiss-task="dismissGenerationTask"
             @restore-task="restoreTaskResult"
             @reuse-task="reuseTaskPrompt"
@@ -997,6 +1030,7 @@
             @reference="pushImageToUpload($event.image)"
             @reuse="reuseHistoryRecipe"
             @canvas="addHistoryItemToCanvas($event.item, $event.image)"
+            @toggle-studio-visibility="toggleStudioHistoryAsset"
             @favorite="toggleHistoryFavorite"
             @category="setHistoryCategory"
             @delete-image="requestDeleteHistoryImage"
@@ -1017,6 +1051,7 @@
             :theme-mode="themeMode"
             :diagnostic-status="diagnosticCopyStatus"
             :prompt-copy-status="historyPromptCopyStatus"
+            :hidden-in-studio="isHistoryPreviewHiddenInStudio"
             @close="closeHistoryPreview"
             @select-image="historyPreviewImage = $event; historyPreviewOriginalMode = false"
             @download="downloadHistoryPreview"
@@ -1027,6 +1062,7 @@
             @copy-prompt="copyHistoryPrompt(historyPreviewItem)"
             @category="setHistoryCategory(historyPreviewItem, $event)"
             @copy-diagnostic="copyHistoryDiagnostic(historyPreviewItem, historyPreviewImage)"
+            @toggle-studio-visibility="toggleHistoryPreviewStudioVisibility"
             @canvas="addHistoryItemToCanvas(historyPreviewItem, historyPreviewImage)"
             @delete-image="requestDeleteHistoryImage({ id: `${historyPreviewItem.id}-${historyPreviewItem.images.indexOf(historyPreviewImage)}`, item: historyPreviewItem, image: historyPreviewImage, index: historyPreviewItem.images.indexOf(historyPreviewImage) })"
             @delete-group="requestDeleteHistoryGroup(historyPreviewItem)"
@@ -1089,14 +1125,15 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
-import { UsersRound, X } from '@lucide/vue'
+import { CalendarDays, UsersRound, X } from '@lucide/vue'
 import ApiKeyInput from './components/ApiKeyInput.vue'
 import ImageUpload from './components/ImageUpload.vue'
 import StylePromptSelector from './components/StylePromptSelector.vue'
-import ResultDisplay from './components/ResultDisplay.vue'
+import StudioResultWaterfall from './components/StudioResultWaterfall.vue'
 import CanvasWorkbench from './components/CanvasWorkbench.vue'
 import Footer from './components/Footer.vue'
 import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
+import CalendarPromptAssistant from './components/CalendarPromptAssistant.vue'
 import ToolboxPanel from './components/ToolboxPanel.vue'
 import AssetLibraryView from './components/AssetLibraryView.vue'
 import AssetDetailWorkspace from './components/AssetDetailWorkspace.vue'
@@ -1121,10 +1158,25 @@ import {
 } from './utils/imageSizing'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
 import { buildDiagnosticReport, formatDiagnosticTimestamp, sanitizeDiagnosticUrl, summarizeDiagnosticError } from './utils/diagnostics'
-import { buildAssetDownloadFilename, buildHistoryAssets, type AssetSortOrder, type HistoryAsset } from './utils/assetLibrary'
+import { buildAssetDownloadFilename, buildHistoryAssets, buildStudioHistoryAssets, type AssetSortOrder, type HistoryAsset } from './utils/assetLibrary'
 import { buildGenerationActionLabel, resolveGenerationMode } from './utils/generationAction'
 import { buildPortraitAssistPrompt, portraitAssistIconTitle, resolvePortraitAssistUiState } from './utils/portraitAssist'
-import { buildGenerationActualParams, clampHistoryImageIndex, selectInitialHistoryId } from './utils/generationRecords'
+import { calendarSourceAllowsPeople, parseCalendarPromptResponse, type CalendarAspectRatio, type CalendarPromptOption } from './utils/calendarPrompt'
+import {
+    buildGenerationActualParams,
+    clampHistoryImageIndex,
+    isHistoryImageHidden,
+    reindexHiddenImagesAfterDeletion,
+    selectInitialVisibleHistoryImage,
+    setHistoryImageHidden
+} from './utils/generationRecords'
+import {
+    addGenerationFailureRecord,
+    buildGenerationFailureRecord,
+    loadGenerationFailureRecords,
+    saveGenerationFailureRecords,
+    type GenerationFailureRecord
+} from './utils/failureRecords'
 import {
     deleteGenerationHistoryItem,
     deletePendingGenerationTaskItem,
@@ -1169,9 +1221,14 @@ const isTextToImageLoading = ref(false)
 const latestResultSource = ref<'text' | 'image' | null>(null)
 const latestGenerationRecipe = ref<GenerationRecipe | null>(null)
 const generationTasks = ref<GenerationTask[]>([])
+const generationFailureRecords = ref<GenerationFailureRecord[]>(loadGenerationFailureRecords())
 const selectedGenerationHistoryId = ref('')
 const selectedGenerationImageIndex = ref(0)
 const selectedFailedTaskId = ref('')
+const studioHistoryGroupLimit = ref(12)
+const STUDIO_HISTORY_PAGE_SIZE = 12
+const hiddenHistoryUndo = ref<{ itemId: string; imageIndex: number } | null>(null)
+let hiddenHistoryUndoTimer: ReturnType<typeof setTimeout> | null = null
 const toolboxGenerationResults = ref<string[]>([])
 const toolboxGenerationError = ref<string | null>(null)
 const pendingTaskHandles = new Map<string, GenerationTaskHandle[]>()
@@ -1183,8 +1240,10 @@ const workspaceMode = ref<WorkspaceMode>('quick')
 const canvasItems = ref<CanvasWorkbenchItem[]>([])
 const showPromptTools = ref(false)
 const showPortraitAssistPanel = ref(false)
+const showCalendarPromptPanel = ref(false)
 const isDesktopLayout = ref(false)
 const portraitAssistButtonRef = ref<HTMLButtonElement | null>(null)
+const calendarPromptButtonRef = ref<HTMLButtonElement | null>(null)
 const portraitAssistCloseButtonRef = ref<HTMLButtonElement | null>(null)
 const portraitAssistPanelRef = ref<HTMLElement | null>(null)
 const portraitAssistOverlayRef = ref<HTMLElement | null>(null)
@@ -1205,6 +1264,10 @@ const phraseGroupFormTitle = ref('')
 const phraseGroupFormDescription = ref('')
 const showTemplateEditor = ref(false)
 const diagnosticCopyStatus = ref('')
+const taskDiagnosticCopyTaskId = ref('')
+const taskDiagnosticCopyStatus = ref('')
+const failureDiagnosticCopyId = ref('')
+const failureDiagnosticCopyStatus = ref('')
 const editingTemplateId = ref('')
 const templateFormTitle = ref('')
 const templateFormCategory = ref('我的模板')
@@ -1228,6 +1291,13 @@ const promptAssistantProxyToken = ref('')
 const isPromptAssistantLoading = ref(false)
 const isToolboxAssistantLoading = ref(false)
 const promptAssistantError = ref<string | null>(null)
+const calendarSourceCopy = ref('')
+const calendarTimeContext = ref('')
+const calendarAspectRatio = ref<CalendarAspectRatio>('9:16')
+const calendarPromptOptions = ref<CalendarPromptOption[]>([])
+const calendarPromptError = ref<string | null>(null)
+const isCalendarPromptLoading = ref(false)
+let calendarPromptRequestVersion = 0
 const selectedAspectRatio = ref('1:1')
 const generationCount = ref(1)
 const generationBatchMode = ref<GenerationBatchMode>('fill')
@@ -1311,6 +1381,25 @@ const updateDesktopLayout = () => {
     isDesktopLayout.value = window.matchMedia('(min-width: 1024px)').matches
 }
 
+const closeCalendarPromptPanel = (restoreFocus = true) => {
+    if (!showCalendarPromptPanel.value) return
+    showCalendarPromptPanel.value = false
+    if (restoreFocus) {
+        nextTick(() => calendarPromptButtonRef.value?.focus())
+    }
+}
+
+const toggleCalendarPromptPanel = () => {
+    if (showCalendarPromptPanel.value) {
+        closeCalendarPromptPanel()
+        return
+    }
+
+    showPromptTools.value = false
+    closePortraitAssistPanel(false)
+    showCalendarPromptPanel.value = true
+}
+
 const closePortraitAssistPanel = (restoreFocus = true) => {
     if (!showPortraitAssistPanel.value) return
     showPortraitAssistPanel.value = false
@@ -1326,12 +1415,14 @@ const togglePortraitAssistPanel = () => {
     }
 
     showPromptTools.value = false
+    closeCalendarPromptPanel(false)
     showPortraitAssistPanel.value = true
     nextTick(() => portraitAssistCloseButtonRef.value?.focus())
 }
 
 const togglePromptTools = () => {
     closePortraitAssistPanel(false)
+    closeCalendarPromptPanel(false)
     showPromptTools.value = !showPromptTools.value
 }
 
@@ -1422,6 +1513,7 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', updateDesktopLayout)
     document.removeEventListener('pointerdown', handlePortraitAssistPointerDown)
     document.removeEventListener('keydown', handlePortraitAssistKeydown)
+    if (hiddenHistoryUndoTimer) clearTimeout(hiddenHistoryUndoTimer)
 })
 
 // 监听API密钥变化，自动保存到本地存储
@@ -1481,6 +1573,15 @@ watch(
 watch(generationBatchMode, mode => {
     LocalStorage.saveGenerationBatchMode(mode)
 })
+
+watch(
+    [calendarSourceCopy, calendarTimeContext, calendarAspectRatio],
+    () => {
+        calendarPromptRequestVersion += 1
+        calendarPromptOptions.value = []
+        calendarPromptError.value = null
+    }
+)
 
 watch(
     apiUseProxy,
@@ -2475,7 +2576,9 @@ const addTaskToCanvas = (task: GenerationTask) => {
 }
 
 const activeGenerationTasks = computed(() => generationTasks.value.filter(task => task.status === 'running'))
-const displayLoading = computed(() => activeGenerationTasks.value.length > 0)
+const studioVisibleGenerationTasks = computed(() => generationTasks.value.filter(task =>
+    task.origin !== 'toolbox' && task.status !== 'done'
+))
 const selectedHistoryItem = computed(() =>
     generationHistory.value.find(item => item.id === selectedGenerationHistoryId.value) || null
 )
@@ -2506,40 +2609,9 @@ const displayError = computed(() => {
     return error.value || textToImageError.value
 })
 
-const canPushDisplayResult = computed(() => Boolean(displayResults.value.length > 0))
 const selectedCurrentImage = computed(() =>
     displayResults.value[clampHistoryImageIndex(displayResults.value, selectedGenerationImageIndex.value)] || ''
 )
-const selectedResultTitle = computed(() => {
-    if (selectedFailedTask.value) return selectedFailedTask.value.title
-    if (selectedHistoryItem.value) return selectedHistoryItem.value.source === 'image' ? '图生图结果' : '文生图结果'
-    if (latestResultSource.value === 'image') return '图生图结果'
-    if (latestResultSource.value === 'text') return '文生图结果'
-    return ''
-})
-const selectedResultPrompt = computed(() =>
-    selectedFailedTask.value?.prompt || selectedHistoryItem.value?.prompt || latestGenerationRecipe.value?.compiledPrompt || ''
-)
-const selectedResultRevisedPrompt = computed(() => {
-    const item = selectedHistoryItem.value
-    if (item) {
-        return item.imageDetails?.[selectedGenerationImageIndex.value]?.revisedPrompt || item.revisedPrompt || ''
-    }
-    return selectedFailedTask.value?.imageDetails?.[selectedGenerationImageIndex.value]?.revisedPrompt || selectedFailedTask.value?.revisedPrompt || ''
-})
-const selectedResultCreatedAt = computed(() => selectedFailedTask.value?.createdAt || selectedHistoryItem.value?.createdAt || 0)
-const selectedResultMeta = computed(() => {
-    const record = selectedFailedTask.value || selectedHistoryItem.value
-    if (!record) return []
-
-    return [
-        record.model || '模型未记录',
-        record.aspectRatio || '比例未记录',
-        record.imageSize || '尺寸未记录',
-        `${record.count || record.images.length || 1} 张`,
-        record.durationMs !== undefined ? `${(record.durationMs / 1000).toFixed(1)} 秒` : '耗时未记录'
-    ]
-})
 
 const canGenerateTextImage = computed(
     () =>
@@ -3328,6 +3400,63 @@ const buildPromptAssistantContext = () => {
     ].filter(Boolean).join('\n')
 }
 
+const handleCalendarPromptDraw = async () => {
+    const sourceCopy = calendarSourceCopy.value.trim()
+    if (!sourceCopy || isCalendarPromptLoading.value) return
+    if (!promptAssistantReady.value) {
+        calendarPromptError.value = '请先配置提示词助手 API。'
+        return
+    }
+
+    const timeContext = calendarTimeContext.value.trim()
+    const allowPeople = calendarSourceAllowsPeople(sourceCopy, timeContext)
+    const requestVersion = ++calendarPromptRequestVersion
+    isCalendarPromptLoading.value = true
+    calendarPromptError.value = null
+
+    try {
+        const response = await improvePrompt({
+            prompt: sourceCopy,
+            context: [
+                `时间语境：${timeContext || '未指定，不主动添加季节元素'}`,
+                `目标画幅：${calendarAspectRatio.value}竖幅`,
+                allowPeople
+                    ? '人物策略：文案包含明确人物或行动，最多允许一组人物方案，其余保持非人物表达。'
+                    : '人物策略：抽象文案，三组方案均不得出现人物、人脸、人形轮廓或情侣。'
+            ].join('\n'),
+            apikey: promptAssistantApiKey.value.trim(),
+            endpoint: resolveChatCompletionsEndpoint(effectivePromptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
+            model: effectivePromptAssistantModel.value,
+            task: 'calendar-illustration',
+            useProxy: promptAssistantUseProxy.value,
+            proxyToken: promptAssistantUseProxy.value ? promptAssistantProxyToken.value.trim() : ''
+        })
+
+        const nextOptions = parseCalendarPromptResponse(response.prompt, {
+            allowPeople,
+            aspectRatio: calendarAspectRatio.value
+        })
+        if (requestVersion === calendarPromptRequestVersion) {
+            calendarPromptOptions.value = nextOptions
+        }
+    } catch (assistantError) {
+        if (requestVersion === calendarPromptRequestVersion) {
+            calendarPromptError.value = assistantError instanceof Error ? assistantError.message : '日历配图方案生成失败'
+        }
+    } finally {
+        isCalendarPromptLoading.value = false
+    }
+}
+
+const applyCalendarPromptOption = (option: CalendarPromptOption) => {
+    const nextPrompt = option.prompt.trim()
+    if (!nextPrompt) return
+
+    promptPhraseUndoStack.value = [...promptPhraseUndoStack.value, textToImagePrompt.value]
+    setTextToImagePromptFromHistory(nextPrompt)
+    closeCalendarPromptPanel()
+}
+
 const handleImprovePrompt = async () => {
     if (!canImprovePrompt.value) return
 
@@ -3692,7 +3821,7 @@ const requestDiagnostic = computed(() => {
         endpoint: resolvedGenerationEndpoint.value,
         provider,
         providerLabel: providerLabelMap[provider] || provider,
-        proxyStream: apiUseProxy.value && provider === 'openai-image-edit' ? 'ndjson' : '',
+        proxyStream: apiUseProxy.value ? 'ndjson' : '',
         sentAspectRatio: shouldSendPixelSizeAsGrsaiAspectRatio(provider, selectedImageModelType.value) ? outputSize : aspectRatio,
         sentImageSize: shouldSendPixelSizeAsGrsaiAspectRatio(provider, selectedImageModelType.value) ? '' : imageSize,
         outputSize,
@@ -4010,14 +4139,17 @@ const hydrateHistoryImages = async (items: GenerationHistoryItem[]) => {
     })))
 }
 
+const selectFirstVisibleHistory = () => {
+    const selection = selectInitialVisibleHistoryImage(generationHistory.value)
+    selectedGenerationHistoryId.value = selection?.id || ''
+    selectedGenerationImageIndex.value = selection?.imageIndex || 0
+}
+
 const loadGenerationHistory = async () => {
     historyLoading.value = true
     try {
         generationHistory.value = await hydrateHistoryImages(await getGenerationHistoryItems())
-        if (!selectedGenerationHistoryId.value) {
-            selectedGenerationHistoryId.value = selectInitialHistoryId(generationHistory.value)
-            selectedGenerationImageIndex.value = 0
-        }
+        if (!selectedGenerationHistoryId.value) selectFirstVisibleHistory()
     } catch (historyError) {
         console.warn('无法读取生成历史:', historyError)
     } finally {
@@ -4201,6 +4333,15 @@ const failGenerationTask = async (task: GenerationTask, message: string) => {
     task.durationMs = durationMs
     task.redactedErrorSummary = redactedErrorSummary
     updateGenerationTask(task.id, { status: 'error', error: message, durationMs, redactedErrorSummary })
+    const failureRecord = buildGenerationFailureRecord({
+        ...task,
+        status: 'error',
+        error: message,
+        durationMs,
+        redactedErrorSummary
+    }, message)
+    generationFailureRecords.value = addGenerationFailureRecord(generationFailureRecords.value, failureRecord)
+    saveGenerationFailureRecords(generationFailureRecords.value)
     if (task.origin !== 'toolbox') {
         selectedFailedTaskId.value = task.id
         selectedGenerationHistoryId.value = ''
@@ -4298,8 +4439,11 @@ const collectionOptions = computed(() =>
 )
 
 const favoriteHistory = computed(() => generationHistory.value.filter(item => item.favorite))
+const studioVisibleHistoryItems = computed(() => generationHistory.value.filter(item =>
+    item.images.some((image, index) => Boolean(image) && !isHistoryImageHidden(item, index))
+))
 const recentGenerationHistory = computed(() =>
-    generationHistory.value.filter(item => item.images.some(Boolean)).slice(0, 6)
+    studioVisibleHistoryItems.value.slice(0, 6)
 )
 const formatHistoryListTime = (timestamp: number) => new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
@@ -4313,6 +4457,15 @@ const allHistoryAssets = computed(() => buildHistoryAssets(generationHistory.val
     search: '',
     sort: 'newest'
 }))
+const studioHistoryAssets = computed(() => buildStudioHistoryAssets(
+    generationHistory.value,
+    studioHistoryGroupLimit.value
+))
+const hasMoreStudioHistory = computed(() => studioVisibleHistoryItems.value.length > studioHistoryGroupLimit.value)
+const hiddenHistoryAssetCount = computed(() => generationHistory.value.reduce(
+    (count, item) => count + item.images.filter((_, index) => isHistoryImageHidden(item, index)).length,
+    0
+))
 const favoriteHistoryAssetCount = computed(() => allHistoryAssets.value.filter(asset => asset.item.favorite).length)
 
 const filteredHistoryAssets = computed(() => buildHistoryAssets(generationHistory.value, {
@@ -4327,6 +4480,9 @@ const selectedHistoryAssets = computed(() =>
 
 const updateHistoryItem = async (nextItem: GenerationHistoryItem) => {
     generationHistory.value = generationHistory.value.map(item => (item.id === nextItem.id ? nextItem : item))
+    if (historyPreviewItem.value?.id === nextItem.id) {
+        historyPreviewItem.value = nextItem
+    }
     if (selectedGenerationHistoryId.value === nextItem.id) {
         selectedGenerationImageIndex.value = clampHistoryImageIndex(nextItem.images, selectedGenerationImageIndex.value)
     }
@@ -4396,31 +4552,32 @@ const selectFailedTask = (task: GenerationTask) => {
     selectedGenerationImageIndex.value = 0
 }
 
-const selectFailedTaskFromToolbox = (task: GenerationTask) => {
-    selectFailedTask(task)
-    currentView.value = 'studio'
-    workspaceMode.value = 'quick'
-}
-
 const dismissGenerationTask = (task: GenerationTask) => {
     generationTasks.value = generationTasks.value.filter(item => item.id !== task.id)
+    if (task.origin === 'toolbox') {
+        toolboxGenerationError.value = null
+    } else if (task.source === 'text') {
+        textToImageError.value = null
+    } else {
+        error.value = null
+    }
     if (selectedFailedTaskId.value === task.id) {
         selectedFailedTaskId.value = ''
-        selectedGenerationHistoryId.value = selectInitialHistoryId(generationHistory.value)
-        selectedGenerationImageIndex.value = 0
+        selectFirstVisibleHistory()
     }
     syncGenerationLoadingState()
 }
 
-const selectDisplayImage = (imageIndex: number) => {
-    selectedGenerationImageIndex.value = clampHistoryImageIndex(displayResults.value, imageIndex)
-}
-
 const openHistoryPreview = (item: GenerationHistoryItem, image = item.images[0] || '') => {
+    selectHistoryItem(item, Math.max(item.images.indexOf(image), 0))
     historyPreviewItem.value = item
     historyPreviewImage.value = image
     historyPreviewOriginalMode.value = false
     historyPromptCopyStatus.value = ''
+}
+
+const openStudioHistoryAsset = (asset: HistoryAsset) => {
+    openHistoryPreview(asset.item, asset.image)
 }
 
 const closeHistoryPreview = () => {
@@ -4493,6 +4650,9 @@ const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string)
 }
 
 const copyTaskDiagnostic = async (task: GenerationTask) => {
+    selectFailedTask(task)
+    taskDiagnosticCopyTaskId.value = task.id
+    taskDiagnosticCopyStatus.value = '复制中…'
     const text = buildDiagnosticReport({
         title: 'Vistack 失败任务诊断',
         capturedAt: formatDiagnosticTimestamp(task.createdAt),
@@ -4504,6 +4664,8 @@ const copyTaskDiagnostic = async (task: GenerationTask) => {
             `configuredEndpoint: ${sanitizeDiagnosticUrl(task.endpoint)}`,
             `resolvedEndpoint: ${sanitizeDiagnosticUrl(task.resolvedEndpoint || task.endpoint)}`,
             `provider: ${task.requestProvider || task.actualParams?.provider || 'unknown'}`,
+            `proxy: ${task.useProxy ? 'on' : 'off'}`,
+            task.useProxy ? 'proxyStream: ndjson' : '',
             `model: ${task.model}`,
             `aspectRatio: ${task.aspectRatio}`,
             `imageSize: ${task.imageSize}`,
@@ -4518,13 +4680,78 @@ const copyTaskDiagnostic = async (task: GenerationTask) => {
     try {
         await navigator.clipboard.writeText(text)
         diagnosticCopyStatus.value = '已复制'
+        taskDiagnosticCopyStatus.value = '已复制'
     } catch {
         diagnosticCopyStatus.value = '复制失败'
+        taskDiagnosticCopyStatus.value = '复制失败'
     }
 
     window.setTimeout(() => {
         diagnosticCopyStatus.value = ''
+        if (taskDiagnosticCopyTaskId.value === task.id) {
+            taskDiagnosticCopyTaskId.value = ''
+            taskDiagnosticCopyStatus.value = ''
+        }
     }, 1800)
+}
+
+const copyFailureDiagnostic = async (record: GenerationFailureRecord) => {
+    failureDiagnosticCopyId.value = record.id
+    failureDiagnosticCopyStatus.value = '复制中…'
+    const text = buildDiagnosticReport({
+        title: 'Vistack 失败记录诊断',
+        capturedAt: formatDiagnosticTimestamp(record.createdAt),
+        visibleError: record.errorSummary,
+        userAgent: navigator.userAgent,
+        details: [
+            `taskId: ${record.id}`,
+            `origin: ${record.origin}`,
+            `source: ${record.source}`,
+            `configuredEndpoint: ${record.endpoint}`,
+            `resolvedEndpoint: ${record.resolvedEndpoint || record.endpoint}`,
+            `provider: ${record.requestProvider || record.actualParams?.provider || 'unknown'}`,
+            `proxy: ${record.useProxy ? 'on' : 'off'}`,
+            record.useProxy ? 'proxyStream: ndjson' : '',
+            `model: ${record.model}`,
+            `aspectRatio: ${record.aspectRatio}`,
+            `imageSize: ${record.imageSize}`,
+            `count: ${record.count}`,
+            `batchMode: ${record.batchMode || 'fill'}`,
+            record.durationMs !== undefined ? `durationMs: ${record.durationMs}` : 'durationMs: not recorded',
+            ...Object.entries(record.actualParams || {}).map(([key, value]) => `actual.${key}: ${String(value)}`),
+            `prompt:\n${record.prompt}`
+        ]
+    })
+
+    try {
+        await navigator.clipboard.writeText(text)
+        failureDiagnosticCopyStatus.value = '已复制'
+    } catch {
+        failureDiagnosticCopyStatus.value = '复制失败'
+    }
+
+    window.setTimeout(() => {
+        if (failureDiagnosticCopyId.value === record.id) {
+            failureDiagnosticCopyId.value = ''
+            failureDiagnosticCopyStatus.value = ''
+        }
+    }, 1800)
+}
+
+const reuseFailureRecord = (record: GenerationFailureRecord) => {
+    textToImagePrompt.value = record.prompt
+    selectedAspectRatio.value = record.aspectRatio
+    gemini3ImageSize.value = record.imageSize
+    generationCount.value = Math.max(record.count || 1, 1)
+    generationBatchMode.value = record.batchMode || 'fill'
+    selectedFailedTaskId.value = ''
+    currentView.value = 'studio'
+    workspaceMode.value = 'quick'
+}
+
+const deleteFailureRecord = (recordId: string) => {
+    generationFailureRecords.value = generationFailureRecords.value.filter(record => record.id !== recordId)
+    saveGenerationFailureRecords(generationFailureRecords.value)
 }
 
 const copySelectedGenerationDiagnostic = () => {
@@ -4536,8 +4763,7 @@ const copySelectedGenerationDiagnostic = () => {
 const deleteHistoryItem = async (item: GenerationHistoryItem) => {
     generationHistory.value = generationHistory.value.filter(historyItem => historyItem.id !== item.id)
     if (selectedGenerationHistoryId.value === item.id) {
-        selectedGenerationHistoryId.value = selectInitialHistoryId(generationHistory.value)
-        selectedGenerationImageIndex.value = 0
+        selectFirstVisibleHistory()
         if (!selectedGenerationHistoryId.value) {
             result.value = []
             textToImageResult.value = []
@@ -4571,7 +4797,13 @@ const deleteHistoryImageAt = async (item: GenerationHistoryItem, imageIndex: num
         return
     }
 
-    const nextItem = { ...item, images: nextImages, imageIds: nextImageIds, rawImageUrls: nextRawImageUrls }
+    const nextItem = {
+        ...item,
+        images: nextImages,
+        imageIds: nextImageIds,
+        rawImageUrls: nextRawImageUrls,
+        hiddenImageIndexes: reindexHiddenImagesAfterDeletion(item, imageIndex)
+    }
     await updateHistoryItem(nextItem)
     if (deletedImageId) {
         await deleteStoredImage(deletedImageId)
@@ -4583,6 +4815,7 @@ const deleteHistoryImageAt = async (item: GenerationHistoryItem, imageIndex: num
             ? historyPreviewImage.value
             : nextImages[0]
     }
+    if (hiddenHistoryUndo.value?.itemId === item.id) hiddenHistoryUndo.value = null
 }
 
 const toggleAssetSelectionMode = () => {
@@ -4674,24 +4907,6 @@ const handleTextToImageGenerate = async () => {
     }
 }
 
-const handlePushDisplayResult = (image: string) => {
-    pushImageToUpload(image)
-}
-
-const handleReuseCurrentRecipe = () => {
-    if (selectedHistoryItem.value) {
-        reuseHistoryRecipe(selectedHistoryItem.value)
-        return
-    }
-    if (selectedFailedTask.value) {
-        reuseTaskPrompt(selectedFailedTask.value)
-        return
-    }
-    applyGenerationRecipe(latestGenerationRecipe.value || undefined, textToImagePrompt.value)
-    currentView.value = 'studio'
-    workspaceMode.value = 'quick'
-}
-
 const restoreTaskResult = (task: GenerationTask) => {
     if (!task.images.length) return
     latestResultSource.value = task.source
@@ -4754,6 +4969,102 @@ const downloadImageFile = async (
     } finally {
         if (revokeUrl) URL.revokeObjectURL(revokeUrl)
     }
+}
+
+const firstVisibleHistoryImage = (item: GenerationHistoryItem) =>
+    item.images.find((image, index) => Boolean(image) && !isHistoryImageHidden(item, index)) || ''
+
+const visibleHistoryImageCount = (item: GenerationHistoryItem) =>
+    item.images.filter((image, index) => Boolean(image) && !isHistoryImageHidden(item, index)).length
+
+const focusHistoryItem = (item: GenerationHistoryItem) => {
+    const imageIndex = item.images.findIndex((image, index) => Boolean(image) && !isHistoryImageHidden(item, index))
+    if (imageIndex < 0) return
+
+    const groupIndex = studioVisibleHistoryItems.value.findIndex(historyItem => historyItem.id === item.id)
+    if (groupIndex >= studioHistoryGroupLimit.value) {
+        studioHistoryGroupLimit.value = Math.ceil((groupIndex + 1) / STUDIO_HISTORY_PAGE_SIZE) * STUDIO_HISTORY_PAGE_SIZE
+    }
+
+    selectHistoryItem(item, imageIndex)
+    nextTick(() => {
+        const target = Array.from(document.querySelectorAll<HTMLElement>('[data-history-id]'))
+            .find(element => element.dataset.historyId === item.id)
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+}
+
+const setHiddenHistoryUndo = (itemId: string, imageIndex: number) => {
+    hiddenHistoryUndo.value = { itemId, imageIndex }
+    if (hiddenHistoryUndoTimer) clearTimeout(hiddenHistoryUndoTimer)
+    hiddenHistoryUndoTimer = setTimeout(() => {
+        hiddenHistoryUndo.value = null
+        hiddenHistoryUndoTimer = null
+    }, 5000)
+}
+
+const hideStudioHistoryAsset = async (asset: HistoryAsset) => {
+    const currentItem = generationHistory.value.find(item => item.id === asset.item.id) || asset.item
+    if (isHistoryImageHidden(currentItem, asset.index)) return
+
+    const nextItem = setHistoryImageHidden(currentItem, asset.index, true)
+    await updateHistoryItem(nextItem)
+    setHiddenHistoryUndo(nextItem.id, asset.index)
+
+    if (selectedGenerationHistoryId.value === nextItem.id && selectedGenerationImageIndex.value === asset.index) {
+        const nextIndex = nextItem.images.findIndex((image, index) => Boolean(image) && !isHistoryImageHidden(nextItem, index))
+        if (nextIndex >= 0) selectHistoryItem(nextItem, nextIndex)
+        else selectFirstVisibleHistory()
+    }
+}
+
+const restoreStudioHistoryAsset = async (asset: HistoryAsset) => {
+    const currentItem = generationHistory.value.find(item => item.id === asset.item.id) || asset.item
+    if (!isHistoryImageHidden(currentItem, asset.index)) return
+    await updateHistoryItem(setHistoryImageHidden(currentItem, asset.index, false))
+}
+
+const toggleStudioHistoryAsset = (asset: HistoryAsset) => {
+    if (isHistoryImageHidden(asset.item, asset.index)) return restoreStudioHistoryAsset(asset)
+    return hideStudioHistoryAsset(asset)
+}
+
+const undoHideStudioHistoryAsset = async () => {
+    const undo = hiddenHistoryUndo.value
+    if (!undo) return
+
+    const item = generationHistory.value.find(historyItem => historyItem.id === undo.itemId)
+    if (item) {
+        await restoreStudioHistoryAsset({
+            id: `${item.id}-${undo.imageIndex}`,
+            item,
+            image: item.images[undo.imageIndex] || '',
+            index: undo.imageIndex
+        })
+    }
+    hiddenHistoryUndo.value = null
+    if (hiddenHistoryUndoTimer) clearTimeout(hiddenHistoryUndoTimer)
+    hiddenHistoryUndoTimer = null
+}
+
+const isHistoryPreviewHiddenInStudio = computed(() => {
+    const item = historyPreviewItem.value
+    if (!item) return false
+    const imageIndex = item.images.indexOf(historyPreviewImage.value)
+    return imageIndex >= 0 && isHistoryImageHidden(item, imageIndex)
+})
+
+const toggleHistoryPreviewStudioVisibility = () => {
+    const item = historyPreviewItem.value
+    if (!item) return
+    const imageIndex = item.images.indexOf(historyPreviewImage.value)
+    if (imageIndex < 0) return
+    return toggleStudioHistoryAsset({
+        id: `${item.id}-${imageIndex}`,
+        item,
+        image: historyPreviewImage.value,
+        index: imageIndex
+    })
 }
 
 const handleDownloadResult = async (image: string) => {

@@ -12,6 +12,7 @@ import {
     resolveModelEndpointCandidates,
     resolveSiblingEndpoint
 } from '../utils/apiEndpoint'
+import { sanitizeDiagnosticUrl } from '../utils/diagnostics'
 import { aspectRatioToDoraverseGptImageSize, aspectRatioToGeminiSize, aspectRatioToGrsaiGptImageSize, aspectRatioToOpenAiImageSize } from '../utils/imageSizing'
 
 type ApiProvider = 'openai-chat' | 'openai-image' | 'openai-image-edit' | 'grsai' | 'grsai-draw'
@@ -148,6 +149,7 @@ interface ProxyStreamMessage {
 }
 
 const VISTACK_PROXY_HEADER = 'x-vistack-proxy'
+const VISTACK_PROXY_STREAM_MODE = 'ndjson'
 
 export async function generateImage(request: GenerateRequest, _maxRetries: number = 1, options: GenerateImageOptions = {}): Promise<GenerateResponse> {
     const targetCount = normalizeImageCount(request.count)
@@ -238,6 +240,7 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
     const isTemplateTranslation = request.task === 'translate-template'
     const isPromptTranslation = request.task === 'translate-prompt'
     const isImageToPrompt = request.task === 'image-to-prompt'
+    const isCalendarIllustration = request.task === 'calendar-illustration'
     const targetLanguage = request.targetLanguage === 'en' ? 'English' : 'Chinese'
     const userContent = isImageToPrompt
         ? [
@@ -261,6 +264,19 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
                 image_url: { url: image }
             }))
         ]
+        : isCalendarIllustration
+          ? [
+              '根据文案抽取 3 组可直接用于图像生成的短创意提示词。',
+              '三组必须采用不同的视觉语法，优先从几何抽象、材料拼贴、版画、艺术静物、自然形态、光影实验中选择。',
+              '随机性来自媒介、形态、材料和隐喻，不要堆砌镜头、服装、精确色表或完整故事。',
+              '除非人物策略明确允许，否则不得生成人物、人脸、人形轮廓、情侣或具象 AI 人物图。允许人物时，最多只有一组可以使用人物。',
+              '时间语境只用于调整季节、光线、明暗和色调权重，不要机械添加节日符号。',
+              '忽略文案中的作者、作品、国籍和出处，不要由此推断地域画风。不要在结果中复述原文或署名。',
+              '每条核心提示词控制在 45 至 110 个汉字，只描述创意核心和视觉媒介，不要加入比例、留白、无文字等固定约束。',
+              '只输出 JSON，不要 Markdown，不要解释。格式：{"options":[{"title":"短标题","direction":"简短视觉方向","prompt":"核心提示词","people":false}]}。',
+              request.context ? `创作条件：\n${request.context}` : '',
+              `文案：\n${request.prompt}`
+          ].filter(Boolean).join('\n\n')
         : isTemplateTranslation
           ? [
               `Translate this image-generation template into ${targetLanguage}.`,
@@ -295,6 +311,14 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
                         '描述画面视觉信息，不要猜测真实身份、隐私信息或未出现的事实。',
                         '输出要能直接被生图模型使用，语言清晰，结构稳定。'
                     ].join('\n')
+                    : isCalendarIllustration
+                    ? [
+                        '你是 Vistack 的日历配图创意助手。',
+                        '你负责把文案转译成短、开放、可抽卡的画面提示词，不负责生成图片。',
+                        '优先输出非人物、非具象且具有编辑设计感的方案，避免常见 AI 人物插画、恋爱海报和过度叙事。',
+                        '保持三组方案明显不同，并严格遵守用户内容中的人物策略。',
+                        '输出必须是可解析的 JSON 对象，且只包含 options 数组。'
+                    ].join('\n')
                     : isTemplateTranslation
                     ? [
                         'You are Vistack template localization assistant.',
@@ -323,7 +347,7 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
                 content: userContent
             }
         ],
-        temperature: 0.4
+        temperature: isCalendarIllustration ? 0.95 : 0.4
     }
 
     const data = await postJson(resolveChatCompletionsEndpoint(request.endpoint), request.apikey, payload, request.useProxy, request.proxyToken)
@@ -693,24 +717,24 @@ async function getJson(endpoint: string, apikey: string, useProxy = false, proxy
 
 async function fetchFormEndpoint(endpoint: string, apikey: string, formData: FormData, useProxy = false, proxyToken?: string): Promise<Response> {
     if (!useProxy) {
-        return fetch(endpoint, {
+        return fetchWithNetworkContext(endpoint, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${apikey}`
             },
             body: formData
-        })
+        }, { endpoint, useProxy })
     }
 
     formData.append('_vistack_target', endpoint)
-    formData.append('_vistack_stream', 'ndjson')
-    return fetch(getProxyUrl(proxyToken), {
+    formData.append('_vistack_stream', VISTACK_PROXY_STREAM_MODE)
+    return fetchWithNetworkContext(getProxyUrl(proxyToken), {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${apikey}`
         },
         body: formData
-    }).then(readProxyStreamResponse)
+    }, { endpoint, useProxy }).then(readProxyStreamResponse)
 }
 
 
@@ -725,25 +749,55 @@ async function fetchEndpoint(
     const headers = buildHeaders(apikey)
 
     if (!useProxy) {
-        return fetch(endpoint, {
+        return fetchWithNetworkContext(endpoint, {
             method,
             headers,
             body: method === 'POST' ? JSON.stringify(payload || {}) : undefined
-        })
+        }, { endpoint, useProxy })
     }
 
-    return fetch(getProxyUrl(proxyToken), {
+    const proxyPayload: Record<string, unknown> = {
+        target: endpoint,
+        method,
+        headers,
+        body: method === 'POST' ? payload || {} : undefined
+    }
+    if (method === 'POST') {
+        proxyPayload._vistack_stream = VISTACK_PROXY_STREAM_MODE
+    }
+
+    const response = await fetchWithNetworkContext(getProxyUrl(proxyToken), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            target: endpoint,
-            method,
-            headers,
-            body: method === 'POST' ? payload || {} : undefined
-        })
-    })
+        body: JSON.stringify(proxyPayload)
+    }, { endpoint, useProxy })
+
+    return method === 'POST' ? readProxyStreamResponse(response) : response
+}
+
+async function fetchWithNetworkContext(
+    input: RequestInfo | URL,
+    init: RequestInit,
+    context: { endpoint: string, useProxy: boolean }
+): Promise<Response> {
+    const startedAt = Date.now()
+    try {
+        return await fetch(input, init)
+    } catch (error) {
+        throw formatNetworkFetchError(error, context, Date.now() - startedAt)
+    }
+}
+
+function formatNetworkFetchError(error: unknown, context: { endpoint: string, useProxy: boolean }, elapsedMs: number): Error {
+    const originalMessage = error instanceof Error ? error.message : String(error || 'network error')
+    const seconds = Math.max(Math.round(elapsedMs / 1000), 0)
+    const routeHint = context.useProxy
+        ? 'The Vistack proxy request ended before an HTTP response was returned.'
+        : 'The browser request ended before an HTTP response was returned; enable Vistack proxy for long-running or browser-blocked endpoints.'
+
+    return new Error(`Network request failed after ${seconds}s: ${originalMessage}. ${routeHint} Target: ${sanitizeDiagnosticUrl(context.endpoint)}`)
 }
 
 async function readJsonResponse(response: Response, context?: { endpoint?: string, useProxy?: boolean }): Promise<unknown> {
@@ -869,7 +923,7 @@ function formatHttpErrorMessage(
 ): string {
     const trimmed = responseText.trim()
     const viaVistackProxy = response?.headers.get(VISTACK_PROXY_HEADER) === '1'
-    const targetSuffix = context?.endpoint ? ` Target: ${context.endpoint}` : ''
+    const targetSuffix = context?.endpoint ? ` Target: ${sanitizeDiagnosticUrl(context.endpoint)}` : ''
 
     if (context?.useProxy && status === 404 && !viaVistackProxy) {
         return [

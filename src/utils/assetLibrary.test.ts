@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GenerationHistoryItem } from './historyDb'
-import { buildAssetDownloadFilename, buildHistoryAssets } from './assetLibrary'
+import { buildAssetDownloadFilename, buildHistoryAssets, buildStudioHistoryAssets } from './assetLibrary'
 
 const historyItem = (overrides: Partial<GenerationHistoryItem>): GenerationHistoryItem => ({
     id: 'history-1',
@@ -36,6 +36,18 @@ describe('asset library queries', () => {
     it('combines favorite and category filters with sorting', () => {
         expect(buildHistoryAssets(items, { filter: 'favorite', search: '', sort: 'oldest' }).map(asset => asset.id)).toEqual(['new-0', 'new-1'])
         expect(buildHistoryAssets(items, { filter: 'category:Campaign', search: '', sort: 'newest' })[0]?.id).toBe('old-0')
+    })
+
+    it('hides studio cards without removing them from the asset library', () => {
+        const items = [historyItem({
+            id: 'visibility',
+            images: ['visible-a', 'hidden-b'],
+            hiddenImageIndexes: [1]
+        })]
+
+        expect(buildStudioHistoryAssets(items, 12).map(asset => asset.image)).toEqual(['visible-a'])
+        expect(buildHistoryAssets(items, { filter: 'all', search: '', sort: 'newest' }).map(asset => asset.image))
+            .toEqual(['visible-a', 'hidden-b'])
     })
 })
 

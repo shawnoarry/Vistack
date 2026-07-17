@@ -3,6 +3,8 @@ interface ProxyPayload {
     method?: unknown
     headers?: unknown
     body?: unknown
+    _vistack_stream?: unknown
+    stream?: unknown
 }
 
 interface ProxyResult {
@@ -99,6 +101,12 @@ export default async function handler(req: any, res: any) {
         }
 
         const payload = await readPayload(req)
+        const streamMode = getProxyStreamMode(payload)
+        if (streamMode === 'ndjson') {
+            await streamJsonProxyRequest(res, payload)
+            return
+        }
+
         const result = await performProxyRequest(payload)
         sendProxyResult(res, result)
     } catch (error) {
@@ -166,6 +174,47 @@ function sendProxyResult(res: any, result: ProxyResult) {
     res.end(Buffer.from(result.body))
 }
 
+async function streamJsonProxyRequest(res: any, payload: ProxyPayload): Promise<void> {
+    const startedAt = Date.now()
+    let heartbeatTimer: ReturnType<typeof setInterval> | undefined
+
+    try {
+        res.statusCode = 200
+        res.setHeader('content-type', 'application/x-ndjson; charset=utf-8')
+        res.setHeader('cache-control', 'no-cache, no-transform')
+        res.setHeader('x-vistack-proxy', '1')
+        res.setHeader('x-accel-buffering', 'no')
+        res.write(formatStreamMessage({ type: 'ready', elapsedMs: 0 }))
+
+        heartbeatTimer = setInterval(() => {
+            res.write(formatStreamMessage({
+                type: 'heartbeat',
+                elapsedMs: Date.now() - startedAt
+            }))
+        }, 10_000)
+
+        const result = await performProxyRequest(payload)
+        res.write(formatStreamMessage({
+            type: 'done',
+            elapsedMs: Date.now() - startedAt,
+            status: result.status,
+            headers: result.headers,
+            body: arrayBufferToBase64(result.body)
+        }))
+    } catch (error) {
+        res.write(formatStreamMessage({
+            type: 'error',
+            elapsedMs: Date.now() - startedAt,
+            error: error instanceof Error ? error.message : 'Proxy stream request failed.'
+        }))
+    } finally {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer)
+        }
+        res.end()
+    }
+}
+
 async function streamMultipartProxyRequest(res: any, payload: MultipartProxyPayload): Promise<void> {
     const startedAt = Date.now()
     let heartbeatTimer: ReturnType<typeof setInterval> | undefined
@@ -213,6 +262,10 @@ function formatStreamMessage(message: StreamProxyMessage): string {
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
     return Buffer.from(buffer).toString('base64')
+}
+
+function getProxyStreamMode(payload: ProxyPayload): string {
+    return String(payload._vistack_stream || payload.stream || '').trim().toLowerCase()
 }
 
 function isMultipart(req: any): boolean {

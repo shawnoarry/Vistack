@@ -14,7 +14,9 @@
                     </p>
                     <p class="truncate text-xs text-brand-muted">{{ formatDetailDate(item.createdAt) }} · {{ item.model }}</p>
                 </div>
-                <button type="button" class="wb-icon-button" aria-label="关闭详情" title="关闭详情" @click="$emit('close')">×</button>
+                <button type="button" class="wb-icon-button" aria-label="关闭详情" title="关闭详情" @click="$emit('close')">
+                    <X :size="16" :stroke-width="1.8" aria-hidden="true" />
+                </button>
             </header>
 
             <div class="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -49,10 +51,13 @@
                 </div>
 
                 <aside class="min-h-0 overflow-y-auto border-t border-brand-line bg-white p-4 lg:border-l lg:border-t-0 dark:bg-night-surface">
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-2 gap-2">
                         <button type="button" class="wb-primary min-h-10 px-2 text-xs" @click="$emit('download')">下载</button>
                         <button type="button" class="wb-secondary min-h-10 px-2 text-xs" @click="$emit('reference')">当前图作参考</button>
                         <button type="button" class="wb-secondary min-h-10 px-2 text-xs" @click="$emit('reuse')">一键复用</button>
+                        <button type="button" class="wb-secondary min-h-10 px-2 text-xs" @click="$emit('toggle-studio-visibility')">
+                            {{ hiddenInStudio ? '在创作台显示' : '从创作台隐藏' }}
+                        </button>
                     </div>
 
                     <div class="mt-3 grid grid-cols-2 gap-2">
@@ -135,6 +140,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { X } from '@lucide/vue'
 import type { GenerationHistoryItem } from '../utils/historyDb'
 
 const props = defineProps<{
@@ -145,6 +151,7 @@ const props = defineProps<{
     themeMode: 'light' | 'dark'
     diagnosticStatus: string
     promptCopyStatus: string
+    hiddenInStudio: boolean
 }>()
 
 defineEmits<{
@@ -158,6 +165,7 @@ defineEmits<{
     'copy-prompt': []
     category: [category: string]
     'copy-diagnostic': []
+    'toggle-studio-visibility': []
     canvas: []
     'delete-image': []
     'delete-group': []

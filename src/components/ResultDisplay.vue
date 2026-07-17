@@ -47,7 +47,16 @@
                             {{ task.error || '生成失败，未返回可用图片。' }}
                         </p>
                         <div class="mt-2 grid grid-cols-2 gap-2">
-                            <button type="button" data-testid="select-task-diagnostic" class="wb-secondary min-h-10 px-3 text-xs" @click="$emit('select-task', task)">查看本次诊断</button>
+                            <button
+                                type="button"
+                                data-testid="copy-task-diagnostic"
+                                class="wb-secondary min-h-10 px-3 text-xs"
+                                :disabled="taskDiagnosticCopyTaskId === task.id && taskDiagnosticCopyStatus === '复制中…'"
+                                aria-live="polite"
+                                @click="$emit('copy-task-diagnostic', task)"
+                            >
+                                {{ taskDiagnosticCopyTaskId === task.id && taskDiagnosticCopyStatus ? taskDiagnosticCopyStatus : '复制本次诊断' }}
+                            </button>
                             <button type="button" data-testid="dismiss-task" class="wb-secondary min-h-10 px-3 text-xs" @click="$emit('dismiss-task', task)">关闭</button>
                         </div>
                     </div>
@@ -188,6 +197,8 @@ const props = withDefaults(defineProps<{
     canReuse: boolean
     selectedIndex?: number
     selectedTaskId?: string
+    taskDiagnosticCopyTaskId?: string
+    taskDiagnosticCopyStatus?: string
     resultTitle?: string
     resultPrompt?: string
     resultRevisedPrompt?: string
@@ -200,6 +211,8 @@ const props = withDefaults(defineProps<{
 }>(), {
     selectedIndex: 0,
     selectedTaskId: '',
+    taskDiagnosticCopyTaskId: '',
+    taskDiagnosticCopyStatus: '',
     resultTitle: '',
     resultPrompt: '',
     resultRevisedPrompt: '',
@@ -255,7 +268,7 @@ defineEmits<{
     push: [image: string]
     reuse: []
     'select-image': [index: number]
-    'select-task': [task: GenerationTask]
+    'copy-task-diagnostic': [task: GenerationTask]
     'dismiss-task': [task: GenerationTask]
     'restore-task': [task: GenerationTask]
     'reuse-task': [task: GenerationTask]

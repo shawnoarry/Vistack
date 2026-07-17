@@ -29,6 +29,7 @@ export interface GenerationHistoryItem {
     revisedPrompt?: string
     durationMs?: number
     redactedErrorSummary?: string
+    hiddenImageIndexes?: number[]
 }
 
 export interface StoredImage {
@@ -158,7 +159,7 @@ export async function resolveHistoryItemImages(item: GenerationHistoryItem): Pro
 }
 
 export function putGenerationHistoryItem(item: GenerationHistoryItem): Promise<IDBValidKey> {
-    return historyTransaction<IDBValidKey>('readwrite', store => store.put(prepareHistoryItemForStorage(item)))
+    return historyTransaction<IDBValidKey>('readwrite', store => store.put(toPlainIndexedDbValue(prepareHistoryItemForStorage(item))))
 }
 
 export function deleteGenerationHistoryItem(id: string): Promise<undefined> {
@@ -192,7 +193,7 @@ export async function getPendingGenerationTaskItems(): Promise<PendingGeneration
 }
 
 export function putPendingGenerationTaskItem(item: PendingGenerationTaskItem): Promise<IDBValidKey> {
-    return pendingTaskTransaction<IDBValidKey>('readwrite', store => store.put(item))
+    return pendingTaskTransaction<IDBValidKey>('readwrite', store => store.put(toPlainIndexedDbValue(item)))
 }
 
 export function deletePendingGenerationTaskItem(id: string): Promise<undefined> {
@@ -261,6 +262,10 @@ function prepareHistoryItemForStorage(item: GenerationHistoryItem): GenerationHi
             return item.rawImageUrls?.[index] || ''
         })
     }
+}
+
+function toPlainIndexedDbValue<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value)) as T
 }
 
 function isHttpUrl(value: string): boolean {

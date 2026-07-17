@@ -1,4 +1,5 @@
 import type { GenerationHistoryItem } from './historyDb'
+import { isHistoryImageHidden } from './generationRecords'
 
 export type AssetSortOrder = 'newest' | 'oldest'
 
@@ -47,6 +48,27 @@ export const buildHistoryAssets = (
             image,
             index
         })))
+}
+
+export const buildStudioHistoryAssets = (
+    items: GenerationHistoryItem[],
+    groupLimit: number
+): HistoryAsset[] => {
+    const visibleGroups = items.filter(item =>
+        item.images.some((image, index) => Boolean(image) && !isHistoryImageHidden(item, index))
+    )
+
+    return visibleGroups
+        .slice(0, Math.max(Math.trunc(groupLimit), 0))
+        .flatMap(item => item.images.flatMap((image, index) => {
+            if (!image || isHistoryImageHidden(item, index)) return []
+            return [{
+                id: `${item.id}-${index}`,
+                item,
+                image,
+                index
+            }]
+        }))
 }
 
 const normalizeExtension = (extension: string) => {

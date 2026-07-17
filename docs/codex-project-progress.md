@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-13 17:27 (Asia/Shanghai)
+Last updated: 2026-07-17 16:24 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -21,7 +21,7 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Diagnostic copying is occasionally important for upstream failures. The main-page diagnostic action currently represents only the latest generation; future work must allow selecting or copying diagnostics for a specific historical generation.
 - The single-asset history view needs a clearer information and action hierarchy.
 - The right-side prompt preview has no validated user value and must be reviewed for removal, collapse, or replacement within the core workflow.
-- The current main-image plus transient waterfall layout is visually redundant. A future result-browser design must define one clear current result and a persistent session/history strip or grid backed by saved history, not only in-memory page state.
+- The studio result browser uses one persistent, history-backed waterfall as the primary view. Do not reintroduce a separate main image or duplicate same-generation thumbnail strip; hiding a waterfall image must never delete its asset.
 - Provider/model parameters vary and cannot be assumed to be universally discoverable. Adapt them incrementally through tested provider/model capability profiles with a generic fallback.
 - Generation images, prompts, and saved API connection presets are protected user data. No storage migration may delete or silently overwrite them.
 - The application is for personal and limited internal-team use with shared endpoint accounts, not broad public distribution. Compatibility and data reliability take priority over public multi-tenant hardening.
@@ -43,10 +43,12 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - UI/UX Phase 1 is implemented: asset-library hierarchy, search/sort, separate-file selected downloads, and a responsive image-detail workspace.
 - Studio Phase 2A is implemented: the fixed PC prompt dock now has one dynamic `图生图 / 文生图` action while preserving the two existing internal request paths.
 - Studio Phase 2B is implemented: the couple-photo assistant now opens from a compact toolbar icon as a PC popover/mobile bottom sheet, while preserving its prompt behavior.
-- The playground integration P0 gate is satisfied at runtime checkpoint `4d2bb94`; the sole next planning task is the result/history brief that incorporates task-level actual parameters and selected-generation diagnostics.
-- History storage formats, generation requests, and provider routing are unchanged.
+- The calendar illustration assistant is implemented as a separate prompt-only workflow: copy plus a flexible time context produce three short 9:16 or 4:5 options that can be written into the existing prompt field without changing image generation.
+- Studio Phase 3 is implemented: successful history is the persistent waterfall, each image can be hidden without deletion and restored from the asset library, and failed generations use a separate bounded diagnostic log.
+- The playground integration P0 gate remains satisfied at runtime checkpoint `4d2bb94`; the next product-planning task is a bounded provider/model parameter-capability brief.
+- The IndexedDB version, generation requests, provider routing, existing history/images/prompts, and API preset storage are unchanged. Phase 3 adds only backward-compatible optional visibility/diagnostic fields and a separate local failure-record key.
 - Production build succeeds with Vite 5.4.19.
-- Current production bundle is approximately 386.62 kB JS / 135.35 kB gzip and 51.54 kB CSS / 8.43 kB gzip.
+- Current production bundle is approximately 427.94 kB JS / 148.61 kB gzip and 53.80 kB CSS / 8.73 kB gzip.
 
 ## Active Product Brief: Full UI/UX Plan
 
@@ -65,7 +67,7 @@ Approved product choice:
 Proposed plan:
 
 - Use the product direction "high-frequency image editing first, results are assets, low-frequency capabilities appear on demand."
-- Recompose the studio around references, prompt, relevant model parameters, generate, one current result, and a persistent result/history list.
+- Keep the studio centered on references, prompt, relevant model parameters, generation, and one persistent history-backed result waterfall.
 - Replace the generic prompt preview with context for the selected result: prompt, parameters, actions, and its own diagnostics.
 - Flatten and clarify the asset library, promote download/reuse, add separate-file selected downloads, and redesign single-asset details.
 - Move full API configuration out of the page-pushing accordion while keeping compact preset/model access available.
@@ -74,7 +76,7 @@ Proposed plan:
 
 The full draft is `docs/product-ui-ux-plan.md`. Phase 1 is implemented and recorded at `docs/phase-1-asset-library-brief.md`.
 
-The original broad Phase 2 studio restructure was not approved and has been withdrawn. Phase 2A and 2B are complete as separately approved small changes: one dynamic `图生图 / 文生图` action in the fixed PC dock, plus a couple-photo icon after Templates that opens a PC popover/mobile bottom sheet. Phrase/template icons, three-column layout, canvas entry, result layout, request behavior, history, API presets, and local data remain unchanged. No later product phase is approved.
+The original broad Phase 2 studio restructure was not approved and has been withdrawn. Phase 2A and 2B are complete as separately approved small changes. Phase 3 was later approved, implemented, and corrected from an interim single-main-image design to the final persistent-waterfall design in `docs/phase-3-result-history-brief.md`. Phrase/template icons, three-column layout, canvas entry, request behavior, API presets, and protected local data remain unchanged.
 
 ## Completed Work
 
@@ -143,13 +145,22 @@ The original broad Phase 2 studio restructure was not approved and has been with
 
 ### 8. Result and persistent-history workflow
 
-- Replaced the multi-image large-result grid with one current image, stable same-generation thumbnails, fixed common actions, and record-bound prompt/parameter details.
-- Converted the right recent-assets cards into a compact persistent generation-history selector without changing the three-column studio or fixed prompt dock.
-- Separated browsing from reuse: history selection changes only the displayed record; `Reuse this generation` remains the explicit form-writing action.
-- Restores the newest readable history record after browser restart and safely clamps or advances selection after image/group deletion.
-- Limits the task area to running and session-failed work; successful tasks enter persistent history and failed tasks retain their own selectable diagnostics.
-- Added optional actual parameters, per-image details, revised prompts, duration, and redacted error summaries without migrating old records or changing request bodies.
-- Bound the diagnostic panel and clipboard report to the selected history record or failed task, with current-request inspection used only when no generation is selected.
+- Replaced the interim single-main-image workflow with one history-backed result waterfall; successful images appear once, preserve natural proportions, and return after browser restart.
+- Keeps frequent actions visible on every result card and turns right-side generation history into a scroll/highlight index for the waterfall instead of a second result renderer.
+- Adds per-image `hiddenImageIndexes` as a backward-compatible display preference. Hiding removes only the studio card, supports short undo, survives reload, and never deletes the asset.
+- Keeps hidden images in the asset library, labels them `创作台已隐藏`, and lets card menus or asset details restore them to the studio.
+- Limits the visible task area to running and current failed work. Direct failed-task diagnostic copy remains one click, and closing a failed task also clears its current studio/toolbox error.
+- Adds an independent local failure log capped at 20 records with copy, reuse, and delete actions. It saves prompts and redacted diagnostics only, with no API keys, raw secrets, or reference image data.
+- Preserves the existing IndexedDB version and history records; history/pending-task writes now cross the IndexedDB boundary as plain cloneable values to prevent Vue proxy `DataCloneError` failures.
+- Retains optional actual parameters, per-image details, revised prompts, duration, and redacted error summaries without changing generation request bodies or provider routing.
+
+### 9. Calendar illustration prompt assistant
+
+- Added a compact calendar toolbar entry that opens as a desktop popover or mobile bottom sheet.
+- Reduced routine input to the source copy and a flexible time context such as a date range, weekday, festival, or solar term.
+- Reused the independent prompt-assistant API to draw three short, editable visual directions; the existing image-generation API, routing, history, and asset behavior remain unchanged.
+- Kept author, work, source, and nationality text out of visual-style inference. Abstract copy defaults to non-figurative options, while explicit people/activity contexts allow at most one people-based option.
+- Added button-based 9:16 / 4:5 selection, local calendar-layout and no-text constraints, plus safe non-figurative fallbacks for malformed assistant output.
 
 ## Verification Baseline
 
@@ -162,15 +173,16 @@ npm run check
 Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
-- Test files: 8 passed.
-- Tests: 45 passed.
+- Test files: 11 passed.
+- Tests: 61 passed.
 - Production build: passed.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 - UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
 - Browser console errors during the UI fixture check: none.
 - Phase 1 browser verification: image-filled asset grid, search, two-item selection toolbar, desktop detail workspace, and 390×844 mobile detail all passed without horizontal overflow or console warnings/errors.
 - Phase 2B browser verification: PC dock remained 241px high at 1440×900, 1280×800, and 1024×768; the 440px popover stayed above it; the 390×844 bottom sheet fit the viewport with no horizontal overflow; fresh-page console logs were clean.
-- Phase 3 browser verification: 1440×900, 1280×800, 1024×768, and 390×844 had no horizontal overflow; one main result and one selected thumbnail/history state remained stable; history browsing preserved the unsaved prompt; selected-history diagnostics were copied with record ID/duration and token redaction; the 1024px fixed dock left history content fully reachable above it.
+- Phase 3 browser verification: four successful images rendered once in the persistent waterfall with natural proportions and no horizontal overflow at 1440×900, 1280×800, 1024×768, or 390×844. Hiding reduced 4 images to 3 and survived reload; the asset library still held all 4 and restored the hidden image. Failed-task diagnostics were copied with token redaction; closing the task removed its error while the bounded failure record survived reload.
+- Calendar assistant browser verification: the 1440×900 popover stayed above the fixed prompt dock; the 390×844 bottom sheet and its 9:16 / 4:5 segmented control fit without horizontal overflow; `Esc` closed the panel and returned focus to its toolbar trigger. A real assistant request was not sent because no assistant key is configured and external API cost was intentionally avoided.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
 
@@ -225,6 +237,40 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-07-17 16:24 (Asia/Shanghai)
+
+- Reviewed the complete pending workspace as one commit candidate, including the calendar prompt assistant, persistent studio waterfall, asset visibility, failure records, direct diagnostics, and JSON proxy keepalive transport.
+- Fixed a calendar-assistant race where a response for old copy/time/ratio input could appear after the user changed those inputs; stale responses and errors are now discarded.
+- Redacted sensitive endpoint query parameters in new network/HTTP error context and added service-level regression coverage for NDJSON proxy response reconstruction and error redaction.
+- Re-ran the full repository check: type checks passed, 11 test files and 61 tests passed, and the Vite production build completed at 427.94 kB JS / 148.61 kB gzip.
+- No destructive storage migration, request-body change, provider-route change, API preset reset, or removal of existing history/images/prompts was found in the final review.
+
+### 2026-07-17 16:09 (Asia/Shanghai)
+
+- User approved the Phase 3 correction after clarifying that the waterfall must remain the primary result browser and that closing a card must hide, not delete, the generated asset.
+- Replaced the interim single-main-image result workflow with a persistent history-backed waterfall. It initially loads 12 history groups, can load older results, preserves image proportions, and uses the right history list to locate groups instead of replacing the center result.
+- Added per-image studio visibility with short undo and reload persistence. Hidden images remain in the asset library, are labeled `创作台已隐藏`, and can be restored from the asset card menu or detail workspace.
+- Kept running/failed generations as tasks rather than assets. Closing a failed task now removes its visible card and current error; a separate collapsible local failure log retains up to 20 redacted records with copy, reuse, and delete actions.
+- Added focused visibility, asset-library, and failure-record tests. Converted reactive history and pending-task objects to plain cloneable values before IndexedDB writes, fixing the browser `DataCloneError` that initially prevented hidden state from surviving reload.
+- Browser verification covered 1440×900, 1280×800, 1024×768, and 390×844; hide/reload/asset-library restore and failure copy/close/reload flows all passed. Temporary images, failure records, test API key, test endpoint, and mock server were cleaned up afterward.
+- `npm run check` passed with 10 test files and 59 tests, plus type checks and the production build. Calendar-assistant changes from the parallel workstream were preserved and not reverted.
+
+### 2026-07-17 15:59 (Asia/Shanghai)
+
+- User approved implementing the tested calendar illustration workflow after refining it toward short, editable, non-figurative prompts with controlled randomness.
+- Added the calendar prompt assistant with only two routine text inputs: source copy and flexible time context. A compact 9:16 / 4:5 button group controls the target vertical format; it draws three visual directions through the existing independent prompt-assistant API and writes the selected option into the existing main prompt field.
+- Kept image generation fully separate and unchanged. Author, work, source, and nationality text do not influence visual direction; abstract copy prioritizes non-people approaches and explicit people contexts permit at most one people-based option.
+- Added seven focused parsing, fallback, people-policy, ratio, and layout-constraint tests. The current complete workspace check passed with 10 test files and 59 tests, plus type checks and production build.
+- Verified desktop and mobile layout, disabled configuration guidance, no horizontal overflow, `Esc` close, and focus return. No real assistant API generation was called because no key is configured and the check would incur external cost.
+
+### 2026-07-17 15:10 (Asia/Shanghai)
+
+- User confirmed that the failed-task diagnostic flow should not require selecting a task and then clicking the right diagnostic copy button.
+- Renamed the failed-card action from `View this diagnostic` to `Copy this diagnostic`, matching the action outcome and existing diagnostic terminology.
+- One click now selects the failed task, copies its already-redacted diagnostic, updates the right diagnostic summary, and shows local `Copying / Copied / Copy failed` feedback without scrolling or navigation.
+- Kept the right-side copy action for selected history records and did not change diagnostic contents, request behavior, history storage, or result layout.
+- Browser automation verified direct clipboard content, token redaction, selected-card state, no navigation, and the 1.8-second local feedback reset.
 
 ### 2026-07-16 17:03 (Asia/Shanghai)
 
