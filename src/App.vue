@@ -110,12 +110,22 @@
                     :models="modelOptions"
                     :model-loading="isFetchingModels"
                     :model-error="modelsError"
+                    :prompt-assistant-presets="promptAssistantConnectionPresets"
+                    :selected-prompt-assistant-preset-id="selectedPromptAssistantConnectionPresetId"
+                    :prompt-assistant-models="promptAssistantModelOptions"
+                    :prompt-assistant-model-loading="isFetchingPromptAssistantModels"
+                    :prompt-assistant-model-error="promptAssistantModelsError"
                     @save-preset="handleSaveApiPreset"
                     @update-preset="handleUpdateApiPreset"
                     @delete-preset="handleDeleteApiPreset"
                     @select-preset="handleSelectApiPreset"
                     @fetch-models="handleFetchModels"
                     @model-picked="handleModelPicked"
+                    @save-prompt-assistant-preset="handleSavePromptAssistantPreset"
+                    @update-prompt-assistant-preset="handleUpdatePromptAssistantPreset"
+                    @delete-prompt-assistant-preset="handleDeletePromptAssistantPreset"
+                    @select-prompt-assistant-preset="handleSelectPromptAssistantPreset"
+                    @fetch-prompt-assistant-models="handleFetchPromptAssistantModels"
                 />
             </div>
         </section>
@@ -1288,6 +1298,12 @@ const promptAssistantEndpoint = ref('')
 const promptAssistantModel = ref('')
 const promptAssistantUseProxy = ref(false)
 const promptAssistantProxyToken = ref('')
+const promptAssistantConnectionPresets = ref<ApiConnectionPreset[]>([])
+const selectedPromptAssistantConnectionPresetId = ref('')
+const isApplyingPromptAssistantConnectionPreset = ref(false)
+const promptAssistantModelOptions = ref<ModelOption[]>([])
+const isFetchingPromptAssistantModels = ref(false)
+const promptAssistantModelsError = ref<string | null>(null)
 const isPromptAssistantLoading = ref(false)
 const isToolboxAssistantLoading = ref(false)
 const promptAssistantError = ref<string | null>(null)
@@ -1371,6 +1387,11 @@ const modelCacheKey = (endpoint = effectiveApiEndpoint.value, apikey = apiKey.va
         apikey.trim().slice(-12),
         useProxy ? 'proxy' : 'direct'
     ].join('|')
+const promptAssistantModelCacheKey = (
+    endpoint = effectivePromptAssistantEndpoint.value,
+    apikey = promptAssistantApiKey.value,
+    useProxy = promptAssistantUseProxy.value
+) => modelCacheKey(endpoint, apikey, useProxy)
 
 const toggleThemeMode = () => {
     themeMode.value = themeMode.value === 'dark' ? 'light' : 'dark'
@@ -1468,6 +1489,7 @@ onMounted(() => {
     canvasItems.value = getCanvasWorkbenchItems()
     themeMode.value = LocalStorage.getThemeMode()
     generationBatchMode.value = LocalStorage.getGenerationBatchMode()
+    promptAssistantConnectionPresets.value = LocalStorage.getPromptAssistantConnectionPresets()
 
     if (savedApiKey) {
         apiKey.value = savedApiKey
@@ -1501,6 +1523,18 @@ onMounted(() => {
     promptAssistantModel.value = savedPromptAssistantModel.trim() || DEFAULT_PROMPT_ASSISTANT_MODEL_ID
     promptAssistantUseProxy.value = savedPromptAssistantUseProxy
     promptAssistantProxyToken.value = savedPromptAssistantProxyToken
+    restorePromptAssistantModelOptionsFromCache(
+        promptAssistantEndpoint.value,
+        savedPromptAssistantApiKey,
+        savedPromptAssistantUseProxy
+    )
+    selectedPromptAssistantConnectionPresetId.value = findMatchingApiPresetId(promptAssistantConnectionPresets.value, {
+        apiKey: savedPromptAssistantApiKey,
+        endpoint: promptAssistantEndpoint.value,
+        model: promptAssistantModel.value,
+        useProxy: savedPromptAssistantUseProxy,
+        proxyToken: savedPromptAssistantProxyToken
+    })
 
     ensureSelectedOptionPresent()
 
@@ -1627,26 +1661,46 @@ watch(
 
 watch(
     promptAssistantApiKey,
-    (newApiKey: string) => {
+    (newApiKey: string, previousApiKey?: string) => {
         const trimmed = newApiKey.trim()
         if (trimmed) {
             LocalStorage.savePromptAssistantApiKey(trimmed)
         } else {
             LocalStorage.clearPromptAssistantApiKey()
         }
+        if (
+            hasSyncedInitialEndpoint &&
+            !isApplyingPromptAssistantConnectionPreset.value &&
+            trimmed !== (previousApiKey || '').trim()
+        ) {
+            promptAssistantModelOptions.value = []
+            promptAssistantModelsError.value = null
+            restorePromptAssistantModelOptionsFromCache(effectivePromptAssistantEndpoint.value, trimmed)
+        }
+        syncSelectedPromptAssistantPreset()
     },
     { immediate: false }
 )
 
 watch(
     promptAssistantEndpoint,
-    (newEndpoint: string) => {
+    (newEndpoint: string, previousEndpoint?: string) => {
         const trimmed = newEndpoint.trim()
         if (trimmed) {
             LocalStorage.savePromptAssistantEndpoint(trimmed)
         } else {
             LocalStorage.clearPromptAssistantEndpoint()
         }
+        if (
+            hasSyncedInitialEndpoint &&
+            !isApplyingPromptAssistantConnectionPreset.value &&
+            trimmed !== (previousEndpoint || '').trim()
+        ) {
+            promptAssistantModelOptions.value = []
+            promptAssistantModelsError.value = null
+            restorePromptAssistantModelOptionsFromCache(trimmed || DEFAULT_PROMPT_ASSISTANT_ENDPOINT)
+        }
+        syncSelectedPromptAssistantPreset()
     },
     { immediate: false }
 )
@@ -1660,6 +1714,7 @@ watch(
         } else {
             LocalStorage.clearPromptAssistantModelId()
         }
+        syncSelectedPromptAssistantPreset()
     },
     { immediate: false }
 )
@@ -1668,6 +1723,16 @@ watch(
     promptAssistantUseProxy,
     (newUseProxy: boolean) => {
         LocalStorage.savePromptAssistantUseProxy(newUseProxy)
+        if (hasSyncedInitialEndpoint && !isApplyingPromptAssistantConnectionPreset.value) {
+            promptAssistantModelOptions.value = []
+            promptAssistantModelsError.value = null
+            restorePromptAssistantModelOptionsFromCache(
+                effectivePromptAssistantEndpoint.value,
+                promptAssistantApiKey.value,
+                newUseProxy
+            )
+        }
+        syncSelectedPromptAssistantPreset()
     },
     { immediate: false }
 )
@@ -1676,6 +1741,7 @@ watch(
     promptAssistantProxyToken,
     (newToken: string) => {
         LocalStorage.savePromptAssistantProxyToken(newToken)
+        syncSelectedPromptAssistantPreset()
     },
     { immediate: false }
 )
@@ -1748,6 +1814,42 @@ const handleFetchModels = async () => {
     }
 }
 
+const handleFetchPromptAssistantModels = async () => {
+    if (!promptAssistantApiKey.value.trim() || !effectivePromptAssistantEndpoint.value.trim()) return
+
+    isFetchingPromptAssistantModels.value = true
+    promptAssistantModelsError.value = null
+
+    try {
+        const rawModels = await fetchModels(
+            promptAssistantApiKey.value,
+            effectivePromptAssistantEndpoint.value,
+            promptAssistantUseProxy.value,
+            promptAssistantProxyToken.value
+        )
+        const options = mapPromptAssistantModelsToOptions(rawModels)
+
+        if (!options.length) {
+            throw new Error('未找到可用模型')
+        }
+
+        promptAssistantModelOptions.value = options
+        LocalStorage.saveModelCache(promptAssistantModelCacheKey(), options)
+
+        const preferred =
+            options.find(option => option.id === promptAssistantModel.value.trim()) ||
+            options.find(option => option.id === DEFAULT_PROMPT_ASSISTANT_MODEL_ID) ||
+            options[0]
+
+        promptAssistantModel.value = preferred.id
+    } catch (fetchError) {
+        promptAssistantModelsError.value = fetchError instanceof Error ? fetchError.message : '无法获取助手模型列表'
+        promptAssistantModelOptions.value = []
+    } finally {
+        isFetchingPromptAssistantModels.value = false
+    }
+}
+
 const buildApiPresetName = (endpoint: string, model: string) => {
     try {
         const host = new URL(endpoint).host
@@ -1788,9 +1890,25 @@ const syncSelectedApiPreset = () => {
     })
 }
 
+const syncSelectedPromptAssistantPreset = () => {
+    if (isApplyingPromptAssistantConnectionPreset.value) return
+    selectedPromptAssistantConnectionPresetId.value = findMatchingApiPresetId(promptAssistantConnectionPresets.value, {
+        apiKey: promptAssistantApiKey.value,
+        endpoint: effectivePromptAssistantEndpoint.value,
+        model: effectivePromptAssistantModel.value,
+        useProxy: promptAssistantUseProxy.value,
+        proxyToken: promptAssistantProxyToken.value
+    })
+}
+
 const persistApiConnectionPresets = (presets: ApiConnectionPreset[]) => {
     apiConnectionPresets.value = presets
     LocalStorage.saveApiConnectionPresets(presets)
+}
+
+const persistPromptAssistantConnectionPresets = (presets: ApiConnectionPreset[]) => {
+    promptAssistantConnectionPresets.value = presets
+    LocalStorage.savePromptAssistantConnectionPresets(presets)
 }
 
 const createApiPresetFromCurrentConfig = (name?: string): ApiConnectionPreset => {
@@ -1873,6 +1991,88 @@ const handleSelectApiPreset = (presetId: string) => {
     })
 }
 
+const createPromptAssistantPresetFromCurrentConfig = (name?: string): ApiConnectionPreset => {
+    const now = Date.now()
+    const endpoint = effectivePromptAssistantEndpoint.value
+    const model = effectivePromptAssistantModel.value
+
+    return {
+        id: `assistant-preset-${now}-${Math.random().toString(36).slice(2, 8)}`,
+        name: name?.trim() || buildApiPresetName(endpoint, model),
+        apiKey: promptAssistantApiKey.value.trim(),
+        endpoint,
+        model,
+        useProxy: promptAssistantUseProxy.value,
+        proxyToken: promptAssistantUseProxy.value ? promptAssistantProxyToken.value.trim() : '',
+        createdAt: now,
+        updatedAt: now
+    }
+}
+
+const handleSavePromptAssistantPreset = (name?: string) => {
+    const preset = createPromptAssistantPresetFromCurrentConfig(name)
+    persistPromptAssistantConnectionPresets([preset, ...promptAssistantConnectionPresets.value])
+    selectedPromptAssistantConnectionPresetId.value = preset.id
+}
+
+const handleUpdatePromptAssistantPreset = (presetId: string) => {
+    const existing = promptAssistantConnectionPresets.value.find(preset => preset.id === presetId)
+    if (!existing) {
+        handleSavePromptAssistantPreset()
+        return
+    }
+
+    const endpoint = effectivePromptAssistantEndpoint.value
+    const model = effectivePromptAssistantModel.value
+    const nextPreset: ApiConnectionPreset = {
+        ...existing,
+        name: existing.name.trim() || buildApiPresetName(endpoint, model),
+        apiKey: promptAssistantApiKey.value.trim(),
+        endpoint,
+        model,
+        useProxy: promptAssistantUseProxy.value,
+        proxyToken: promptAssistantUseProxy.value ? promptAssistantProxyToken.value.trim() : '',
+        updatedAt: Date.now()
+    }
+
+    persistPromptAssistantConnectionPresets(
+        promptAssistantConnectionPresets.value.map(preset => preset.id === presetId ? nextPreset : preset)
+    )
+    selectedPromptAssistantConnectionPresetId.value = nextPreset.id
+}
+
+const handleDeletePromptAssistantPreset = (presetId: string) => {
+    persistPromptAssistantConnectionPresets(
+        promptAssistantConnectionPresets.value.filter(preset => preset.id !== presetId)
+    )
+    if (selectedPromptAssistantConnectionPresetId.value === presetId) {
+        selectedPromptAssistantConnectionPresetId.value = ''
+    }
+}
+
+const handleSelectPromptAssistantPreset = (presetId: string) => {
+    if (!presetId) {
+        selectedPromptAssistantConnectionPresetId.value = ''
+        return
+    }
+
+    const preset = promptAssistantConnectionPresets.value.find(item => item.id === presetId)
+    if (!preset) return
+
+    isApplyingPromptAssistantConnectionPreset.value = true
+    selectedPromptAssistantConnectionPresetId.value = preset.id
+    promptAssistantApiKey.value = preset.apiKey
+    promptAssistantEndpoint.value = preset.endpoint
+    promptAssistantUseProxy.value = preset.useProxy
+    promptAssistantProxyToken.value = preset.proxyToken || ''
+    promptAssistantModel.value = preset.model || DEFAULT_PROMPT_ASSISTANT_MODEL_ID
+    restorePromptAssistantModelOptionsFromCache(preset.endpoint, preset.apiKey, preset.useProxy)
+    queueMicrotask(() => {
+        isApplyingPromptAssistantConnectionPreset.value = false
+        syncSelectedPromptAssistantPreset()
+    })
+}
+
 const mapModelsToOptions = (models: ApiModel[]): ModelOption[] => {
     const uniqueIds = new Set<string>()
     const options: ModelOption[] = []
@@ -1932,6 +2132,29 @@ const mapModelsToOptions = (models: ApiModel[]): ModelOption[] => {
         }
         return a.label.localeCompare(b.label)
     })
+}
+
+const mapPromptAssistantModelsToOptions = (models: ApiModel[]): ModelOption[] => {
+    const uniqueIds = new Set<string>()
+
+    return models
+        .filter(model => {
+            if (!model?.id || uniqueIds.has(model.id)) return false
+            uniqueIds.add(model.id)
+            return true
+        })
+        .map(model => {
+            const modelRecord = model as Record<string, unknown>
+            return {
+                id: model.id,
+                label: buildModelLabel(model),
+                description: (typeof model.description === 'string' && model.description.trim()) ||
+                    (typeof modelRecord.about === 'string' && String(modelRecord.about).trim()) ||
+                    '',
+                supportsImages: detectImageSupport(model)
+            }
+        })
+        .sort((a, b) => a.label.localeCompare(b.label))
 }
 
 const detectImageSupport = (model: ApiModel): boolean => {
@@ -2210,6 +2433,22 @@ const restoreModelOptionsFromCache = (endpoint: string) => {
 
     modelOptions.value = normalizeCachedModelOptions(cached, trimmedEndpoint)
     ensureSelectedOptionPresent()
+}
+
+const restorePromptAssistantModelOptionsFromCache = (
+    endpoint: string,
+    apikey = promptAssistantApiKey.value,
+    useProxy = promptAssistantUseProxy.value
+) => {
+    const trimmedEndpoint = endpoint.trim() || DEFAULT_PROMPT_ASSISTANT_ENDPOINT
+    const cached = LocalStorage.getModelCache(promptAssistantModelCacheKey(trimmedEndpoint, apikey, useProxy))
+
+    promptAssistantModelOptions.value = cached.map(option => ({
+        id: option.id,
+        label: option.label || buildFallbackLabel(option.id),
+        description: option.description || '',
+        supportsImages: option.supportsImages === true
+    }))
 }
 
 const normalizeCachedModelOptions = (options: ModelOption[], endpoint: string): ModelOption[] =>

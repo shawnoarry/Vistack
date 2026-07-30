@@ -34,6 +34,7 @@ export class LocalStorage {
     private static readonly PROMPT_ASSISTANT_MODEL_ID = 'vistack-prompt-assistant-model-id'
     private static readonly PROMPT_ASSISTANT_USE_PROXY = 'vistack-prompt-assistant-use-proxy'
     private static readonly PROMPT_ASSISTANT_PROXY_TOKEN = 'vistack-prompt-assistant-proxy-token'
+    private static readonly PROMPT_ASSISTANT_CONNECTION_PRESETS = 'vistack-prompt-assistant-connection-presets'
     private static readonly ASSET_COLLECTIONS = 'vistack-asset-collections'
     private static readonly CUSTOM_PROMPT_PHRASE_GROUPS = 'vistack-custom-prompt-phrase-groups'
     private static readonly PROMPT_PHRASE_OVERRIDES = 'vistack-prompt-phrase-overrides'
@@ -156,25 +157,27 @@ export class LocalStorage {
     static getApiConnectionPresets(): ApiConnectionPreset[] {
         try {
             const raw = localStorage.getItem(this.API_CONNECTION_PRESETS)
-            if (!raw) return []
-            const parsed = JSON.parse(raw)
-            if (!Array.isArray(parsed)) return []
-
-            return parsed
-                .map(item => ({
-                    id: typeof item?.id === 'string' ? item.id : '',
-                    name: typeof item?.name === 'string' ? item.name : '',
-                    apiKey: typeof item?.apiKey === 'string' ? item.apiKey : '',
-                    endpoint: typeof item?.endpoint === 'string' ? item.endpoint : '',
-                    model: typeof item?.model === 'string' ? item.model : '',
-                    useProxy: item?.useProxy === true,
-                    proxyToken: typeof item?.proxyToken === 'string' ? item.proxyToken : '',
-                    createdAt: typeof item?.createdAt === 'number' ? item.createdAt : Date.now(),
-                    updatedAt: typeof item?.updatedAt === 'number' ? item.updatedAt : Date.now()
-                }))
-                .filter(item => item.id && item.name.trim() && item.endpoint.trim())
+            return this.parseApiConnectionPresets(raw)
         } catch (error) {
             console.warn('无法读取 API 配置预设:', error)
+            return []
+        }
+    }
+
+    static savePromptAssistantConnectionPresets(presets: ApiConnectionPreset[]): void {
+        try {
+            localStorage.setItem(this.PROMPT_ASSISTANT_CONNECTION_PRESETS, JSON.stringify(presets))
+        } catch (error) {
+            console.warn('无法保存提示词助手 API 配置预设:', error)
+        }
+    }
+
+    static getPromptAssistantConnectionPresets(): ApiConnectionPreset[] {
+        try {
+            const raw = localStorage.getItem(this.PROMPT_ASSISTANT_CONNECTION_PRESETS)
+            return this.parseApiConnectionPresets(raw)
+        } catch (error) {
+            console.warn('无法读取提示词助手 API 配置预设:', error)
             return []
         }
     }
@@ -538,6 +541,27 @@ export class LocalStorage {
         }
 
         return {}
+    }
+
+    private static parseApiConnectionPresets(raw: string | null): ApiConnectionPreset[] {
+        if (!raw) return []
+
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return []
+
+        return parsed
+            .map(item => ({
+                id: typeof item?.id === 'string' ? item.id : '',
+                name: typeof item?.name === 'string' ? item.name : '',
+                apiKey: typeof item?.apiKey === 'string' ? item.apiKey : '',
+                endpoint: typeof item?.endpoint === 'string' ? item.endpoint : '',
+                model: typeof item?.model === 'string' ? item.model : '',
+                useProxy: item?.useProxy === true,
+                proxyToken: typeof item?.proxyToken === 'string' ? item.proxyToken : '',
+                createdAt: typeof item?.createdAt === 'number' ? item.createdAt : Date.now(),
+                updatedAt: typeof item?.updatedAt === 'number' ? item.updatedAt : Date.now()
+            }))
+            .filter(item => item.id && item.name.trim() && item.endpoint.trim())
     }
 
     private static normalizeEndpoint(endpoint: string): string {

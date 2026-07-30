@@ -249,6 +249,62 @@
                 普通生图不需要依赖这里。助手端点填 Base URL 时会自动补全 /chat/completions。
             </div>
 
+            <div class="mb-3 border-b border-brand-line pb-3">
+                <div class="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p class="wb-label">助手配置预设</p>
+                        <p class="mt-1 text-xs text-brand-muted">独立保存助手的 URL / Key / Model / 代理设置。</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="wb-secondary min-h-9 px-3 text-xs"
+                            :disabled="!canSavePromptAssistantPreset"
+                            @click="savePromptAssistantPreset"
+                        >
+                            保存为新配置
+                        </button>
+                        <button
+                            type="button"
+                            class="wb-secondary min-h-9 px-3 text-xs"
+                            :disabled="!selectedPromptAssistantPresetId || !canSavePromptAssistantPreset"
+                            @click="$emit('update-prompt-assistant-preset', selectedPromptAssistantPresetId)"
+                        >
+                            更新当前
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg border border-brand-accent/30 bg-brand-accent/10 px-3 py-2 text-xs font-semibold text-brand-accent transition hover:bg-brand-accent/15 disabled:cursor-not-allowed disabled:border-brand-line disabled:bg-brand-line disabled:text-brand-muted"
+                            :disabled="!selectedPromptAssistantPresetId"
+                            @click="$emit('delete-prompt-assistant-preset', selectedPromptAssistantPresetId)"
+                        >
+                            删除
+                        </button>
+                    </div>
+                </div>
+                <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px]">
+                    <select
+                        :value="selectedPromptAssistantPresetId"
+                        class="wb-input w-full"
+                        @change="$emit('select-prompt-assistant-preset', ($event.target as HTMLSelectElement).value)"
+                    >
+                        <option value="">未选择预设 / 使用当前填写</option>
+                        <option v-for="preset in promptAssistantPresets" :key="preset.id" :value="preset.id">
+                            {{ preset.name }} · {{ preset.model || '未指定模型' }}
+                        </option>
+                    </select>
+                    <input
+                        v-model="promptAssistantPresetNameDraft"
+                        type="text"
+                        class="wb-input w-full"
+                        placeholder="新配置名称，可不填"
+                    />
+                </div>
+                <p v-if="selectedPromptAssistantPreset" class="mt-2 truncate text-xs text-brand-muted">
+                    当前预设：{{ selectedPromptAssistantPreset.endpoint }} · {{ selectedPromptAssistantPreset.useProxy ? '代理开启' : '直连' }}
+                </p>
+            </div>
+
             <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_260px]">
                 <label>
                     <span class="mb-1 block wb-label">助手密钥</span>
@@ -291,16 +347,42 @@
                         class="wb-input w-full"
                     />
                 </label>
-                <label>
-                    <span class="mb-1 block wb-label">助手模型</span>
-                    <input
-                        type="text"
-                        :value="promptAssistantModel"
-                        @input="$emit('update:promptAssistantModel', ($event.target as HTMLInputElement).value)"
-                        placeholder="openai/gpt-4o-mini"
-                        class="wb-input w-full"
-                    />
-                </label>
+                <div>
+                    <div class="mb-1 flex items-center justify-between gap-2">
+                        <label for="prompt-assistant-model" class="wb-label">助手模型</label>
+                        <span v-if="promptAssistantModels.length" class="text-[11px] text-brand-muted">{{ promptAssistantModels.length }} 个候选</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input
+                            id="prompt-assistant-model"
+                            type="text"
+                            list="prompt-assistant-model-options"
+                            :value="promptAssistantModel"
+                            @input="$emit('update:promptAssistantModel', ($event.target as HTMLInputElement).value)"
+                            placeholder="openai/gpt-4o-mini"
+                            class="wb-input min-w-0 flex-1"
+                        />
+                        <datalist id="prompt-assistant-model-options">
+                            <option v-for="item in promptAssistantModels" :key="item.id" :value="item.id">
+                                {{ item.label }}
+                            </option>
+                        </datalist>
+                        <button
+                            type="button"
+                            class="wb-secondary min-h-10 shrink-0 px-3 text-xs"
+                            :disabled="!canFetchPromptAssistantModels || promptAssistantModelLoading"
+                            @click="$emit('fetch-prompt-assistant-models')"
+                        >
+                            {{ promptAssistantModelLoading ? '获取中...' : '获取模型' }}
+                        </button>
+                    </div>
+                    <p v-if="promptAssistantModelError" class="mt-2 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-2 py-1 text-xs text-brand-accent">
+                        {{ promptAssistantModelError }}
+                    </p>
+                    <p v-else-if="selectedPromptAssistantModelInfo" class="mt-1 text-xs text-brand-muted">
+                        {{ selectedPromptAssistantModelInfo }}
+                    </p>
+                </div>
             </div>
             <label class="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-brand-line bg-white px-3 py-2 transition hover:border-brand-accent/40">
                 <input
@@ -356,6 +438,11 @@ const props = defineProps<{
     promptAssistantModel: string
     promptAssistantUseProxy: boolean
     promptAssistantProxyToken: string
+    promptAssistantPresets: ApiConnectionPreset[]
+    selectedPromptAssistantPresetId: string
+    promptAssistantModels: ModelOption[]
+    promptAssistantModelLoading: boolean
+    promptAssistantModelError: string | null
     apiPresets: ApiConnectionPreset[]
     selectedPresetId: string
 }>()
@@ -377,10 +464,16 @@ const emit = defineEmits<{
     'select-preset': [presetId: string]
     'fetch-models': []
     'model-picked': []
+    'save-prompt-assistant-preset': [name?: string]
+    'update-prompt-assistant-preset': [presetId: string]
+    'delete-prompt-assistant-preset': [presetId: string]
+    'select-prompt-assistant-preset': [presetId: string]
+    'fetch-prompt-assistant-models': []
 }>()
 
 const { modelValue, endpoint, models, model } = toRefs(props)
 const presetNameDraft = ref('')
+const promptAssistantPresetNameDraft = ref('')
 const effectiveEndpoint = computed(() => endpoint.value.trim() || DEFAULT_API_ENDPOINT)
 
 const clearApiKey = () => {
@@ -399,6 +492,15 @@ const isCustomEndpoint = computed(() => endpoint.value.trim() !== '' && endpoint
 const canFetchModels = computed(() => modelValue.value.trim() !== '' && effectiveEndpoint.value.trim() !== '')
 const canSavePreset = computed(() => modelValue.value.trim() !== '' && endpoint.value.trim() !== '')
 const selectedPreset = computed(() => props.apiPresets.find(preset => preset.id === props.selectedPresetId))
+const canFetchPromptAssistantModels = computed(() =>
+    props.promptAssistantApiKey.trim() !== '' && props.promptAssistantEndpoint.trim() !== ''
+)
+const canSavePromptAssistantPreset = computed(() =>
+    props.promptAssistantApiKey.trim() !== '' && props.promptAssistantEndpoint.trim() !== ''
+)
+const selectedPromptAssistantPreset = computed(() =>
+    props.promptAssistantPresets.find(preset => preset.id === props.selectedPromptAssistantPresetId)
+)
 const endpointModeLabel = computed(() => {
     const value = effectiveEndpoint.value.trim().toLowerCase()
     if (!value) return '使用默认端点'
@@ -417,9 +519,21 @@ watch(
     }
 )
 
+watch(
+    () => props.selectedPromptAssistantPresetId,
+    () => {
+        promptAssistantPresetNameDraft.value = ''
+    }
+)
+
 const savePreset = () => {
     emit('save-preset', presetNameDraft.value.trim() || undefined)
     presetNameDraft.value = ''
+}
+
+const savePromptAssistantPreset = () => {
+    emit('save-prompt-assistant-preset', promptAssistantPresetNameDraft.value.trim() || undefined)
+    promptAssistantPresetNameDraft.value = ''
 }
 
 const optionList = computed<ModelOption[]>(() => {
@@ -446,6 +560,13 @@ const selectedModelInfo = computed(() => {
         return current.description
     }
     return current.supportsImages ? '支持生成图片' : ''
+})
+
+const selectedPromptAssistantModelInfo = computed(() => {
+    const current = props.promptAssistantModels.find(option => option.id === props.promptAssistantModel.trim())
+    if (!current) return ''
+    if (current.description) return current.description
+    return current.supportsImages ? '支持图片理解，可用于图片反推' : ''
 })
 
 const handleModelChange = (event: Event) => {
