@@ -494,6 +494,8 @@
                     v-model:source-copy="calendarSourceCopy"
                     v-model:time-context="calendarTimeContext"
                     v-model:aspect-ratio="calendarAspectRatio"
+                    v-model:people-strategy="calendarPeopleStrategy"
+                    v-model:style-strategy="calendarStyleStrategy"
                     :open="showCalendarPromptPanel"
                     :desktop="isDesktopLayout"
                     :assistant-ready="promptAssistantReady"
@@ -1171,7 +1173,15 @@ import { buildDiagnosticReport, formatDiagnosticTimestamp, sanitizeDiagnosticUrl
 import { buildAssetDownloadFilename, buildHistoryAssets, buildStudioHistoryAssets, type AssetSortOrder, type HistoryAsset } from './utils/assetLibrary'
 import { buildGenerationActionLabel, resolveGenerationMode } from './utils/generationAction'
 import { buildPortraitAssistPrompt, portraitAssistIconTitle, resolvePortraitAssistUiState } from './utils/portraitAssist'
-import { calendarSourceAllowsPeople, parseCalendarPromptResponse, type CalendarAspectRatio, type CalendarPromptOption } from './utils/calendarPrompt'
+import {
+    calendarSourceAllowsPeople,
+    parseCalendarPromptResponse,
+    selectCalendarStyleRoutes,
+    type CalendarAspectRatio,
+    type CalendarPeopleStrategy,
+    type CalendarPromptOption,
+    type CalendarStyleStrategy
+} from './utils/calendarPrompt'
 import {
     buildGenerationActualParams,
     clampHistoryImageIndex,
@@ -1310,6 +1320,8 @@ const promptAssistantError = ref<string | null>(null)
 const calendarSourceCopy = ref('')
 const calendarTimeContext = ref('')
 const calendarAspectRatio = ref<CalendarAspectRatio>('9:16')
+const calendarPeopleStrategy = ref<CalendarPeopleStrategy>('auto')
+const calendarStyleStrategy = ref<CalendarStyleStrategy>('diverse')
 const calendarPromptOptions = ref<CalendarPromptOption[]>([])
 const calendarPromptError = ref<string | null>(null)
 const isCalendarPromptLoading = ref(false)
@@ -1609,7 +1621,7 @@ watch(generationBatchMode, mode => {
 })
 
 watch(
-    [calendarSourceCopy, calendarTimeContext, calendarAspectRatio],
+    [calendarSourceCopy, calendarTimeContext, calendarAspectRatio, calendarPeopleStrategy, calendarStyleStrategy],
     () => {
         calendarPromptRequestVersion += 1
         calendarPromptOptions.value = []
@@ -3648,7 +3660,20 @@ const handleCalendarPromptDraw = async () => {
     }
 
     const timeContext = calendarTimeContext.value.trim()
-    const allowPeople = calendarSourceAllowsPeople(sourceCopy, timeContext)
+    const sourceAllowsPeople = calendarSourceAllowsPeople(sourceCopy, timeContext)
+    const allowPeople = calendarPeopleStrategy.value === 'allow'
+        || (calendarPeopleStrategy.value === 'auto' && sourceAllowsPeople)
+    const peopleContext = calendarPeopleStrategy.value === 'avoid'
+        ? '人物策略：避开人物，三组方案均不得出现人物、人脸、人形轮廓或情侣。'
+        : calendarPeopleStrategy.value === 'allow'
+          ? '人物策略：允许人物，最多一组可以使用人物，其余方案保持非人物表达。'
+          : sourceAllowsPeople
+            ? '人物策略：自动判断为可含人物，最多一组可以使用人物，其余方案保持非人物表达。'
+            : '人物策略：自动判断为非人物，三组方案均不得出现人物、人脸、人形轮廓或情侣。'
+    const styleRoutes = selectCalendarStyleRoutes(calendarStyleStrategy.value)
+    const styleRouteContext = styleRoutes
+        .map((route, index) => `方案 ${index + 1}：${route.label}。${route.prompt}`)
+        .join('\n')
     const requestVersion = ++calendarPromptRequestVersion
     isCalendarPromptLoading.value = true
     calendarPromptError.value = null
@@ -3659,9 +3684,9 @@ const handleCalendarPromptDraw = async () => {
             context: [
                 `时间语境：${timeContext || '未指定，不主动添加季节元素'}`,
                 `目标画幅：${calendarAspectRatio.value}竖幅`,
-                allowPeople
-                    ? '人物策略：文案包含明确人物或行动，最多允许一组人物方案，其余保持非人物表达。'
-                    : '人物策略：抽象文案，三组方案均不得出现人物、人脸、人形轮廓或情侣。'
+                peopleContext,
+                '三组风格路线必须按下列顺序一一对应，不得交换、合并或重复：',
+                styleRouteContext
             ].join('\n'),
             apikey: promptAssistantApiKey.value.trim(),
             endpoint: resolveChatCompletionsEndpoint(effectivePromptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
@@ -3673,7 +3698,8 @@ const handleCalendarPromptDraw = async () => {
 
         const nextOptions = parseCalendarPromptResponse(response.prompt, {
             allowPeople,
-            aspectRatio: calendarAspectRatio.value
+            aspectRatio: calendarAspectRatio.value,
+            styleRoutes
         })
         if (requestVersion === calendarPromptRequestVersion) {
             calendarPromptOptions.value = nextOptions

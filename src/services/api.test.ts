@@ -14,6 +14,31 @@ const request = {
 }
 
 describe('prompt assistant network transport', () => {
+    it('sends calendar style assignments and uses the creative temperature', async () => {
+        const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({
+            choices: [{ message: { content: '{"options":[]}' } }]
+        }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' }
+        }))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await improvePrompt({
+            ...request,
+            task: 'calendar-illustration',
+            context: '方案 1：自然光摄影。\n方案 2：透明水彩。\n方案 3：材料拼贴。'
+        })
+
+        const [, init] = fetchMock.mock.calls[0]
+        const body = JSON.parse(String(init?.body)) as {
+            temperature: number
+            messages: Array<{ role: string; content: string }>
+        }
+        expect(body.temperature).toBe(0.95)
+        expect(body.messages[1].content).toContain('严格按创作条件中列出的方案 1、2、3 风格路线逐条输出')
+        expect(body.messages[1].content).toContain('方案 1：自然光摄影')
+    })
+
     it('reconstructs a streamed proxy response and requests NDJSON keepalive mode', async () => {
         const upstreamBody = JSON.stringify({
             choices: [{ message: { content: '代理返回的提示词' } }]

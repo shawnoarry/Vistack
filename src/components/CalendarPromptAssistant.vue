@@ -11,7 +11,7 @@
                 aria-modal="true"
                 aria-labelledby="calendar-prompt-title"
                 data-testid="calendar-prompt-assistant"
-                class="max-h-[90vh] w-full overflow-y-auto rounded-t-lg border border-brand-line bg-white p-4 shadow-2xl shadow-black/25 dark:border-night-muted/35 dark:bg-night-surface dark:text-brand-surface lg:max-h-[calc(100vh-280px)] lg:rounded-lg"
+                class="max-h-[90vh] w-full overflow-y-auto rounded-t-lg border border-brand-line bg-white p-4 shadow-2xl shadow-black/25 dark:border-night-muted/35 dark:bg-night-surface dark:text-brand-surface lg:max-h-[calc(100vh-330px)] lg:rounded-lg"
             >
                 <header class="flex items-start justify-between gap-3 border-b border-brand-line pb-3 dark:border-night-muted/35">
                     <div class="min-w-0">
@@ -30,13 +30,13 @@
                     </button>
                 </header>
 
-                <div class="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1.45fr)_minmax(210px,0.55fr)]">
+                <div class="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1.35fr)_minmax(240px,0.65fr)]">
                     <label class="min-w-0">
                         <span class="wb-label mb-1 block">文案</span>
                         <textarea
                             :value="sourceCopy"
                             data-testid="calendar-source-copy"
-                            class="wb-input min-h-[112px] w-full resize-y py-2.5 leading-6"
+                            class="wb-input min-h-[112px] w-full resize-y py-2.5 leading-6 sm:min-h-[260px]"
                             placeholder="粘贴文案，可包含作者和作品信息"
                             @input="$emit('update:sourceCopy', ($event.target as HTMLTextAreaElement).value)"
                         />
@@ -54,40 +54,66 @@
                             />
                         </label>
 
-                        <div class="mt-auto space-y-2.5">
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                                <div class="flex items-center gap-2">
-                                    <span class="wb-label">画幅</span>
-                                    <div class="grid grid-cols-2 rounded-md border border-brand-line bg-brand-surface p-0.5 text-xs font-semibold dark:border-night-muted/35 dark:bg-night-panel" role="group" aria-label="日历底图画幅">
-                                        <button
-                                            v-for="ratio in aspectRatios"
-                                            :key="ratio"
-                                            type="button"
-                                            class="min-h-7 min-w-12 rounded px-2 transition-colors"
-                                            :class="aspectRatio === ratio ? 'bg-brand-ink text-white dark:bg-brand-surface dark:text-brand-ink' : 'text-brand-muted hover:text-brand-ink dark:text-night-muted dark:hover:text-brand-surface'"
-                                            :aria-pressed="aspectRatio === ratio"
-                                            @click="$emit('update:aspectRatio', ratio)"
-                                        >
-                                            {{ ratio }}
-                                        </button>
-                                    </div>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="wb-label">画幅</span>
+                                <div class="grid grid-cols-2 rounded-md border border-brand-line bg-brand-surface p-0.5 text-xs font-semibold dark:border-night-muted/35 dark:bg-night-panel" role="group" aria-label="画幅">
+                                    <button
+                                        v-for="ratio in aspectRatios"
+                                        :key="ratio"
+                                        type="button"
+                                        class="min-h-7 min-w-12 rounded px-2 transition-colors"
+                                        :class="aspectRatio === ratio ? 'bg-brand-ink text-white dark:bg-brand-surface dark:text-brand-ink' : 'text-brand-muted hover:text-brand-ink dark:text-night-muted dark:hover:text-brand-surface'"
+                                        :aria-pressed="aspectRatio === ratio"
+                                        @click="$emit('update:aspectRatio', ratio)"
+                                    >
+                                        {{ ratio }}
+                                    </button>
                                 </div>
-                                <span class="wb-chip">三组 · 非人物优先</span>
                             </div>
 
-                            <div class="flex justify-end">
-                                <button
-                                    type="button"
-                                    data-testid="calendar-draw-button"
-                                    class="wb-primary min-h-10 gap-2 px-3"
-                                    :disabled="!canDraw"
-                                    @click="$emit('draw')"
-                                >
-                                    <RefreshCw v-if="loading" :size="15" :stroke-width="1.8" class="animate-spin" aria-hidden="true" />
-                                    <Shuffle v-else :size="15" :stroke-width="1.8" aria-hidden="true" />
-                                    {{ loading ? '正在构思' : options.length ? '再抽 3 组' : '抽取 3 组' }}
-                                </button>
+                            <div>
+                                <span class="wb-label mb-1 block">人物策略</span>
+                                <div class="grid grid-cols-3 rounded-md border border-brand-line bg-brand-surface p-0.5 text-xs font-semibold dark:border-night-muted/35 dark:bg-night-panel" role="group" aria-label="人物策略">
+                                    <button
+                                        v-for="item in peopleStrategies"
+                                        :key="item.value"
+                                        type="button"
+                                        class="min-h-8 rounded px-1.5 transition-colors"
+                                        :class="peopleStrategy === item.value ? 'bg-brand-ink text-white dark:bg-brand-surface dark:text-brand-ink' : 'text-brand-muted hover:text-brand-ink dark:text-night-muted dark:hover:text-brand-surface'"
+                                        :aria-pressed="peopleStrategy === item.value"
+                                        :title="item.title"
+                                        @click="$emit('update:peopleStrategy', item.value)"
+                                    >
+                                        {{ item.label }}
+                                    </button>
+                                </div>
                             </div>
+
+                            <label class="block">
+                                <span class="wb-label mb-1 block">风格策略</span>
+                                <select
+                                    :value="styleStrategy"
+                                    class="wb-input w-full"
+                                    @change="$emit('update:styleStrategy', ($event.target as HTMLSelectElement).value as CalendarStyleStrategy)"
+                                >
+                                    <option v-for="item in styleStrategies" :key="item.value" :value="item.value">{{ item.label }}</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="mt-auto">
+                            <button
+                                type="button"
+                                data-testid="calendar-draw-button"
+                                class="wb-primary min-h-10 w-full gap-2 px-3"
+                                :disabled="!canDraw"
+                                @click="$emit('draw')"
+                            >
+                                <RefreshCw v-if="loading" :size="15" :stroke-width="1.8" class="animate-spin" aria-hidden="true" />
+                                <Shuffle v-else :size="15" :stroke-width="1.8" aria-hidden="true" />
+                                {{ loading ? '正在生成' : options.length ? '换一批' : '生成 3 组' }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -117,12 +143,14 @@
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
                                 <h3 class="truncate text-sm font-semibold text-brand-ink dark:text-brand-surface">{{ option.title }}</h3>
-                                <p class="mt-1 truncate text-[11px] font-medium text-brand-accent" :title="option.direction">{{ option.direction }}</p>
+                                <p class="mt-1 truncate text-[11px] font-medium text-brand-accent" :title="`${option.style} · ${option.direction}`">
+                                    {{ option.style }} · {{ option.direction }}
+                                </p>
                             </div>
                             <span v-if="option.source === 'fallback'" class="shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-brand-muted dark:bg-night-surface dark:text-night-muted">安全补位</span>
                         </div>
 
-                        <p class="mt-3 line-clamp-5 text-xs leading-5 text-brand-muted dark:text-night-muted" :title="option.prompt">{{ option.prompt }}</p>
+                        <p class="mt-3 line-clamp-5 text-xs leading-5 text-brand-muted dark:text-night-muted" :title="option.creativePrompt">{{ option.creativePrompt }}</p>
 
                         <button
                             type="button"
@@ -134,6 +162,11 @@
                         </button>
                     </article>
                 </div>
+
+                <p v-if="options.length" class="mt-3 border-t border-brand-line pt-3 text-xs leading-5 text-brand-muted dark:border-night-muted/35 dark:text-night-muted">
+                    <span class="font-semibold text-brand-ink dark:text-brand-surface">统一构图：</span>
+                    {{ sharedConstraintSummary }}
+                </p>
             </section>
         </div>
     </Teleport>
@@ -142,7 +175,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ArrowDownToLine, RefreshCw, Shuffle, X } from '@lucide/vue'
-import type { CalendarAspectRatio, CalendarPromptOption } from '../utils/calendarPrompt'
+import type {
+    CalendarAspectRatio,
+    CalendarPeopleStrategy,
+    CalendarPromptOption,
+    CalendarStyleStrategy
+} from '../utils/calendarPrompt'
 
 const props = defineProps<{
     open: boolean
@@ -153,6 +191,8 @@ const props = defineProps<{
     sourceCopy: string
     timeContext: string
     aspectRatio: CalendarAspectRatio
+    peopleStrategy: CalendarPeopleStrategy
+    styleStrategy: CalendarStyleStrategy
     options: CalendarPromptOption[]
 }>()
 
@@ -163,11 +203,27 @@ const emit = defineEmits<{
     'update:sourceCopy': [value: string]
     'update:timeContext': [value: string]
     'update:aspectRatio': [value: CalendarAspectRatio]
+    'update:peopleStrategy': [value: CalendarPeopleStrategy]
+    'update:styleStrategy': [value: CalendarStyleStrategy]
 }>()
 
 const closeButtonRef = ref<HTMLButtonElement | null>(null)
 const aspectRatios: CalendarAspectRatio[] = ['9:16', '4:5']
+const peopleStrategies: Array<{ value: CalendarPeopleStrategy; label: string; title: string }> = [
+    { value: 'avoid', label: '避开人物', title: '三组方案均不出现人物' },
+    { value: 'auto', label: '自动判断', title: '根据文案决定是否允许一组人物方案' },
+    { value: 'allow', label: '允许人物', title: '允许其中一组使用人物表达' }
+]
+const styleStrategies: Array<{ value: CalendarStyleStrategy; label: string }> = [
+    { value: 'diverse', label: '自动发散' },
+    { value: 'photography', label: '摄影倾向' },
+    { value: 'illustration', label: '插画倾向' },
+    { value: 'experimental', label: '设计实验' }
+]
 const canDraw = computed(() => props.assistantReady && props.sourceCopy.trim().length > 0 && !props.loading)
+const sharedConstraintSummary = computed(() => props.aspectRatio === '4:5'
+    ? '4:5 竖幅，视觉重点位于中上部，底部约四分之一保持简洁；写入时自动加入无文字与标识约束。'
+    : '9:16 竖幅，视觉重点位于中上部，底部约三分之一保持简洁；写入时自动加入无文字与标识约束。')
 
 const emitClose = () => emit('close')
 

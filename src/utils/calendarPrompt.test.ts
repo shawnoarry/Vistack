@@ -4,7 +4,9 @@ import {
     CALENDAR_LAYOUT_CONSTRAINTS,
     CALENDAR_NO_PEOPLE_CONSTRAINT,
     calendarSourceAllowsPeople,
-    parseCalendarPromptResponse
+    parseCalendarPromptResponse,
+    selectCalendarStyleRoutes,
+    type CalendarStyleRoute
 } from './calendarPrompt'
 
 describe('calendar prompt context', () => {
@@ -32,6 +34,20 @@ describe('calendar prompt response parsing', () => {
         expect(options[0].prompt).toContain(options[0].creativePrompt)
         expect(options[0].prompt).toContain(CALENDAR_NO_PEOPLE_CONSTRAINT)
         expect(options[0].prompt).toContain(CALENDAR_LAYOUT_CONSTRAINT)
+        expect(options[0].prompt).not.toContain('无字日历底图')
+    })
+
+    it('applies assigned style routes to the final prompts without repeating them in card copy', () => {
+        const styleRoutes: CalendarStyleRoute[] = [
+            { id: 'photo', label: '摄影路线', prompt: '真实摄影质感。' },
+            { id: 'paint', label: '绘画路线', prompt: '手绘插画质感。' },
+            { id: 'design', label: '设计路线', prompt: '实验平面设计。' }
+        ]
+        const options = parseCalendarPromptResponse(response, { styleRoutes })
+
+        expect(options.map(option => option.style)).toEqual(['摄影路线', '绘画路线', '设计路线'])
+        expect(options[0].prompt).toContain('真实摄影质感。')
+        expect(options[0].creativePrompt).not.toContain('真实摄影质感。')
     })
 
     it('accepts fenced JSON responses', () => {
@@ -80,5 +96,21 @@ describe('calendar prompt response parsing', () => {
         expect(assistantOptions.every(option => option.prompt.includes(CALENDAR_LAYOUT_CONSTRAINTS['4:5']))).toBe(true)
         expect(fallbackOptions.every(option => option.prompt.includes(CALENDAR_LAYOUT_CONSTRAINTS['4:5']))).toBe(true)
         expect(fallbackOptions.every(option => !option.prompt.includes('9:16'))).toBe(true)
+    })
+})
+
+describe('calendar style routes', () => {
+    it('selects three distinct routes for automatic diversification', () => {
+        const routes = selectCalendarStyleRoutes('diverse', () => 0)
+
+        expect(routes).toHaveLength(3)
+        expect(new Set(routes.map(route => route.id)).size).toBe(3)
+    })
+
+    it('keeps a selected style strategy within its route family', () => {
+        const routes = selectCalendarStyleRoutes('photography', () => 0)
+
+        expect(routes).toHaveLength(3)
+        expect(routes.every(route => ['自然光摄影', '微距静物', '电影静帧', '实验摄影'].includes(route.label))).toBe(true)
     })
 })
