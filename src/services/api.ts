@@ -686,6 +686,9 @@ async function fetchModelsFromKnownEndpoints(apikey: string, endpoint: string, u
             lastError = new Error('Model list is empty')
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error))
+            if (shouldSurfaceModelListError(lastError)) {
+                throw lastError
+            }
         }
     }
 
@@ -924,6 +927,17 @@ function formatHttpErrorMessage(
     const trimmed = responseText.trim()
     const viaVistackProxy = response?.headers.get(VISTACK_PROXY_HEADER) === '1'
     const targetSuffix = context?.endpoint ? ` Target: ${sanitizeDiagnosticUrl(context.endpoint)}` : ''
+
+    if (
+        context?.useProxy &&
+        status === 401 &&
+        !viaVistackProxy &&
+        /Unauthorized:\s*this proxy is protected/i.test(trimmed)
+    ) {
+        const target = context.endpoint ? `目标：${sanitizeDiagnosticUrl(context.endpoint)}` : ''
+        const guidance = 'Vistack 代理鉴权失败（HTTP 401）。请检查当前配置的代理密码，必须与服务端 VISTACK_PROXY_TOKEN 完全一致。'
+        return target ? `${guidance} ${target}` : guidance
+    }
 
     if (context?.useProxy && status === 404 && !viaVistackProxy) {
         return [

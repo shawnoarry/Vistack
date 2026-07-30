@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { improvePrompt } from './api'
+import { fetchModels, improvePrompt } from './api'
 
 afterEach(() => {
     vi.unstubAllGlobals()
@@ -66,5 +66,33 @@ describe('prompt assistant network transport', () => {
         expect(message).toContain('Network request failed')
         expect(message).toContain('REDACTED')
         expect(message).not.toContain('private-token')
+    })
+})
+
+describe('model list error guidance', () => {
+    it('stops endpoint probing and explains a protected Vistack proxy rejection', async () => {
+        const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({
+            error: 'Unauthorized: this proxy is protected.'
+        }), {
+            status: 401,
+            headers: { 'content-type': 'application/json' }
+        }))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await expect(fetchModels(
+            'test-key',
+            'https://api.example.com/v1/chat/completions',
+            true,
+            'wrong-proxy-token'
+        )).rejects.toThrow(
+            'Vistack 代理鉴权失败（HTTP 401）。请检查当前配置的代理密码，必须与服务端 VISTACK_PROXY_TOKEN 完全一致。'
+        )
+
+        expect(fetchMock).toHaveBeenCalledTimes(1)
+        const [, init] = fetchMock.mock.calls[0]
+        expect(JSON.parse(String(init?.body))).toMatchObject({
+            target: 'https://api.example.com/v1/models',
+            method: 'GET'
+        })
     })
 })

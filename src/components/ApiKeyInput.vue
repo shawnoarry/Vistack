@@ -1,18 +1,21 @@
 <template>
     <div class="rounded-lg border border-brand-line bg-white p-4 shadow-sm shadow-black/5">
-        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <header class="mb-5">
+            <h3 class="text-sm font-semibold text-brand-ink">API 配置</h3>
+            <p class="mt-1 text-xs text-brand-muted">生图和提示词助手使用独立连接，切换预设时互不覆盖。</p>
+        </header>
+
+        <div class="grid gap-x-6 xl:grid-cols-2">
+        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between xl:col-start-1 xl:row-start-1">
             <div>
-                <h3 class="text-sm font-semibold text-brand-ink">生图 API 配置</h3>
-                <p class="mt-1 text-xs text-brand-muted">这里仅用于生成图片和获取模型列表。提示词助手使用下方独立配置，不会和生图 Key / URL 合并。</p>
+                <h4 class="text-sm font-semibold text-brand-ink">生图 API</h4>
+                <p class="mt-1 text-xs text-brand-muted">用于生成图片和读取图像模型。</p>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <span class="w-fit rounded-md border border-brand-line bg-brand-surface px-2 py-1 text-xs font-medium text-brand-muted">生图专用</span>
-                <span v-if="modelValue" class="w-fit rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">密钥已保存</span>
-            </div>
+            <span v-if="modelValue" class="w-fit rounded-md bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">密钥已保存</span>
         </div>
 
-        <div class="mb-4 rounded-lg border border-brand-line bg-brand-surface p-3">
-            <div class="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div class="mb-4 border-b border-brand-line pb-4 xl:col-start-1 xl:row-start-2">
+            <div class="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <p class="wb-label">生图配置预设</p>
                     <p class="mt-1 text-xs text-brand-muted">保存常用 URL / Key / Model / 代理设置，切换时会一起恢复。</p>
@@ -44,7 +47,7 @@
                     </button>
                 </div>
             </div>
-            <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_160px]">
                 <select
                     :value="selectedPresetId"
                     class="wb-input w-full"
@@ -70,7 +73,7 @@
             </p>
         </div>
 
-        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px]">
+        <div class="grid gap-4 sm:grid-cols-2 xl:col-start-1 xl:row-start-3">
             <div>
                 <label class="mb-1 block wb-label">生图 API 密钥</label>
                 <div class="flex gap-2">
@@ -120,31 +123,33 @@
                 </div>
             </div>
 
-            <div>
-                <label class="mb-1 block wb-label">生图 API 端点</label>
-                <div class="flex gap-2">
-                    <input
-                        type="text"
-                        :value="endpoint"
-                        @input="$emit('update:endpoint', ($event.target as HTMLInputElement).value)"
-                        placeholder="例如 https://duckcu.tech/v1 或 https://grsai.dakka.com.cn/v1/api/generate"
-                        class="wb-input min-w-0 flex-1"
-                    />
-                    <button
-                        v-if="isCustomEndpoint"
-                        type="button"
-                        @click="resetEndpoint"
-                        class="wb-secondary"
-                        title="恢复默认端点"
-                    >
-                        默认
-                    </button>
+            <div class="contents">
+                <div class="min-w-0">
+                    <label class="mb-1 block wb-label">生图 API 端点</label>
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            :value="endpoint"
+                            @input="$emit('update:endpoint', ($event.target as HTMLInputElement).value)"
+                            placeholder="例如 https://duckcu.tech/v1 或完整接口地址"
+                            class="wb-input min-w-0 flex-1"
+                        />
+                        <button
+                            v-if="isCustomEndpoint"
+                            type="button"
+                            @click="resetEndpoint"
+                            class="wb-secondary"
+                            title="恢复默认端点"
+                        >
+                            默认
+                        </button>
+                    </div>
+                    <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                        <span class="rounded-md bg-brand-surface px-2 py-0.5 font-semibold text-brand-muted">{{ endpointModeLabel }}</span>
+                        <span class="text-brand-muted">Base URL 自动补全后缀，完整接口保持原样。</span>
+                    </div>
                 </div>
-                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                    <span class="rounded-md border border-brand-line bg-brand-surface px-2 py-0.5 font-semibold text-brand-muted">{{ endpointModeLabel }}</span>
-                    <span class="text-brand-muted">Base URL 会自动补全后缀；完整接口会保持原样。</span>
-                </div>
-                <label class="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-brand-line bg-brand-surface px-3 py-2 transition hover:border-brand-accent/40">
+                <label class="flex cursor-pointer items-start gap-3 border-t border-brand-line pt-4 sm:col-span-2">
                     <input
                         type="checkbox"
                         :checked="useProxy"
@@ -158,7 +163,7 @@
                         </span>
                     </span>
                 </label>
-                <div v-if="useProxy" class="mt-2 rounded-lg border border-brand-line bg-brand-surface px-3 py-2">
+                <div v-if="useProxy" class="sm:col-span-2">
                     <label class="mb-1 block wb-label">代理密码（可选）</label>
                     <div class="relative">
                         <input
@@ -195,7 +200,7 @@
                 </div>
             </div>
 
-            <div>
+            <div class="min-w-0 sm:col-span-2">
                 <label class="mb-1 block wb-label">模型列表</label>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <button
@@ -233,24 +238,17 @@
             </div>
         </div>
 
-        <div class="mt-4 rounded-lg border border-brand-line bg-brand-surface p-3">
-            <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div class="mt-5 border-t border-brand-line pt-5 xl:col-start-2 xl:row-span-3 xl:row-start-1 xl:mt-0 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+            <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <h4 class="text-sm font-semibold text-brand-ink">提示词助手 API（独立，可选）</h4>
-                    <p class="mt-1 text-xs text-brand-muted">只影响底部“AI 优化”按钮。它可以使用另一套 Key / URL / 文本模型，不影响正常生图。</p>
+                    <h4 class="text-sm font-semibold text-brand-ink">提示词助手 API（可选）</h4>
+                    <p class="mt-1 text-xs text-brand-muted">用于“AI 优化”、翻译和图片反推，不参与生图请求。</p>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <span class="w-fit rounded-md border border-brand-line bg-white px-2 py-1 text-xs font-medium text-brand-muted">不参与生图请求</span>
-                    <span v-if="promptAssistantApiKey" class="w-fit rounded-md border border-brand-accent/20 bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">助手已配置</span>
-                </div>
+                <span v-if="promptAssistantApiKey" class="w-fit rounded-md bg-brand-accent/10 px-2 py-1 text-xs font-medium text-brand-accent">助手已配置</span>
             </div>
 
-            <div class="mb-3 rounded-md border border-brand-line bg-white px-3 py-2 text-xs leading-5 text-brand-muted">
-                普通生图不需要依赖这里。助手端点填 Base URL 时会自动补全 /chat/completions。
-            </div>
-
-            <div class="mb-3 border-b border-brand-line pb-3">
-                <div class="mb-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div class="mb-4 border-b border-brand-line pb-4">
+                <div class="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <p class="wb-label">助手配置预设</p>
                         <p class="mt-1 text-xs text-brand-muted">独立保存助手的 URL / Key / Model / 代理设置。</p>
@@ -282,7 +280,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_220px]">
+                <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_160px]">
                     <select
                         :value="selectedPromptAssistantPresetId"
                         class="wb-input w-full"
@@ -305,7 +303,7 @@
                 </p>
             </div>
 
-            <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_260px]">
+            <div class="grid gap-4 sm:grid-cols-2">
                 <label>
                     <span class="mb-1 block wb-label">助手密钥</span>
                     <div class="relative">
@@ -346,27 +344,46 @@
                         placeholder="https://duckcu.tech/v1 或完整 chat/completions 地址"
                         class="wb-input w-full"
                     />
+                    <span class="mt-1 block text-xs leading-5 text-brand-muted">Base URL 会自动补全 /chat/completions；完整地址保持不变。</span>
                 </label>
-                <div>
+                <div class="min-w-0 sm:col-span-2">
                     <div class="mb-1 flex items-center justify-between gap-2">
                         <label for="prompt-assistant-model" class="wb-label">助手模型</label>
-                        <span v-if="promptAssistantModels.length" class="text-[11px] text-brand-muted">{{ promptAssistantModels.length }} 个候选</span>
+                        <div v-if="promptAssistantModels.length" class="flex items-center gap-1.5">
+                            <span class="text-[11px] text-brand-muted">{{ promptAssistantModels.length }} 个候选</span>
+                            <button
+                                type="button"
+                                class="wb-icon-button h-7 w-7"
+                                :title="promptAssistantManualEntry ? '从候选模型中选择' : '手动输入模型'"
+                                :aria-label="promptAssistantManualEntry ? '从候选模型中选择' : '手动输入模型'"
+                                @click="promptAssistantManualEntry = !promptAssistantManualEntry"
+                            >
+                                <List v-if="promptAssistantManualEntry" class="h-3.5 w-3.5" aria-hidden="true" />
+                                <Pencil v-else class="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                        </div>
                     </div>
                     <div class="flex gap-2">
+                        <select
+                            v-if="promptAssistantModels.length && !promptAssistantManualEntry"
+                            id="prompt-assistant-model"
+                            :value="promptAssistantModel"
+                            class="wb-input min-w-0 flex-1"
+                            @change="handlePromptAssistantModelChange"
+                        >
+                            <option v-for="item in promptAssistantModelOptionList" :key="item.id" :value="item.id">
+                                {{ item.label }}
+                            </option>
+                        </select>
                         <input
+                            v-else
                             id="prompt-assistant-model"
                             type="text"
-                            list="prompt-assistant-model-options"
                             :value="promptAssistantModel"
                             @input="$emit('update:promptAssistantModel', ($event.target as HTMLInputElement).value)"
                             placeholder="openai/gpt-4o-mini"
                             class="wb-input min-w-0 flex-1"
                         />
-                        <datalist id="prompt-assistant-model-options">
-                            <option v-for="item in promptAssistantModels" :key="item.id" :value="item.id">
-                                {{ item.label }}
-                            </option>
-                        </datalist>
                         <button
                             type="button"
                             class="wb-secondary min-h-10 shrink-0 px-3 text-xs"
@@ -384,7 +401,7 @@
                     </p>
                 </div>
             </div>
-            <label class="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-brand-line bg-white px-3 py-2 transition hover:border-brand-accent/40">
+            <label class="mt-4 flex cursor-pointer items-start gap-3 border-t border-brand-line pt-4">
                 <input
                     type="checkbox"
                     :checked="promptAssistantUseProxy"
@@ -394,11 +411,11 @@
                 <span class="min-w-0">
                     <span class="block text-sm font-semibold text-brand-ink">助手使用同源代理</span>
                     <span class="mt-1 block text-xs leading-5 text-brand-muted">
-                        只影响提示词优化、翻译和图片反推；不会跟随上方生图代理开关。
+                        只影响提示词优化、翻译和图片反推；不会跟随生图代理开关。
                     </span>
                 </span>
             </label>
-            <div v-if="promptAssistantUseProxy" class="mt-2 rounded-lg border border-brand-line bg-white px-3 py-2">
+            <div v-if="promptAssistantUseProxy" class="mt-3">
                 <label class="mb-1 block wb-label">助手代理密码（可选）</label>
                 <input
                     type="password"
@@ -408,13 +425,18 @@
                     autocomplete="off"
                     class="wb-input w-full"
                 />
+                <p class="mt-1 text-xs leading-5 text-brand-muted">
+                    必须与服务端 <code class="rounded bg-brand-line px-1 py-0.5 text-[11px]">VISTACK_PROXY_TOKEN</code> 完全一致，并与生图代理密码独立保存。
+                </p>
             </div>
+        </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, toRefs, watch } from 'vue'
+import { List, Pencil } from '@lucide/vue'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID } from '../config/api'
 import { LocalStorage } from '../utils/storage'
 import type { ApiConnectionPreset, ModelOption } from '../types'
@@ -474,6 +496,7 @@ const emit = defineEmits<{
 const { modelValue, endpoint, models, model } = toRefs(props)
 const presetNameDraft = ref('')
 const promptAssistantPresetNameDraft = ref('')
+const promptAssistantManualEntry = ref(false)
 const effectiveEndpoint = computed(() => endpoint.value.trim() || DEFAULT_API_ENDPOINT)
 
 const clearApiKey = () => {
@@ -501,6 +524,22 @@ const canSavePromptAssistantPreset = computed(() =>
 const selectedPromptAssistantPreset = computed(() =>
     props.promptAssistantPresets.find(preset => preset.id === props.selectedPromptAssistantPresetId)
 )
+const promptAssistantModelOptionList = computed<ModelOption[]>(() => {
+    const currentId = props.promptAssistantModel.trim()
+    if (!currentId || props.promptAssistantModels.some(option => option.id === currentId)) {
+        return props.promptAssistantModels
+    }
+
+    return [
+        {
+            id: currentId,
+            label: `${currentId}（当前手填）`,
+            description: '',
+            supportsImages: false
+        },
+        ...props.promptAssistantModels
+    ]
+})
 const endpointModeLabel = computed(() => {
     const value = effectiveEndpoint.value.trim().toLowerCase()
     if (!value) return '使用默认端点'
@@ -523,6 +562,15 @@ watch(
     () => props.selectedPromptAssistantPresetId,
     () => {
         promptAssistantPresetNameDraft.value = ''
+    }
+)
+
+watch(
+    () => props.promptAssistantModels.map(option => option.id).join('\n'),
+    (modelIds, previousModelIds) => {
+        if (modelIds && modelIds !== previousModelIds) {
+            promptAssistantManualEntry.value = false
+        }
     }
 )
 
@@ -573,6 +621,10 @@ const handleModelChange = (event: Event) => {
     const value = (event.target as HTMLSelectElement).value
     emit('update:model', value)
     emit('model-picked')
+}
+
+const handlePromptAssistantModelChange = (event: Event) => {
+    emit('update:promptAssistantModel', (event.target as HTMLSelectElement).value)
 }
 
 function buildFallbackLabel(modelId: string): string {
