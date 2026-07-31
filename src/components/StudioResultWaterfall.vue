@@ -97,14 +97,15 @@
             <button type="button" class="font-semibold text-brand-accent hover:underline" @click="$emit('undo-hide')">撤销</button>
         </div>
 
-        <div v-if="assets.length" class="columns-1 gap-3 md:columns-[220px]" data-testid="studio-waterfall">
+        <div v-if="assets.length" class="grid grid-cols-1 gap-3 md:auto-rows-[1px] md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))]" data-testid="studio-waterfall">
             <article
                 v-for="asset in assets"
                 :key="asset.id"
+                v-masonry-item
                 :data-history-id="asset.item.id"
                 :data-image-index="asset.index"
                 :class="[
-                    'group relative mb-3 break-inside-avoid overflow-hidden rounded-lg border bg-white shadow-sm shadow-black/5 transition-colors dark:bg-night-panel dark:shadow-black/25',
+                    'group relative self-start overflow-hidden rounded-lg border bg-white shadow-sm shadow-black/5 transition-colors dark:bg-night-panel dark:shadow-black/25',
                     selectedHistoryId === asset.item.id && selectedImageIndex === asset.index
                         ? 'border-brand-accent ring-2 ring-brand-accent/15'
                         : 'border-brand-line hover:border-brand-muted dark:border-night-muted/35'
@@ -178,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, type ObjectDirective } from 'vue'
 import { AlertTriangle, ChevronDown, Download, ImagePlus, RotateCcw, Trash2, X } from '@lucide/vue'
 import type { GenerationTask } from '../types'
 import type { HistoryAsset } from '../utils/assetLibrary'
@@ -229,6 +230,38 @@ const pendingFailureDeleteId = ref('')
 const imageSizes = ref<Record<string, string>>({})
 const runningTasks = computed(() => props.tasks.filter(task => task.status === 'running'))
 const failedTasks = computed(() => props.tasks.filter(task => task.status === 'error'))
+const masonryObservers = new WeakMap<HTMLElement, ResizeObserver>()
+
+const updateMasonrySpan = (element: HTMLElement) => {
+    const container = element.parentElement
+    if (!container) return
+
+    const containerStyles = getComputedStyle(container)
+    const rowHeight = Number.parseFloat(containerStyles.gridAutoRows)
+    if (!Number.isFinite(rowHeight)) {
+        element.style.gridRowEnd = 'auto'
+        return
+    }
+
+    const rowGap = Number.parseFloat(containerStyles.rowGap) || 0
+    const elementHeight = element.getBoundingClientRect().height
+    const rowSpan = Math.max(1, Math.ceil((elementHeight + rowGap) / (rowHeight + rowGap)))
+    element.style.gridRowEnd = `span ${rowSpan}`
+}
+
+const vMasonryItem: ObjectDirective<HTMLElement> = {
+    mounted(element) {
+        const observer = new ResizeObserver(() => updateMasonrySpan(element))
+        masonryObservers.set(element, observer)
+        observer.observe(element)
+        updateMasonrySpan(element)
+    },
+    updated: updateMasonrySpan,
+    beforeUnmount(element) {
+        masonryObservers.get(element)?.disconnect()
+        masonryObservers.delete(element)
+    }
+}
 
 const onImageLoad = (event: Event, image: string) => {
     const element = event.currentTarget as HTMLImageElement | null
