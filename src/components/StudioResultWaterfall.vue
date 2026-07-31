@@ -97,7 +97,7 @@
             <button type="button" class="font-semibold text-brand-accent hover:underline" @click="$emit('undo-hide')">撤销</button>
         </div>
 
-        <div v-if="assets.length" class="columns-1 gap-3 md:columns-2 2xl:columns-3" data-testid="studio-waterfall">
+        <div v-if="assets.length" class="columns-1 gap-3 md:columns-[220px]" data-testid="studio-waterfall">
             <article
                 v-for="asset in assets"
                 :key="asset.id"
@@ -145,7 +145,7 @@
                         <span class="shrink-0 text-[10px] text-brand-muted">{{ asset.index + 1 }}/{{ asset.item.images.length }}</span>
                     </div>
                     <div class="mt-2 flex items-center justify-between gap-2 border-t border-brand-line pt-2 dark:border-night-muted/35">
-                        <span class="truncate text-[10px] text-brand-muted">{{ imageSizes[asset.image] || asset.item.aspectRatio }}</span>
+                        <span class="min-w-0 truncate text-[10px] text-brand-muted">{{ imageSizes[asset.image] || asset.item.aspectRatio }}</span>
                         <div class="flex gap-1.5">
                             <button type="button" class="wb-icon-button h-9 w-9" title="下载当前图片" aria-label="下载当前图片" @click="$emit('download', asset)">
                                 <Download :size="15" :stroke-width="1.8" aria-hidden="true" />
