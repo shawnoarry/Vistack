@@ -1213,6 +1213,7 @@ import {
 } from './utils/historyDb'
 import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerateResponse, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
+import { findMatchingApiPresetId, resolveSelectedApiPresetId } from './utils/apiPreset'
 
 type ThemeMode = 'light' | 'dark'
 
@@ -1871,46 +1872,34 @@ const buildApiPresetName = (endpoint: string, model: string) => {
     }
 }
 
-const normalizeApiPresetEndpoint = (endpoint: string) => endpoint.trim().replace(/\/+$/, '').toLowerCase()
-
-const findMatchingApiPresetId = (
-    presets: ApiConnectionPreset[],
-    config: { apiKey: string; endpoint: string; model: string; useProxy: boolean; proxyToken?: string }
-) => {
-    const endpoint = normalizeApiPresetEndpoint(config.endpoint)
-    const model = config.model.trim()
-    const apiKeyValue = config.apiKey.trim()
-    const proxyTokenValue = config.useProxy ? (config.proxyToken || '').trim() : ''
-
-    return presets.find(preset =>
-        normalizeApiPresetEndpoint(preset.endpoint) === endpoint &&
-        preset.model.trim() === model &&
-        preset.apiKey.trim() === apiKeyValue &&
-        preset.useProxy === config.useProxy &&
-        (!config.useProxy || (preset.proxyToken || '').trim() === proxyTokenValue)
-    )?.id || ''
-}
-
 const syncSelectedApiPreset = () => {
     if (isApplyingApiConnectionPreset.value) return
-    selectedApiConnectionPresetId.value = findMatchingApiPresetId(apiConnectionPresets.value, {
-        apiKey: apiKey.value,
-        endpoint: effectiveApiEndpoint.value,
-        model: selectedModel.value,
-        useProxy: apiUseProxy.value,
-        proxyToken: apiProxyToken.value
-    })
+    selectedApiConnectionPresetId.value = resolveSelectedApiPresetId(
+        apiConnectionPresets.value,
+        selectedApiConnectionPresetId.value,
+        {
+            apiKey: apiKey.value,
+            endpoint: effectiveApiEndpoint.value,
+            model: selectedModel.value,
+            useProxy: apiUseProxy.value,
+            proxyToken: apiProxyToken.value
+        }
+    )
 }
 
 const syncSelectedPromptAssistantPreset = () => {
     if (isApplyingPromptAssistantConnectionPreset.value) return
-    selectedPromptAssistantConnectionPresetId.value = findMatchingApiPresetId(promptAssistantConnectionPresets.value, {
-        apiKey: promptAssistantApiKey.value,
-        endpoint: effectivePromptAssistantEndpoint.value,
-        model: effectivePromptAssistantModel.value,
-        useProxy: promptAssistantUseProxy.value,
-        proxyToken: promptAssistantProxyToken.value
-    })
+    selectedPromptAssistantConnectionPresetId.value = resolveSelectedApiPresetId(
+        promptAssistantConnectionPresets.value,
+        selectedPromptAssistantConnectionPresetId.value,
+        {
+            apiKey: promptAssistantApiKey.value,
+            endpoint: effectivePromptAssistantEndpoint.value,
+            model: effectivePromptAssistantModel.value,
+            useProxy: promptAssistantUseProxy.value,
+            proxyToken: promptAssistantProxyToken.value
+        }
+    )
 }
 
 const persistApiConnectionPresets = (presets: ApiConnectionPreset[]) => {
