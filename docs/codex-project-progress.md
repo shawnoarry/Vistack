@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-08-15 14:14 (Asia/Shanghai)
+Last updated: 2026-08-15 23:59:59 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -43,13 +43,15 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - UI/UX Phase 1 is implemented: asset-library hierarchy, search/sort, separate-file selected downloads, and a responsive image-detail workspace.
 - Studio Phase 2A is implemented: the fixed PC prompt dock now has one dynamic `图生图 / 文生图` action while preserving the two existing internal request paths.
 - Studio Phase 2B is implemented: the couple-photo assistant now opens from a compact toolbar icon as a PC popover/mobile bottom sheet, while preserving its prompt behavior.
+- Studio character references now have a prompt-only `自由 / 平衡 / 严格` identity-preservation control. `平衡` is the backward-compatible default and explicitly allows requested hairstyle, expression, camera-angle, and pose changes while requiring coherent head/body reconstruction; no provider parameter, endpoint, preset, or API payload field was added.
 - The calendar illustration assistant is implemented as a separate prompt-only workflow: copy plus a flexible time context produce three short 9:16 or 4:5 options that can be written into the existing prompt field without changing image generation.
 - Studio Phase 3 is implemented: successful history is the persistent waterfall, each image can be hidden without deletion and restored from the asset library, and failed generations use a separate bounded diagnostic log.
-- GPT Image2 G3-lite is implemented as six bilingual `精准改图配方` templates in the existing template panel. Four separately approved paid preview pilots are now bound to representative templates; prompt A/B validation has not been run, G1/G2 remain deferred, and the 42-image batch plus 12 new recipes remain unapproved.
+- GPT Image2 G3-lite is implemented as six bilingual `精准改图配方` templates. The library also contains 28 approved upstream `Curated` generation templates with local previews, bringing the built-in total to 58. All 58 now have visible previews and enlarged viewing. The flat 18-category rail is organized under eight tested main groups while retaining all fine categories. G1/G2, the earlier 42-image batch, and 12 new precise-edit recipes remain deferred or unapproved.
+- Eleven previously weak built-in templates now use matching Chinese/English seven-section prompts with complete `【editable phrases】`, explicit reference roles, concrete scene/camera/lighting/material direction, and failure boundaries. Portrait-oriented templates preserve identity while explicitly rebuilding hairstyle, expression, angle, head/neck/body integration, and pose instead of pasting the source head.
 - The playground integration P0 gate remains satisfied at runtime checkpoint `4d2bb94`; the next product-planning task is a bounded provider/model parameter-capability brief.
 - The IndexedDB version, generation requests, provider routing, existing history/images/prompts, and API preset storage are unchanged. Phase 3 adds only backward-compatible optional visibility/diagnostic fields and a separate local failure-record key.
 - Production build succeeds with Vite 5.4.19.
-- Current production bundle is approximately 449.77 kB JS / 156.31 kB gzip and 54.73 kB CSS / 8.98 kB gzip.
+- Current production bundle is approximately 528.24 kB JS / 199.21 kB gzip and 56.23 kB CSS / 9.14 kB gzip.
 
 ## Active Product Brief: Full UI/UX Plan
 
@@ -170,6 +172,14 @@ The original broad Phase 2 studio restructure was not approved and has been with
 - Reused the existing template panel and prompt insertion path. API payloads, provider routing, model parameters, endpoint/model presets, references, history, and storage schemas are unchanged.
 - Added data-level characterization tests for fixed IDs, category/mode/image boundaries, bilingual content, reference roles, invariants, and exact-text constraints.
 
+### 11. GPT Image2 curated gallery expansion
+
+- Added 28 upstream entries marked `Curated` across poster, cinematic, fashion, illustration, UI/graphics, architecture/technical, beauty/lifestyle, and gaming categories while retaining complete English prompts and faithful Chinese versions.
+- Imported the 28 matching examples as local `512×640` WebP previews with letterboxing, recorded the pinned upstream commit and MIT license, and excluded individually attributed community entries.
+- Reused the existing search, category, language-switch, preview, and prompt-insertion flows; API payloads, provider routing, model parameters, presets, history, IndexedDB, and local user data are unchanged.
+- Added focused tests for exact count, unique IDs/source numbers, category distribution, bilingual prompt completeness, provenance, WebP signatures, dimensions, and file-size bounds.
+- Prevented the existing template-panel close button from wrapping vertically on narrow mobile screens.
+
 ## Verification Baseline
 
 Latest successful command:
@@ -181,8 +191,8 @@ npm run check
 Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
-- Test files: 13 passed.
-- Tests: 72 passed.
+- Test files: 14 passed.
+- Tests: 78 passed.
 - Production build: passed.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 - UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
@@ -191,7 +201,7 @@ Latest result:
 - Phase 2B browser verification: PC dock remained 241px high at 1440×900, 1280×800, and 1024×768; the 440px popover stayed above it; the 390×844 bottom sheet fit the viewport with no horizontal overflow; fresh-page console logs were clean.
 - Phase 3 browser verification: four successful images rendered once in the persistent waterfall with natural proportions and no horizontal overflow at 1440×900, 1280×800, 1024×768, or 390×844. Hiding reduced 4 images to 3 and survived reload; the asset library still held all 4 and restored the hidden image. Failed-task diagnostics were copied with token redaction; closing the task removed its error while the bounded failure record survived reload.
 - Calendar assistant browser verification: the 1440×900 popover stayed above the fixed prompt dock; the 390×844 bottom sheet and its 9:16 / 4:5 segmented control fit without horizontal overflow; `Esc` closed the panel and returned focus to its toolbar trigger. A real assistant request was not sent because no assistant key is configured and external API cost was intentionally avoided.
-- G3-lite desktop browser verification: the existing template panel displayed the `精准改图配方` category and all six approved bilingual cards. Browser automation then became unstable while simulating template insertion and the 390×844 viewport, so those two interactive checks were not completed in this turn; no app console error attributable to the template data was observed before the connection timeouts.
+- Template gallery browser verification: all eight new categories appeared; all 28 local previews decoded at `512×640`; representative desktop/mobile searches, Chinese/English prompt insertion, and the 1440×900 plus 390×844 layouts passed with no horizontal overflow or application errors. The restricted browser environment blocked Google Fonts and Clarity, and the desktop request for the pre-existing missing favicon returned 404; these were isolated external/static-resource messages rather than application failures.
 - Template preview pilot browser verification: all four approved templates were found through the existing search and rendered their assigned 80×100 4:5 previews on desktop. At a 390×844 viewport, the document client width and scroll width were both 375 px, so there was no horizontal overflow; all four resources reported complete 1024×1280 loads and no application console errors were present.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
@@ -216,7 +226,7 @@ The diagnostic enhancement was saved as a separate checkpoint before starting UI
 
 ## Next TODO
 
-1. Present the four Stage A preview pilots for user review. Do not generate the remaining 42 previews or add the proposed 12 recipes until the user separately approves Stage B.
+1. Review the newly imported 28-template gallery in the local preview. Do not import any of the remaining 134 upstream prompts, generate the old 42-image batch, or add the proposed 12 precise-edit recipes without separate approval.
 2. Review `docs/gpt-image2-prompt-validation-pack.md`; execute its A/B generations only after separately confirming acceptable API cost and test images, then record scores before considering any product integration.
 3. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback only if complete GPT Image 2 parameters or native masks become a confirmed need; do not implement before approval.
 4. Design and implement storage v2 only after the model-parameter boundary and migration plan are agreed.
@@ -249,6 +259,173 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-08-15 23:59:59 (Asia/Shanghai)
+
+- Rewrote the approved 11 weak built-in templates and their English versions: commercial campaign, magazine cover, poster key visual, beauty editorial, K-pop studio concept, MV still, album photobook, comeback teaser, luxury product still, product hero, and cinematic environment. Each prompt now uses the same seven editable sections: goal, editable content, reference handling, visual design, camera/composition, lighting/materials, and avoid.
+- Added multiple complete `【】` replacement phrases to every Chinese and English prompt. The eight portrait-capable templates explicitly preserve recognizable identity without copying the original head pixels, and require coherent reconstruction for requested hairstyle, expression, camera angle, head/neck/body connection, and pose changes.
+- Preserved template IDs, titles, categories, modes, tags, descriptions, preview paths, insertion behavior, API payloads, provider routing, model parameters, presets, history, IndexedDB, and user data. No image generation, external moderation request, upload, or API charge occurred.
+- Added focused data tests for the exact 11-template set, ordered bilingual section headings, at least six editable phrases per language, and the non-pasted-head rule. `npm run check` passed with type checks, 16 test files / 85 tests, and the production build.
+- Browser verification at `http://127.0.0.1:5427/` confirmed both Chinese and English insert with seven sections, six blank-line separators, and 21 editable phrases for the sampled commercial template. The long prompt scrolls inside the existing textarea, the 1280 px viewport has no horizontal overflow, and browser warnings/errors are zero. The previous `5426` preview was unreachable; a new Vite server is running on `5427` because `5426` was already occupied.
+- Files changed: `src/data/templates.ts`, `src/data/templates.test.ts`, and this handoff. Saved the focused checkpoint with subject `feat: expand editable template prompts`; branch is `main...origin/main [ahead 7, behind 1]`. User-owned untracked `排查/` remains untouched. Existing preview images were intentionally retained; review their semantic match before authorizing any optional regeneration.
+
+### 2026-08-15 23:59:30 (Asia/Shanghai)
+
+- Clarified that checkpoint `38933ad` changed only the Studio identity-preservation policy; it did not rewrite the 11 previously audited weak built-in prompts. Those prompts remain unchanged and still rely on vague output-type labels and adjectives instead of concrete subject, scene, camera, lighting, editable-variable, and failure-boundary instructions.
+- No runtime source or template data changed in this clarification turn, no image request was sent, and no verification command was required. Branch remains `main...origin/main [ahead 6, behind 1]`; this shared handoff remains modified and user-owned untracked `排查/` remains untouched.
+- Pending separately approved item: rewrite the 11 weak prompts and their English versions while preserving IDs, titles, categories, tags, descriptions, preview paths, UI behavior, API payloads, presets, history, and storage. Review the new copy before deciding whether any existing preview image is sufficiently mismatched to justify regeneration.
+
+### 2026-08-15 23:59 (Asia/Shanghai)
+
+- User approved the safest trial of the identity-boundary fix. Added a compact `自由 / 平衡 / 严格` segmented control that appears only when at least one reference is marked `人物/角色`; it changes the compiled prompt only and does not send or expose provider `input_fidelity`.
+- Made `平衡` the default. Its prompt preserves identity-defining facial relationships while explicitly allowing the requested hairstyle, expression, camera angle, pose, lighting, and perspective, and prohibits copied/pasted heads, rigid frontal gaze, frozen expression, and mismatched head-to-body proportions. `自由` permits stronger reconstruction; `严格` preserves more appearance detail but still requires a coherent re-render instead of forcing the source portrait angle.
+- Added optional `identityFidelity` to generation recipes so reuse restores the selected policy; legacy history without the field safely falls back to `平衡`. Existing API presets, request routing, provider-specific parameters, storage versions, images, prompts, history records, template IDs/categories/previews, and user data were not migrated or rewritten.
+- Added `src/utils/identityFidelity.ts` plus four behavior tests. `npm run check` passed with type checks, 16 test files / 82 tests, and a production build. A fresh local page at `http://127.0.0.1:5426/` loaded as Vistack with no console warnings/errors and no horizontal overflow at the active 1265 px viewport.
+- Browser automation could not complete the local file-chooser handshake, so the character-reference-only visible state was not screenshot-verified; no private reference image was uploaded and no image-generation request or external API charge occurred. The behavior, accessibility state, prompt compilation, type compatibility, and build are covered by source inspection and automated checks.
+- Files changed for the focused checkpoint: `src/App.vue`, `src/types/index.ts`, `src/utils/identityFidelity.ts`, and `src/utils/identityFidelity.test.ts`. The shared handoff remains separately modified, and user-owned untracked `排查/` remains untouched.
+- Saved focused checkpoint `38933ad` (`feat: add identity fidelity controls`). Branch is `main...origin/main [ahead 6, behind 1]`; only this shared handoff remains modified and user-owned untracked `排查/` remains untouched. The local development server is running and returned HTTP 200 at `http://127.0.0.1:5426/`.
+- Next concrete TODO: user manually test `平衡` with a character reference and a prompt that explicitly changes hairstyle, expression, angle, and pose. Review the actual provider result before changing the default or adding any provider-level fidelity parameter; the separately identified 11 weak template rewrites remain pending.
+
+### 2026-08-15 20:13 (Asia/Shanghai)
+
+- Investigated the user's observation that the face/head was preserved too literally across the newly generated previews while pose, proportions, expression, camera angle, and body integration remained poor. No image request or runtime/source change was made.
+- Confirmed the dominant cause is the one-off preview runner, not a global Vistack hard boundary. `scripts/run-template-preview-completion.mjs` wraps every identity job with `strongest and only facial identity anchor`, explicitly preserves one selected portrait hairstyle, repeats a final exact-identity lock, and sends `--input-fidelity high`. All three supplied identity sources are clean front portraits, so the combined instruction strongly favors reusing the frontal head solution while inventing the unsupported body/pose.
+- The normal Studio path is materially softer: it appends a role mapping that says character references preserve identity, but `src/services/api.ts` does not send `input_fidelity` for OpenAI image edits and App does not globally lock hairstyle, expression, angle, pose, or camera. The remaining project-level limitation is that reference roles default to `character` and there is no Studio fidelity control, so provider defaults and prompt wording cannot currently be balanced explicitly.
+- A local, offline 26-image contact sheet (three references plus 23 identity-guided outputs) visually confirmed the failure mode: repeated frontal eyes/head geometry and hairstyle within each group, with the largest whole-body mismatch in dynamic poster, full-body fashion, airport, stage, and scene-change compositions. The sheet is stored outside the repo at `C:\Users\PC\.codex\visualizations\2026\08\15\01a003c2-85ec-7513-9646-72c1f1fa119f\vistack-template-identity-audit.jpg`.
+- Additional contributing factors are one candidate per job (`n=1`), medium quality, one forced 4:5 format, prompts that prioritize thumbnail face clarity, no pose/body reference, and several precise-edit previews whose own briefs intentionally preserve hair/pose/camera. These do not by themselves prove the third-party provider's unspecified default behavior; a paid controlled A/B would be needed for that and was not attempted.
+- Revised proposed next item, pending explicit approval: define three identity policies (`自由变化`, `平衡保持`, `严格保持`), use balanced preservation for general style templates and strict preservation only for outfit/background/local-detail recipes, explicitly allow requested hairstyle/expression/angle/pose changes, and only then rewrite the 11 weak prompts. Preserve API presets, history, storage, template IDs/categories, and current preview files; do not regenerate until copy and policy are reviewed.
+
+### 2026-08-15 20:06 (Asia/Shanghai)
+
+- Audited all 58 built-in template prompts from copy alone, without changing runtime code or sending image requests. Confirmed that the 28 curated gallery prompts and six precise-edit recipes are structurally detailed, while a substantial part of the older 23 general style prompts are short format descriptions rather than production-ready image briefs.
+- Identified 11 highest-priority rewrites: `commercial-campaign`, `magazine-cover`, `poster-key-visual`, `beauty-editorial`, `kpop-studio-concept`, `mv-concept-still`, `album-photobook`, `comeback-teaser-poster`, `luxury-product-still`, `product-hero`, and `cinematic-environment`. Their main defects are undefined subjects/scenes, vague adjectives, multiple unranked alternatives, missing camera/light/composition decisions, no editable variables, and no image-reference preservation contract despite many being available in image mode.
+- Also identified two cross-library quality issues: the detailed KBO prompt is overfitted to one woman's fixed facial traits and is unsuitable as a general built-in identity template; several curated prompts are complete demonstration briefs but overly fixed through exact text, brands, subjects, or aspect ratios, so they need parameterization rather than more prose if generalized.
+- Verification was source inspection plus a structured import of all 58 templates and prompt lengths; no application check was required because only this handoff changed. Working tree remains on `main` with the shared handoff modified and user-owned untracked `排查/` untouched.
+- Proposed next concrete item, pending explicit approval: rewrite the 11 weakest prompts first using a stable production structure (goal, editable variables, reference roles/preservation, scene/action, camera/composition, lighting/materials, and failure constraints), preserve IDs/categories/images/UI/API/storage, and review copy before any optional preview regeneration.
+
+### 2026-08-15 20:03 (Asia/Shanghai)
+
+- Resumed after context handoff and confirmed the user's latest request was already completed: the final 11 missing previews were generated once each using portrait references only, all 58 built-in templates are image-bound with enlarged viewing, and the gallery now uses eight main groups plus the retained 18 fine categories.
+- Performed no image generation and made no runtime/source changes in this turn. Focused verification `npm exec vitest run src/data/templates.test.ts src/data/templateCategories.test.ts` passed with 2 test files / 7 tests; the local review page at `http://127.0.0.1:5426/` returned HTTP 200.
+- Working tree remains `main...origin/main [ahead 5, behind 1]`; only this shared handoff is modified and user-owned untracked `排查/` remains untouched. No blocker remains; next concrete TODO is user review of preview quality and category naming/order before any further gallery expansion.
+
+### 2026-08-15 20:00 (Asia/Shanghai)
+
+- User explicitly requested one attempt for each of the remaining 11 template previews using portrait references only. Resumed the committed batch with concurrency 2 and no automatic retries; the runner skipped the existing 14 outputs, used one matching front portrait for each identity-guided job, used no full-body reference, and kept `product-hero` as a text-only generation.
+- All 11 requests succeeded on their single attempt with HTTP 200 responses and no content-policy warning: `fancam-cover`, `after-work-preview`, `korean-cafe-snapshot`, `street-paparazzi`, `product-hero`, `cinematic-environment`, and the five remaining precise-edit previews. No image-generation process remains running.
+- Bound the new files so all 58 built-in templates now have images and support the existing enlarged-preview flow. All 25 batch assets are valid WebP files over 20 KB and decode at exactly `1024x1280`; local visual review found the new `fancam-cover` uses a covered black stage outfit and does not reproduce the removed full-body reference styling.
+- Investigated the user's category concern. No built-in template had an empty `category` field, but 18 overlapping fine categories were presented as one flat horizontal rail, making many templates appear unorganized. Added eight main groups: `人像摄影`, `K-pop`, `商业设计`, `影视艺术`, `UI / 技术`, `精准改图`, `角色创作`, and `游戏视觉`; retained the 18 existing fine categories as a second row and route future/custom unmapped categories to `其他`.
+- Added pure-data category tests requiring every built-in fine category to belong to exactly one main group, with unique group IDs/labels. `npm run check` passed with type checks, 15 test files / 78 tests, and the production build.
+- Browser verification found 58 cards and 58 zoom controls. Each main-group count matched the rendered card count (`58 / 13 / 10 / 9 / 9 / 8 / 6 / 1 / 2`), portrait fine categories rendered correctly, and the new `fancam-cover` enlarged at natural `1024x1280` resolution on desktop and `390x844` mobile with no horizontal overflow or application console warnings/errors.
+- Saved focused checkpoint `5bf0521` (`feat: complete and categorize template previews`) containing the 11 new preview assets, 58-image bindings/tests, and two-level category UI. Branch is `main...origin/main [ahead 5, behind 1]`; only this shared handoff remains modified, and user-owned untracked `排查/` remains untouched.
+- Next concrete TODO: user review at `http://127.0.0.1:5426/`. No further template image generation is needed. Review category naming/order from real use before adding new templates; do not expand the gallery or precise-edit recipe count without separate approval.
+
+### 2026-08-15 19:45 (Asia/Shanghai)
+
+- User requested that all already-generated preview assets be completed in code while keeping the remaining paid image generation paused. Bound the 14 verified `1024x1280` WebP files to their matching templates, bringing visible preview coverage from 33/58 to 47/58; the 11 missing templates remain without image paths.
+- Added thumbnail enlargement to the existing template panel. The thumbnail has a dedicated zoom control; the full image opens in a restrained modal with backdrop close, close button, `Esc` handling, initial close-button focus, and focus return to the originating thumbnail. The existing card-click prompt insertion behavior remains unchanged.
+- Offline safety review established that the content-policy warning came from the failed `fancam-cover` request, not from any of the 14 successful requests. Ten later missing jobs were never submitted. The text prompt itself did not request sexual content, but the modeled full-body reference visibly combines a chest cutout, exposed midriff, tight clothing, and emphasized proportions; combined with a full-body stage/dance context, this is the most plausible trigger. This remains a reasoned diagnosis rather than a proven classifier explanation because no further request or moderation upload was made.
+- Per the user's instruction, removed the fourth full-body reference only from `scripts/run-template-preview-completion.mjs`; the Vistack reference-upload feature, multi-reference generation behavior, stored data, and local source file `112_副本.jpg` were not changed or deleted. A local dry-run using only the three portrait references passed for all 25 manifest entries without network access. The full-body source image remains outside the repository.
+- Tightened the built-in and batch-only `fancam-cover` wording to require a general-audience, performance-appropriate outfit with full torso coverage and to exclude lingerie styling, chest cutouts, plunging necklines, exposed midriff, and body-emphasizing poses. No image generation or external moderation request was sent after the user's stop instruction.
+- Verification: `npm run check` passed with type checks, 14 test files / 76 tests, and the production build. Browser verification found 47 zoom controls, decoded the new preview at its natural `1024x1280` size, and passed desktop plus `390x844` mobile layout, `Esc` close/focus return, zero horizontal overflow, and zero browser warnings/errors.
+- Saved focused checkpoint `ab6b67e` (`feat: connect completed template previews`) containing the 14 new preview assets, template bindings/tests, enlarged-preview UI, and the safer resumable batch files. Branch is `main...origin/main [ahead 4, behind 1]`; only this shared handoff remains modified, and user-owned untracked `排查/` remains untouched.
+- Next concrete TODO: keep all remaining image generation paused. The local review server is available at `http://127.0.0.1:5426/` for the user to inspect the 47 previews and enlargement behavior. Do not resume the remaining 11 jobs or send the full-body reference through any batch path without a new explicit product/privacy decision.
+
+### 2026-08-15 19:26 (Asia/Shanghai)
+
+- User explicitly authorized the configured `codex-image` CLI, sending the four supplied identity/body references through its current `https://ljqclub.com` endpoint, and charges on the configured key. Started the capped 25-preview batch with concurrency 2 and no automatic retries.
+- Generated 14 of the 25 missing preview assets. A content-policy rejection stopped `mv-concept-still`; its prompt was manually narrowed to the provider's suggested safe framing, a resumable `--resume` mode was added, and the revised item then succeeded without regenerating the seven existing outputs. A later content-policy rejection stopped `fancam-cover`; the concurrently active `airport-preview` completed before the batch exited.
+- User then explicitly requested no more image generation. Confirmed there is no remaining `run-template-preview-completion` or `codex_image.py` process, and no further API request was started. The remaining 11 IDs are `fancam-cover`, `after-work-preview`, `korean-cafe-snapshot`, `street-paparazzi`, `product-hero`, `cinematic-environment`, `gpt-image2-edit-identity-scene`, `gpt-image2-edit-outfit-only`, `gpt-image2-edit-background-only`, `gpt-image2-edit-multi-reference`, and `gpt-image2-edit-local-detail`.
+- Verification: the completion manifest reports 14 `DONE` / 11 `MISSING`; all 14 generated files have valid RIFF/WEBP signatures, exceed 20 KB, and decode at exactly `1024x1280`. `npm run check` passed with type checks, 14 test files / 75 tests, and the production build. The repository contains 58 templates total: 33 currently have UI-bound previews, while binding the 14 new files would bring visible coverage to 47/58 (81.0%). No binding or runtime UI change was made in this turn.
+- Working tree: 14 new untracked files under `public/template-previews/`, untracked `scripts/run-template-preview-completion.mjs` and `scripts/template-preview-completion.jsonl`, the pre-existing shared modification to this handoff, and user-owned untracked `排查/`. Branch remains `main...origin/main [ahead 3, behind 1]`; `排查/` and the four source reference images remain untouched and outside the repository.
+- Next concrete TODO: keep generation paused. When the user approves a non-generation step, bind the 14 verified files to their matching templates, add coverage tests, run `npm run check`, and visually verify thumbnail plus enlarged-preview behavior. Separately revise `fancam-cover` before any future paid resume; never resume the remaining 11 without a new explicit request.
+
+### 2026-08-15 18:50 (Asia/Shanghai)
+
+- User supplied three front portraits of the same adult woman with different hairstyles and one modeled full-body reference. Updated the completion runner so portrait 1/2/3 control the selected hairstyle and facial identity, while the fourth image is used only for body proportions on 13 full-body-sensitive templates; source images remain outside the repository.
+- Added a 25-job completion manifest and a no-retry runner. The final dry-run passed for 23 identity-guided edits plus 2 non-person product generations, with exact `gpt-image-2`, `4:5@1k`, medium-quality WebP outputs and concurrency capped at 2.
+- The attempted real batch was rejected before process launch because the configured endpoint resolves to the unverified third-party base URL `https://ljqclub.com`; the user had not yet explicitly authorized sending these four private reference images to that exact destination. No image was uploaded, no API request was sent, and no fee was incurred.
+- Work is blocked only on informed privacy authorization for that destination or selection of a trusted alternative endpoint. Do not retry or route around the rejection. Runtime source and template data remain unchanged; no application check was required.
+- Branch remains `main...origin/main [ahead 3, behind 1]`; the shared handoff, two uncommitted preview-generation scripts, and user-owned untracked `排查/` remain outside checkpoint `abafd34`.
+
+### 2026-08-15 18:44 (Asia/Shanghai)
+
+- User asked whether files can be dragged directly into the Codex desktop composer. Clarified that arbitrary-file drag-and-drop is not a reliable universal attachment workflow in the current Windows client; project files should be referenced by name or path, files outside the project by full local path, and images can use the visible attachment/paste flow available in the current UI.
+- No Codex state, sidebar classification, Vistack runtime source, API configuration, or user-owned `排查/` content changed. No application verification command was required for this usage-guidance-only response.
+
+### 2026-08-15 18:40 (Asia/Shanghai)
+
+- User confirmed the Codex sidebar restoration succeeded and requested a fresh backup after making their own adjustments. Captured the current state at 18:39:43 under `C:\Users\PC\.codex\recovery-backups\sidebar-classification-20260815-183943` without closing or modifying Codex.
+- The backup preserves the exact 13 project definitions and sidebar order, all 211 thread-to-project assignments, each project's current thread order, selected project, 2 pinned threads, 2 pinned projects, and thread writable roots. It contains 0 projectless threads and excludes authentication files, API keys, provider credentials, and conversation bodies.
+- Created `global-state-snapshot.json` for exact rollback, `sidebar-classification.json` for classification-only recovery, `backup-summary.json` for human-readable counts, and `sha256-manifest.json` for integrity checking. All three manifest-listed payloads parsed successfully and matched their recorded SHA-256 hashes; the full snapshot hash is `16DAA0D88AE97343FDBED7169AA51E11E9A3953D751CE6ED18144A1FFAD61B5F`.
+- No Vistack runtime source changed and `npm run check` was not required. The pre-existing modified handoff, untracked `scripts/template-preview-completion.jsonl`, and user-owned `排查/` directory were preserved and not overwritten.
+
+### 2026-08-15 18:39 (Asia/Shanghai)
+
+- User approved filling the remaining 25 old-template previews, then offered to provide a person reference before generation. Drafted `scripts/template-preview-completion.jsonl` for the 25-job batch, but paused before dry-run or any external request so its person prompts can be revised around the approved reference strategy.
+- No new paid request was sent; the new-request count remains 0. The intended hard cap remains one image per missing template with no automatic paid retries.
+- A supplied portrait would be sent to the currently configured external image API for identity-guided edits, so explicit scope/privacy confirmation and the actual uploaded reference images are required before continuing. Recommended using the person consistently for the five precise-edit recipes and a bounded set of identity-sensitive portrait/K-pop previews, while keeping product and broader editorial examples diverse.
+- No runtime source changed and no application check was required. Branch remains `main...origin/main [ahead 3, behind 1]`; the shared handoff, the uncommitted draft JSONL, and user-owned untracked `排查/` remain outside checkpoint `abafd34`.
+
+### 2026-08-15 18:34 (Asia/Shanghai)
+
+- User asked whether every template now has an example image and whether previews can be enlarged. Confirmed from the current data that the library has 58 built-in templates: 33 have image files and 25 still use the category placeholder.
+- Confirmed from `StylePromptSelector.vue` that previews are fixed `80×100` thumbnails. Clicking the card or its insert action writes the prompt into the main prompt field; there is no image-specific lightbox or enlarged preview yet.
+- No runtime source changed and no application check was required. Recommended the next separately approved UI item: make thumbnail clicks open a non-destructive desktop/mobile lightbox without changing card prompt insertion, then separately decide how to source previews for the remaining 25 templates without automatically incurring generation cost.
+- Branch remains `main...origin/main [ahead 3, behind 1]`; the shared handoff file and user-owned untracked `排查/` remain outside checkpoint `abafd34`.
+
+### 2026-08-15 18:31 (Asia/Shanghai)
+
+- Completed the separately approved 28-template GPT Image2 gallery expansion. Added complete bilingual `Curated` prompts, eight new categories, 28 local `512×640` WebP previews, fixed upstream commit/license provenance, and a focused data/image integrity test file.
+- Preserved the existing template-panel workflow and all generation/storage behavior. The only UI adjustment prevents the mobile template-panel `关闭` button from wrapping vertically; API payloads, provider routing, model parameters, presets, history, IndexedDB, and user-owned `排查/` content are unchanged.
+- `npm run check` passed with 14 test files and 75 tests plus a successful Vite production build. Chrome verification passed at 1440×900 and 390×844: all 28 previews decoded, eight categories appeared, representative search and Chinese/English insertion worked, there was no horizontal overflow, and application errors were 0.
+- The restricted browser blocked Google Fonts and Clarity, and the desktop favicon request returned the pre-existing 404; these were isolated resource messages. No paid image-generation or assistant request was sent.
+- Saved the focused checkpoint as `abafd34` (`feat: expand prompt gallery templates`). Branch is now `main...origin/main [ahead 3, behind 1]`; only this shared handoff file and the user-owned untracked `排查/` directory remain outside the checkpoint.
+- Restarted the local Vite preview at `http://127.0.0.1:4173/` for user review.
+- The remaining 134 upstream prompts, the old 42-image paid batch, and 12 proposed precise-edit recipes were not imported or authorized. The concurrent Codex-sidebar restore updates immediately below were preserved and not overwritten.
+
+### 2026-08-15 18:19 (Asia/Shanghai)
+
+- Prepared a non-manual Codex sidebar restoration from the current rollback backup at `C:\Users\PC\.codex\recovery-backups\sidebar-before-restore-20260815-175720`. The payload restores 13 local projects and assigns all 211 indexed threads; no thread remains projectless.
+- Confirmed each project's thread list is ordered by last conversation recency descending, with thread ID descending only as the stable tie-breaker. A direct comparison against the live `state_5.sqlite` found 0 ordering violations across all 211 threads.
+- Fixed the hidden apply watcher to read UTF-8 JSON explicitly under Windows PowerShell 5. Validation succeeded with SHA-256 `85A80C49ADA64E14207129C28B37C773A17B9FC1CD38DD0047B8BC136E0A63B5`.
+- Started hidden watcher PID `19380`; `restore-apply-status.json` reported `waiting-for-codex-close` at 18:18. It will wait for all `ChatGPT` processes to exit, create an immediate pre-apply copy, atomically replace `.codex-global-state.json` and its `.bak`, verify the applied hash, and reopen `H:\Codex++\codex-plus-plus.exe`.
+- No restore has been written yet. Required next step: the user closes every Codex window, then after automatic restart verify the applied status, 13 project groups, 211 assignments, 0 projectless threads, and newest-first ordering. No `npm run check` was needed because no Vistack runtime source changed; the user-owned `排查/` directory remains untouched.
+
+### 2026-08-15 17:58 (Asia/Shanghai)
+
+- Created a pre-restore Codex state backup for the user at `C:\Users\PC\.codex\recovery-backups\sidebar-before-restore-20260815-175720`. It contains the current global state and backup copy, session index, a safety-state copy, consistent SQLite snapshots of `state_5.sqlite` and `codex-dev.db`, plus a SHA-256 manifest; API keys, authentication files, and provider configuration were deliberately excluded.
+- Verified every manifest entry exists and matches its recorded SHA-256. Both SQLite snapshots returned `ok` from `PRAGMA integrity_check`, and both JSON state files parsed successfully. Total backup size is approximately 12.86 MB across seven files.
+- The live `latest-safe-state.json` refreshed while Codex/Codex++ remained open and now represents a newer compact safety snapshot, so it must not be treated as the original 2026-08-12 eight-root snapshot during restoration. The earlier read-only diagnosis in this task preserves the old roots, order IDs, labels, and thread hints needed for reconstruction.
+- No sidebar assignment, conversation record, archive state, API configuration, Vistack runtime source, or user-owned `排查/` content was changed. The next step remains an explicitly approved restore performed only after Codex is closed, using the new current-state backup as the rollback point.
+
+### 2026-08-15 17:53 (Asia/Shanghai)
+
+- Investigated the user's Codex sidebar grouping after a PC power loss. Read-only app APIs confirmed that the conversations still exist, while the current sidebar state retains only two local projects and one explicit thread-to-project assignment; most visible conversations now report no project assignment.
+- Found the pre-incident recovery evidence at `C:\Users\PC\.codex\backups_state\app-state-sync\latest-safe-state.json` (2026-08-12 16:55): it retains eight saved workspace roots, eleven project-order entries, two custom workspace labels, and thread workspace hints. The active thread database still contains 179 non-archived conversations, so this is a sidebar metadata/index problem rather than conversation deletion.
+- Confirmed in the existing Codex++ GUI that `会话项目移动` is enabled and can manually reassign conversations. Its separate `立刻修复历史会话` action was not run because it targets historical session ownership/index repair and is not established as a project-sidebar restore.
+- No Codex state file, SQLite database, Vistack runtime source, API configuration, or user-owned `排查/` content was modified. Recovery is intentionally paused for explicit approval because the safe automatic route requires closing Codex, backing up the current state, and rebuilding only project/sidebar assignments from preserved metadata.
+- Verification: `codex_app__list_projects`, `codex_app__list_threads`, and `codex_app__list_archived_threads` succeeded; read-only `sqlite3` schema/count queries succeeded; Codex++ session refresh found 50 recent sessions on its first page. `git status --short --branch` shows the pre-existing dirty tree and `main` ahead 2/behind 1. No `npm run check` was needed because only this handoff document changed.
+
+### 2026-08-15 15:02 (Asia/Shanghai)
+
+- User confirmed that Vistack's existing prompt-template feature should be expanded with more of the upstream gallery's ready-made prompts; new entries do not need to be rewritten around Vistack-specific traits.
+- Inspected high-value upstream categories and proposed a bounded first gallery expansion of 28 `Curated` entries: 4 poster/typography, 4 cinematic, 4 fashion, 4 illustration/art, 4 UI/graphic design, 4 architecture/technical illustration, 2 beauty/lifestyle, and 2 gaming templates. This would grow the built-in library from 30 to 58 templates while keeping the existing six precise-edit recipes.
+- Recommended preserving upstream prompt intent, adding faithful Chinese/English variants only as needed, importing each selected matching example as a compressed local WebP thumbnail, and recording the pinned repository commit plus provenance. Selecting only upstream `Curated` entries avoids the first batch's individual-author attribution complexity and requires no paid image-generation calls.
+- This is a product brief only. No runtime source, template data, image asset, API request, paid generation, storage, or user-owned `排查/` content changed. Awaiting explicit confirmation of the proposed 28-template scope before implementation.
+
+### 2026-08-15 14:25 (Asia/Shanghai)
+
+- User asked whether the provided GPT-Image2 Skill already contains ready-to-use prompts. Rechecked the upstream repository at commit `068dd9e24aadc8731e46f38548ca4dcd94515d35`: its canonical gallery index currently lists 31 category files and 162 concrete prompts, each category file carrying full prompt text plus preview paths, metadata, and source/attribution markers.
+- Clarified an important distinction: the upstream 162-entry gallery is a broad generation/design prompt library, while its dedicated `Edit Endpoint Showcase` contains only 2 direct edit examples. The six Vistack G3-lite entries were rewritten as reusable precise-edit workflows, not selected verbatim as the only useful prompts from the gallery.
+- The previous scope was intentionally conservative but underused the upstream gallery's ready-made creative templates. A future proposal should separately evaluate importing/adapting relevant general gallery prompts into Vistack's existing template categories while preserving attribution and avoiding an indiscriminate 418 MB image-library import.
+- Verification used the freshly cloned upstream commit, `references/gallery.md`, `references/gallery-edit-endpoint-showcase.md`, `README.zh.md`, and the local integration brief. No runtime source, API request, paid generation, or user-owned `排查/` content changed in this turn.
+
+### 2026-08-15 14:19 (Asia/Shanghai)
+
+- User asked how many recipes were selected from the provided GPT-Image2 Skill. Confirmed that 6 rewritten G3-lite precise-edit recipes are currently integrated: identity-preserving scene change, outfit-only replacement, background-only replacement, role-based multi-reference composition, visual-mask local correction, and exact text replacement.
+- The 12 additional high-frequency recipes in `docs/template-preview-expansion-brief.md` are proposals only and remain unapproved/unimplemented. The four Stage A paid images are preview pilots, not four additional recipes; only the exact-text pilot belongs to the six precise-edit recipes.
+- Verification used the six `gpt-image2-edit-*` IDs in `src/data/templates.ts` and the Stage B approval boundary in the expansion brief. No runtime source, API request, image generation, or user-owned `排查/` content changed in this turn.
 
 ### 2026-08-15 14:14 (Asia/Shanghai)
 

@@ -14,6 +14,40 @@ const preciseEditTemplateIds = [
     'gpt-image2-edit-exact-text'
 ]
 
+const expandedPromptTemplateIds = [
+    'commercial-campaign',
+    'magazine-cover',
+    'poster-key-visual',
+    'beauty-editorial',
+    'kpop-studio-concept',
+    'mv-concept-still',
+    'album-photobook',
+    'comeback-teaser-poster',
+    'luxury-product-still',
+    'product-hero',
+    'cinematic-environment'
+]
+
+const chinesePromptSections = [
+    '生成目标：',
+    '可编辑内容：',
+    '参考图处理：',
+    '画面设计：',
+    '镜头与构图：',
+    '光线与材质：',
+    '避免：'
+]
+
+const englishPromptSections = [
+    'Goal:',
+    'Editable Elements:',
+    'Reference Handling:',
+    'Visual Design:',
+    'Camera and Composition:',
+    'Lighting and Materials:',
+    'Avoid:'
+]
+
 const pilotPreviewById = {
     'phone-selfie-natural': '/template-previews/phone-selfie-natural.webp',
     'kpop-studio-concept': '/template-previews/kpop-studio-concept.webp',
@@ -104,6 +138,50 @@ describe('GPT Image2 precise edit templates', () => {
         const exactText = templates.find(template => template.id === 'gpt-image2-edit-exact-text')
         expect(exactText?.prompt).toContain('准确文字')
         expect(exactText?.prompt).toContain('逐字准确')
+    })
+})
+
+describe('expanded built-in prompt templates', () => {
+    const templates = expandedPromptTemplateIds.map(templateId => {
+        const template = styleTemplates.find(candidate => candidate.id === templateId)
+        expect(template, `missing template ${templateId}`).toBeDefined()
+        return template!
+    })
+
+    it('keeps the approved template set and reusable seven-section structure', () => {
+        for (const template of templates) {
+            let previousChineseSectionIndex = -1
+            let previousEnglishSectionIndex = -1
+
+            for (const section of chinesePromptSections) {
+                const sectionIndex = template.prompt.indexOf(section)
+                expect(sectionIndex, `${template.id} missing ${section}`).toBeGreaterThan(previousChineseSectionIndex)
+                previousChineseSectionIndex = sectionIndex
+            }
+
+            for (const section of englishPromptSections) {
+                const sectionIndex = template.promptEn?.indexOf(section) ?? -1
+                expect(sectionIndex, `${template.id} missing ${section}`).toBeGreaterThan(previousEnglishSectionIndex)
+                previousEnglishSectionIndex = sectionIndex
+            }
+        }
+    })
+
+    it('provides several complete editable phrases in both languages', () => {
+        for (const template of templates) {
+            expect(template.prompt.match(/【[^】]+】/g)?.length ?? 0, `${template.id} Chinese placeholders`).toBeGreaterThanOrEqual(6)
+            expect(template.promptEn?.match(/【[^】]+】/g)?.length ?? 0, `${template.id} English placeholders`).toBeGreaterThanOrEqual(6)
+        }
+    })
+
+    it('treats portrait references as identity guidance instead of a pasted head', () => {
+        const portraitTemplateIds = expandedPromptTemplateIds.slice(0, 8)
+
+        for (const templateId of portraitTemplateIds) {
+            const template = templates.find(candidate => candidate.id === templateId)!
+            expect(template.prompt).toContain('不要把参考图的头部像贴纸一样原样复制')
+            expect(template.promptEn).toContain('Do not paste the reference head unchanged')
+        }
     })
 })
 

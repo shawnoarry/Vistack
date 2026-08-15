@@ -47,7 +47,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: '商业视觉',
         mode: 'both',
         tags: ['广告', '大片', '品牌'],
-        prompt: '生成一张高级商业广告大片。主体有明确品牌感，构图干净有冲击力，布光精准，材质细节和轮廓清晰。背景应服务主体，可保留适当留白用于后期添加标题或 logo。整体像现代消费品牌的正式 campaign visual，不要杂乱，不要随机文字。',
+        prompt: `生成目标：
+为【现代生活方式品牌】制作一张以【核心产品或人物】为主角的高级商业广告主视觉，清楚传达【可靠、精致且具有吸引力的品牌印象】与【一个最重要的产品卖点】。
+
+可编辑内容：
+主体设定为【核心产品或成年人物】，场景设定为【简洁的品牌摄影棚】，主色为【中性色搭配一个鲜明品牌色】，造型或道具为【与卖点直接相关的少量物件】，画幅为【4:5 竖版】。
+
+参考图处理：
+如上传参考图，先判断每张图负责【人物身份、产品外观、服装或场景】中的哪一项，只提取对应信息。产品参考需保留标志性轮廓、结构和材质；如参考图包含人物，只保留可识别身份与必要特征，不要把参考图的头部像贴纸一样原样复制；应根据【自然利落的新发型】、【自信放松的新表情】、【轻微侧面的新视角】和【舒展有力量的新动作】重新生成连贯的头颈、身体与姿态。
+
+画面设计：
+建立明确的主体层级，以【克制、现代、可信】为视觉方向，用【一处关键道具或色块】强化卖点。背景服务主体并保留品牌呼吸感，不依赖复杂装饰制造高级感。
+
+镜头与构图：
+使用【50mm 商业摄影镜头感】和【略低于视线的平视机位】，主体占据画面【约三分之二】，在【画面上方和右侧】保留可用于后期标题与 logo 的干净区域，边缘、透视和主体比例准确。
+
+光线与材质：
+采用【大型柔光主灯配窄角轮廓光】，让皮肤、玻璃、金属、织物或包装分别呈现真实材质反应；阴影干净但有层次，高光不过曝，最终质感接近正式品牌 campaign。
+
+避免：
+避免随机文字、伪造 logo、廉价促销感、无关道具、过度饱和、塑料皮肤、错误反射、变形手指、僵硬姿态、头身比例失衡，以及主体与背景光线不一致。`,
         image: '',
         description: '适合品牌宣传、活动视觉和高级广告图。'
     },
@@ -57,7 +76,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: '商业视觉',
         mode: 'both',
         tags: ['杂志', '封面', '编辑'],
-        prompt: '生成一张杂志封面风格大片。主体位于强视觉中心，姿态和眼神有记忆点，背景干净但有质感，画面上方或侧边保留标题排版空间。使用编辑摄影风格、精致造型、自然但高级的修图，不添加任何真实文字或水印。',
+        prompt: `生成目标：
+为【一本当代时尚与文化杂志】创作一张以【成年人物】为主角的封面级编辑摄影，主题是【冷静、自信与现代感】，画面应有鲜明观点而不是普通棚拍肖像。
+
+可编辑内容：
+人物穿着【结构感黑白时装】，发型改为【带自然空气感的短发或盘发】，表情为【平静直视镜头】，背景为【带细微纸张或墙面肌理的纯色空间】，主色为【黑、白、冷红三色】，画幅为【4:5 竖版】。
+
+参考图处理：
+如上传人物参考图，将其用于保持【面部身份与年龄感】，不要锁死原图的发型、表情、拍摄角度、头部朝向或姿势。不要把参考图的头部像贴纸一样原样复制；请按照【新的妆发】、【新的视线方向】和【新的肩颈姿态】完整重建自然连贯的头部、颈部和身体。
+
+画面设计：
+造型、妆容和背景围绕【克制的先锋编辑感】统一设计，以【一个醒目的轮廓或配饰】形成记忆点。皮肤保留真实纹理，修图精致但不过度，画面具有可出版的时尚质感。
+
+镜头与构图：
+使用【85mm 人像镜头感】，采用【胸像到半身构图】，人物略偏【画面左侧】，眼睛位于上三分区；在【顶部、右侧和下方】留出封面刊头、标题与条码的排版空间，但图中不直接生成文字。
+
+光线与材质：
+使用【柔和正面主光配一侧硬质切光】，清楚呈现脸部结构、发丝、织物纹理与配饰边缘；背景与人物之间保持适度层次，色彩准确，高光细腻。
+
+避免：
+避免直接生成杂志名、标题、条码、水印或随机字母；避免对称证件照构图、塑料皮肤、过度磨皮、僵硬肩颈、固定原发型、五官漂移、头身拼接感和不自然眼神。`,
         image: '',
         description: '适合人物封面、时尚大片和社媒封面。'
     },
@@ -67,7 +105,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: '商业视觉',
         mode: 'both',
         tags: ['海报', '主视觉', '活动'],
-        prompt: '生成一张活动海报主视觉。主体清楚、有强识别度，画面层次分明，光影和色彩能制造视觉冲击。构图需要适合后期排版，保留标题区和信息区，但不要直接生成文字。整体应像专业设计团队产出的 key visual。',
+        prompt: `生成目标：
+为【城市创意节或品牌发布活动】制作一张专业海报主视觉，以【核心人物或主题物件】表达【连接、突破与未来感】的活动概念，第一眼就能形成清楚的视觉识别。
+
+可编辑内容：
+主角为【成年人物或标志性产品】，核心动作或状态为【向前移动并与环境产生互动】，场景为【抽象化的城市展览空间】，视觉符号为【重复的几何框架与一道明亮色带】，配色为【深灰、象牙白和荧光绿】，画幅为【2:3 竖版】。
+
+参考图处理：
+如上传参考图，分别提取【人物身份、产品结构、品牌色或空间气质】，不要把多张参考图的内容平均混合。如参考图包含人物，只保留可识别身份与必要特征，不要把参考图的头部像贴纸一样原样复制；应根据【有方向感的新发型】、【专注的新表情】、【三分之二侧面视角】和【具有动势的新动作】重建完整人物。
+
+画面设计：
+使用【一个主视觉焦点、两层辅助图形和清晰负空间】建立层级，让视觉符号与活动概念有关，而不是纯装饰。画面既有冲击力又能承载后期信息排版。
+
+镜头与构图：
+采用【35mm 广角但无明显畸变的镜头感】，主体位于【中下部偏左】，通过前景、中景、背景形成空间深度；在【顶部约四分之一和右下角】预留标题、日期与地点区域，不在图中直接生成文字。
+
+光线与材质：
+使用【高对比侧光与环境反射光】，让人物、产品、金属框架、半透明材质和地面阴影关系可信；色彩强烈但受控，边缘清晰，具有设计团队完成的 KV 质感。
+
+避免：
+避免随机文字、伪造 logo、无意义符号堆叠、主体被装饰遮挡、透视冲突、过度霓虹、廉价光效、人物僵硬、头身比例不协调、参考图头部直接复制和信息区被复杂背景占满。`,
         image: '',
         description: '适合活动 KV、宣传海报和封面主图。'
     },
@@ -77,7 +134,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: '人像时尚',
         mode: 'both',
         tags: ['美妆', '人像', '棚拍'],
-        prompt: '生成一张美妆编辑大片。脸部和妆容细节清晰，皮肤真实但精致，光线柔和可控，背景干净。重点表现眼妆、唇妆、发丝和面部轮廓，避免塑料皮肤和过度磨皮。整体像高端美妆杂志或品牌视觉。',
+        prompt: `生成目标：
+创作一张以【成年人物的清透光泽妆容】为核心的高端美妆编辑大片，重点展示【细腻眼妆、自然唇色与健康皮肤质感】，达到可用于杂志内页或品牌视觉的完成度。
+
+可编辑内容：
+妆容主题为【冷调珍珠光泽妆】，发型为【露出面部轮廓的湿感束发】，表情为【放松而有力量的轻微侧视】，背景为【柔和灰粉渐变摄影棚】，点缀物为【少量透明亚克力或水滴】，画幅为【4:5 竖版】。
+
+参考图处理：
+如上传人物参考图，仅用来维持【同一人物的脸部身份、肤色与年龄感】，允许按照模板改变发型、妆容、表情、视线和脸部角度。不要把参考图的头部像贴纸一样原样复制；请围绕【新的三分之二侧脸角度】重新建立五官透视、耳朵、发际线、颈部、肩部与身体连接。
+
+画面设计：
+让【眼部光泽、唇部颜色和皮肤纹理】成为清楚的三级重点，配饰与背景只负责衬托。保留毛孔、细小绒毛和真实肤色变化，同时进行精细但克制的商业修饰。
+
+镜头与构图：
+使用【100mm 微距人像镜头感】，采用【面部特写到肩部构图】，对焦在【靠近镜头的眼睛】，让另一侧脸部自然进入浅景深；裁切干净，不切断下巴、嘴唇或关键妆容区域。
+
+光线与材质：
+采用【大型柔光箱正侧光、下方柔和补光和细窄轮廓光】，准确表现皮肤、唇釉、眼影、发丝与透明道具的差异；高光柔润而不油腻，肤色不发灰。
+
+避免：
+避免塑料皮肤、过度磨皮、假睫毛粘连、眼睛大小不一、牙齿或嘴唇变形、过强油光、发丝糊成块、固定原发型、参考图头部直接复制、随机文字、品牌 logo 和水印。`,
         image: '',
         description: '适合美妆、头像、人像特写和妆容参考。'
     },
@@ -87,7 +163,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: 'K-pop 物料',
         mode: 'both',
         tags: ['棚拍', '概念照', '回归'],
-        prompt: '生成一张 K-pop 回归棚拍概念照。人物造型、妆发、服装和背景需要围绕同一个视觉主题展开，像官方 teaser image 或 concept photo。使用专业棚拍布光，脸部、发丝、服装材质和配饰清楚，姿态有记忆点但不过度摆拍。画面保留适当留白，不添加文字、水印或真实 logo。',
+        prompt: `生成目标：
+为【一位成年 K-pop solo 艺人】创作一张官方回归棚拍概念照，概念为【未来感极简与冷静力量】，像完整企划中的主视觉而不是普通写真。
+
+可编辑内容：
+人物发型为【利落高马尾配少量碎发】，妆容为【低饱和冷调眼妆与自然唇色】，服装为【结构感银灰舞台套装，完整覆盖且适合公开宣传】，表情为【克制而自信】，背景装置为【镜面金属框架与半透明灯片】，画幅为【4:5 竖版】。
+
+参考图处理：
+如上传人物参考图，将其作为【同一成年人物的身份参考】，保持脸型与核心五官关系，但允许明确更换发型、妆容、表情、头部角度、姿态和服装。不要把参考图的头部像贴纸一样原样复制；请根据【略微仰头的三分之二侧面】与【肩部转向镜头的站姿】重新生成协调的头颈、肩线、躯干和四肢。
+
+画面设计：
+妆发、服装、配饰、背景装置和主题色全部围绕【冷银与深红的未来舞台感】统一，使用【一个不对称金属耳饰】作为记忆点。造型精致但不堆砌，具备官方 teaser 的识别度。
+
+镜头与构图：
+使用【70mm 棚拍人像镜头感】，采用【膝上构图】，机位【略低于眼睛】，人物偏【画面右侧】并在左上方留出发布文案空间；姿态有张力但关节自然，身体重心可信。
+
+光线与材质：
+采用【硬质侧上方主光、柔和正面补光和红色边缘光】，清楚呈现皮肤、发丝、金属、织物和半透明装置；保留真实皮肤纹理与服装褶皱，画面锐利但不过度磨皮。
+
+避免：
+避免随机文字、真实团体 logo、水印、暴露或内衣式造型、通用偶像脸、固定原发型、参考图头部直接复制、表情僵硬、手脚变形、头身比例失衡、身体像假人以及背景装置穿过人物。`,
         image: '/template-previews/kpop-studio-concept.webp',
         description: '适合回归预告、概念视觉和官方社媒物料。'
     },
@@ -97,7 +192,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: 'K-pop 物料',
         mode: 'both',
         tags: ['MV', '概念', '剧照'],
-        prompt: '生成一张概念 MV 剧照感图片。画面像音乐视频中的关键静帧，有明确场景、主题色彩和叙事氛围。人物处于自然动作或凝视瞬间，妆发和服装完整，光影有戏剧性但主体脸部清楚。整体应有 K-pop MV 视觉质感，不要生成字幕、歌词、电视台台标或水印。',
+        prompt: `生成目标：
+创作一张像【高预算 K-pop 音乐视频】关键静帧的电影感画面：一位【成年艺人】正在【雨后深夜的空旷地铁站】经历【离开前最后一次回望】的叙事瞬间。
+
+可编辑内容：
+场景为【潮湿反光的末班地铁站】，人物发型为【被风轻轻吹动的中长发】，服装为【深色长外套与简洁舞台内搭】，动作和表情为【快步离开时突然回望，呼吸微急但神情清醒】，主题色为【青绿色环境光与暖橙信号灯】，画幅为【16:9 横版】。
+
+参考图处理：
+如上传人物参考图，只将其用于保持【同一成年人物的面部身份和年龄感】，不要沿用原图的正面角度、静态表情、发型轮廓或棚拍姿势。不要把参考图的头部像贴纸一样原样复制；应依据【回头运动中的侧后方角度】重建正确的五官透视、发丝运动、颈肩扭转与全身重心。
+
+画面设计：
+让【远处即将关闭的列车门、地面倒影和人物回望】共同讲述一个明确瞬间，环境细节支持故事但不过度解释。画面应像真实 MV 截帧，而不是摆拍海报。
+
+镜头与构图：
+使用【40mm 电影镜头感】和【略低的手持跟拍机位】，人物位于【右侧三分之一】，前景加入【轻微虚化的站台立柱】，中景是人物，背景是列车与纵深线；保留适度运动模糊，但脸部仍可辨认。
+
+光线与材质：
+以【顶部冷色荧光灯】为环境光，用【列车门内的暖光】勾勒面部和外套边缘；湿地、金属、玻璃和织物反射真实，暗部保留细节，整体具有电影级色彩层次。
+
+避免：
+避免字幕、歌词、电视台台标、水印、随机文字、过度烟雾、廉价霓虹、脸部完全陷入黑暗、固定原发型、参考图头部直接复制、人物动作僵硬、颈肩扭曲、四肢重复和明显摆拍感。`,
         image: '',
         description: '适合 MV 截帧、概念故事和视觉叙事。'
     },
@@ -107,7 +221,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: 'K-pop 物料',
         mode: 'both',
         tags: ['专辑', '内页', '写真'],
-        prompt: '生成一张 K-pop 专辑 photobook 内页写真。人物造型完整，妆容、发型、服装和配饰有统一企划感。构图像专辑写真内页，画面干净、有编辑摄影质感，可以保留环境或道具但不要杂乱。皮肤真实精致，身体比例自然，不添加任何文字或条形码。',
+        prompt: `生成目标：
+为【一张以夏末记忆为主题的 K-pop 专辑】制作一幅 photobook 内页写真，呈现【成年艺人在安静旅途中短暂停留】的自然状态，既有生活感又保留完整的编辑摄影品质。
+
+可编辑内容：
+地点为【傍晚的海边汽车旅馆走廊】，发型为【自然松散的低马尾】，妆容为【清透低饱和妆面】，服装为【宽松浅蓝衬衫与白色长裤】，动作和表情为【靠在栏杆上看向远处，随后轻微回头】，道具为【一台旧胶片相机】，画幅为【3:4 竖版】。
+
+参考图处理：
+如上传人物参考图，用它确认【同一成年人物的面部身份、肤色与年龄感】，同时允许根据企划重新设计妆发、表情、视角、动作和服装。不要把参考图的头部像贴纸一样原样复制；请为【自然回头的侧面角度】重建连贯的发际线、耳朵、下颌、颈肩、躯干与四肢关系。
+
+画面设计：
+以【褪色蓝、暖白和夕阳橙】建立统一企划感，让建筑线条、海风、服装和胶片相机共同支持“旅途记忆”主题。环境有真实生活痕迹，但没有无关杂物。
+
+镜头与构图：
+使用【55mm 胶片人像镜头感】，采用【大腿以上构图】，人物偏【画面左侧】，走廊延伸线通向远处海面；保留【右页方向的干净负空间】，使画面适合与另一张照片组合成跨页。
+
+光线与材质：
+使用【夕阳侧逆光与走廊墙面柔和反射光】，皮肤、棉质衬衫、旧墙面、金属栏杆和胶片相机材质真实；加入克制的细颗粒与柔和高光，保持肤色自然。
+
+避免：
+避免文字、条形码、logo、水印、过度滤镜、塑料皮肤、杂乱道具、固定原发型、参考图头部直接复制、僵硬站姿、身体比例失衡、手指错误和像商业广告一样过度精修。`,
         image: '',
         description: '适合专辑写真、内页视觉和主题组图。'
     },
@@ -137,7 +270,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: 'K-pop 物料',
         mode: 'both',
         tags: ['预告', '海报', 'teaser'],
-        prompt: '生成一张 K-pop comeback teaser poster 主视觉。人物和场景有强主题感，构图适合后期添加标题、日期和专辑信息，但画面中不要直接生成文字。妆发、服装、道具和光线要服务同一个概念，整体像官方预告海报或社媒 teaser image，精致、清晰、有悬念。',
+        prompt: `生成目标：
+为【一位成年 K-pop 艺人的新专辑】制作一张 comeback teaser poster 主视觉，以【身份分裂与重新觉醒】为概念，画面精致、清晰并保留足够悬念。
+
+可编辑内容：
+人物发型为【不对称湿感短发】，妆容为【冷调金属眼妆与自然唇色】，服装为【黑色结构感长外套，完整覆盖且适合公开宣传】，场景为【被一面裂纹镜分隔的暗色摄影棚】，关键道具为【一束白色花与一条红线】，配色为【黑、银、暗红】，画幅为【4:5 竖版】。
+
+参考图处理：
+如上传人物参考图，只保留【同一成年人物的身份、脸部结构与年龄感】，允许企划要求的发型、妆容、表情、镜头角度、动作和服装发生明显变化。不要把参考图的头部像贴纸一样原样复制；请按照【侧身面对镜面、脸转向镜头】的动作重建可信的五官透视、头颈旋转、肩线和全身姿态。
+
+画面设计：
+用【真实人物、镜中局部反射和红线】构成三层信息，所有元素围绕“分裂与觉醒”服务。镜面反射应具有叙事意义，不能复制出无关人物；整体像官方预告而不是普通时尚照。
+
+镜头与构图：
+使用【65mm 人像镜头感】，采用【膝上竖版构图】，人物位于【下方偏右】，镜面裂纹引导视线到脸部；在【顶部约五分之一和左下方】为后期标题、日期与专辑信息留出干净区域，图中不直接生成文字。
+
+光线与材质：
+采用【窄角硬质主光、镜面反射补光和暗红轮廓光】，准确呈现皮肤、湿发、黑色织物、玻璃裂纹与花瓣；暗部有层次，轮廓清晰，色彩浓郁但不过曝。
+
+避免：
+避免随机文字、日期、真实 logo、水印、暴露或内衣式服装、镜中多脸、无意义碎玻璃、固定原发型、参考图头部直接复制、僵硬姿态、头身比例不协调、手部畸形和廉价恐怖片效果。`,
         image: '',
         description: '适合回归预告、活动视觉和概念海报。'
     },
@@ -147,7 +299,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: '商业视觉',
         mode: 'both',
         tags: ['产品', '静物', '高级'],
-        prompt: '生成一张奢侈品静物摄影。主体放置在精致台面或极简布景中，材质反射、阴影、边缘和纹理都要真实。光线克制，色彩低饱和，画面有高级留白。适合香水、首饰、包袋、电子产品或包装盒。',
+        prompt: `生成目标：
+为【一款高端香水或珠宝产品】创作一张奢侈品静物广告照片，重点表达【稀有材质、克制工艺与安静力量】，达到杂志跨页或品牌橱窗视觉的完成度。
+
+可编辑内容：
+主产品为【透明玻璃香水瓶与金属瓶盖】，陈列台面为【深色抛光石材】，辅助物为【一片磨砂玻璃与一枝白色花材】，背景为【低饱和暖灰空间】，主色为【烟灰、象牙白与少量香槟金】，画幅为【4:5 竖版】。
+
+参考图处理：
+如上传产品参考图，将其作为【产品造型、比例、材质和真实标识位置】的依据，保持轮廓与结构可识别；允许根据【新的陈列角度】重新计算透视、反射和遮挡。场景或材质参考图只提供对应信息，不得改变产品设计，也不要凭空补造不可读标签。
+
+画面设计：
+以【主产品、一个辅助材质和一道负空间】建立克制层级，产品是唯一视觉中心。道具数量少且彼此有材质对比，画面留白用于后期品牌排版，不依赖华丽装饰表现昂贵感。
+
+镜头与构图：
+使用【90mm 静物摄影镜头感】，采用【略高于台面的三分之二侧视角】，主产品位于【下方偏左】并保持垂直稳定；在【上方和右侧】留出干净区域，景深足以让产品名称区域和关键边缘清楚。
+
+光线与材质：
+采用【大型条形柔光、窄角轮廓光与黑旗控反射】，准确呈现玻璃厚度、液体折射、金属拉丝、石材纹理和花瓣柔软度；阴影方向统一，高光细长而不过曝。
+
+避免：
+避免随机文字、错误标签、伪造 logo、产品结构变形、瓶盖漂浮、玻璃像塑料、金属过曝、反射中出现摄影设备、道具堆积、过度金色、廉价亮片和不可信接触阴影。`,
         image: '/template-previews/luxury-product-still.webp',
         description: '适合产品质感、包装展示和电商高级主图。'
     },
@@ -257,7 +428,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: '商业视觉',
         mode: 'both',
         tags: ['产品', '电商', '海报'],
-        prompt: '生成一张高级产品主视觉。主体清晰居中，背景干净，光线精准，阴影和反射真实可控。画面需要给标题或版式留出适当空间，材质边缘清楚，颜色克制，不要杂乱。最终效果像现代消费品牌的电商主图或活动视觉。',
+        prompt: `生成目标：
+为【一款现代消费电子产品】制作一张清楚、可信且具有品牌完成度的产品级主视觉，突出【轻薄结构、精密材质和易用体验】，适合电商首屏或新品发布页面。
+
+可编辑内容：
+产品为【无线耳机及充电盒】，展示状态为【盒盖开启、耳机悬停在正确收纳位置上方】，背景为【明亮柔和的浅灰摄影棚】，品牌色点缀为【克制的珊瑚红】，辅助元素为【一条表示连接关系的柔和光线】，画幅为【16:9 横版】。
+
+参考图处理：
+如上传产品参考图，严格保留【真实外形、尺寸比例、按键、接口、接缝、材质和颜色】，只改变陈列方式、相机角度、背景和光线。若另有场景参考图，仅提取【空间气质与配色】，不得混入其中的其他产品、文字或品牌标识。
+
+画面设计：
+建立【主产品、功能关系和负空间】三层信息，第一眼看清产品，第二眼理解【开盒与无线连接】。背景简洁但不空洞，品牌色只用于引导视线，不把产品变成概念雕塑。
+
+镜头与构图：
+使用【70mm 产品摄影镜头感】，采用【略高的三分之二视角】，产品组位于【画面右侧中央】，在【左侧约三分之一】保留标题与卖点区域；部件之间距离合理，透视一致，产品没有被画面边缘切断。
+
+光线与材质：
+采用【大面积顶部柔光、正面轻补光和细窄边缘光】，准确表现哑光塑料、金属触点、半透明指示灯和接触阴影；白色产品仍有清楚轮廓，高光干净，背景不过曝。
+
+避免：
+避免随机文字、伪造 logo、额外按键、接口数量错误、左右耳结构混乱、部件漂浮失重、产品比例改变、塑料质感廉价、过强镜面反射、过多道具、杂乱背景和不合理阴影。`,
         image: '',
         description: '适合商品、设备、包装或任意主体。'
     },
@@ -267,7 +457,26 @@ export const styleTemplates: StyleTemplate[] = [
         category: '叙事场景',
         mode: 'both',
         tags: ['电影感', '环境', '光影'],
-        prompt: '生成一张电影剧照感环境图。主体明确，前景、中景、背景有层次，光影有叙事感但不要过度夸张。环境需要真实可信，材质和透视准确，颜色不要过饱和。画面像高预算电影里的一个静帧。',
+        prompt: `生成目标：
+创作一张来自【现实主义科幻电影】的环境叙事静帧：一位【成年旅人】在【暴雨刚停的山城交通站】发现【远处重新亮起的最后一班缆车】，画面应像高预算电影中的真实场景而不是概念拼贴。
+
+可编辑内容：
+主体为【穿深色防雨外套的成年旅人】，地点为【沿山而建的混凝土交通站】，时间为【蓝调时刻之后的夜晚】，天气为【雨后薄雾】，关键事件为【缆车灯光重新亮起】，主色为【冷灰、潮湿青绿与少量钨丝暖黄】，画幅为【2.39:1 宽银幕】。
+
+参考图处理：
+如上传参考图，人物图只负责【身份与基本外形】，环境图只负责【建筑语言、地形和气候】，服装图只负责【款式与材质】。人物身份应可识别，但允许根据【背向镜头后轻微回头】的视角重建发型、表情、头颈和身体；所有参考信息都必须服从同一透视与光线。
+
+画面设计：
+以前景【积水与近处栏杆】、中景【人物和候车平台】、背景【缆车与层叠山城灯光】构成三层叙事。环境细节说明地点、天气与事件，但不使用文字解释故事。
+
+镜头与构图：
+使用【32mm 电影镜头感】，机位位于【人物后方略低处】，人物处在【左下三分点】，站台线条将视线引向右上方缆车；保留真实建筑尺度、人物比例和空间纵深，加入轻微自然镜头呼吸感。
+
+光线与材质：
+以【阴天蓝色环境光】为基础，用【站台顶灯和缆车暖光】形成叙事焦点；混凝土、湿金属、玻璃、积水、雾气和防雨织物均有可信材质反应，暗部保留细节，色彩克制。
+
+避免：
+避免过度霓虹、无来源光束、夸张爆炸、随机文字、悬浮建筑、透视冲突、塑料材质、过饱和青橙调色、背景尺度错误、人物像贴上去、头身比例失衡、僵硬动作和过量烟雾。`,
         image: '',
         description: '适合把人物或主体放进更完整的故事环境。'
     },
@@ -335,17 +544,188 @@ export const styleTemplates: StyleTemplate[] = [
 ]
 
 const builtinTemplateEnglishPrompts: Record<string, string> = {
-    'commercial-campaign': 'Create a premium commercial advertising campaign image. The subject should have a clear brand presence, a clean and impactful composition, precise lighting, and crisp material details and edges. The background should support the subject, with appropriate negative space for adding a title or logo later. The overall result should feel like an official campaign visual from a modern consumer brand. Avoid clutter and random text.',
-    'magazine-cover': 'Create a magazine-cover editorial image. Place the subject in a strong visual center with memorable posture and eye contact. Keep the background clean but textured, leaving space near the top or side for cover typography. Use editorial photography, refined styling, and natural but polished retouching. Do not add real text or watermarks.',
-    'poster-key-visual': 'Create a campaign poster key visual. The subject should be clear, recognizable, and visually strong, with layered composition, impactful lighting, and color. The layout should work for later typography, leaving title and information areas, but do not generate text directly. The result should look like a professional design-team key visual.',
-    'beauty-editorial': 'Create a beauty editorial image. Facial and makeup details should be clear, with realistic but refined skin, soft controlled lighting, and a clean background. Emphasize eye makeup, lip color, hair strands, and facial contours. Avoid plastic skin and excessive smoothing. The result should feel like a high-end beauty magazine or brand visual.',
-    'kpop-studio-concept': 'Create a K-pop comeback studio concept photo. Styling, makeup, hair, clothing, and background should follow one unified visual theme, like an official teaser image or concept photo. Use professional studio lighting with clear facial details, hair, fabric texture, and accessories. The pose should be memorable but not overly staged. Leave some clean space and do not add text, watermarks, or real logos.',
-    'mv-concept-still': 'Create a concept music-video still. The image should feel like a key frame from an MV, with a clear setting, theme color, and narrative atmosphere. The subject should be in a natural movement or gaze moment, with complete styling, makeup, hair, and outfit. Lighting can be dramatic but the face must remain clear. Keep a K-pop MV visual quality. Do not generate subtitles, lyrics, broadcast logos, or watermarks.',
-    'album-photobook': 'Create a K-pop album photobook page image. The subject should have complete styling, unified makeup, hair, outfit, and accessories. The composition should feel like an album photobook spread: clean, editorial, and polished, with environment or props only when they support the concept. Keep realistic refined skin and natural body proportions. Do not add text or barcodes.',
+    'commercial-campaign': `Goal:
+Create a premium commercial campaign visual for 【a modern lifestyle brand】, led by 【the core product or an adult person】 and clearly communicating 【a refined, reliable, desirable brand impression】 together with 【one primary product benefit】.
+
+Editable Elements:
+Set the subject to 【the hero product or an adult campaign model】, the location to 【a clean branded studio set】, the palette to 【neutrals with one vivid brand color】, the styling or props to 【a few objects directly related to the benefit】, and the format to 【4:5 portrait】.
+
+Reference Handling:
+If references are supplied, assign each one only to 【identity, product appearance, wardrobe, or environment】. Preserve a product's defining silhouette, structure, and materials. For a person, preserve recognizable identity rather than the original pixels. Do not paste the reference head unchanged like a sticker; rebuild a coherent head, neck, body, and pose using 【a clean new hairstyle】, 【a relaxed confident expression】, 【a slight three-quarter camera angle】, and 【an open, purposeful action】.
+
+Visual Design:
+Build a clear subject hierarchy with a 【restrained, modern, trustworthy】 direction. Use 【one purposeful prop or color field】 to reinforce the main benefit. Keep the environment supportive and spacious instead of relying on decorative clutter for a premium impression.
+
+Camera and Composition:
+Use a 【50 mm commercial-photography lens feel】 from 【an eye-level or slightly low position】. Let the subject fill 【about two thirds of the frame】 and preserve clean space in 【the upper and right areas】 for later title and logo placement. Keep perspective, edges, and proportions accurate.
+
+Lighting and Materials:
+Use 【a large soft key light with a narrow rim light】. Render skin, glass, metal, fabric, and packaging with distinct, believable responses. Shadows should be clean but dimensional, highlights controlled, and the finish comparable to an official brand campaign.
+
+Avoid:
+Avoid random text, invented logos, discount-ad aesthetics, unrelated props, excessive saturation, plastic skin, incorrect reflections, malformed fingers, stiff posture, poor head-to-body proportions, and lighting that separates the subject from the environment.`,
+    'magazine-cover': `Goal:
+Create a cover-level editorial portrait for 【a contemporary fashion and culture magazine】 featuring 【an adult subject】 under the theme 【calm confidence and modern presence】. The image should express a clear point of view rather than feel like a generic studio portrait.
+
+Editable Elements:
+Dress the subject in 【structured black-and-white fashion】, change the hair to 【an airy short cut or sculpted updo】, use 【a calm direct gaze】, place them against 【a solid background with subtle paper or wall texture】, use 【black, white, and cool red】, and frame it as 【4:5 portrait】.
+
+Reference Handling:
+If a portrait reference is supplied, use it to preserve 【facial identity and apparent age】, not the original hairstyle, expression, camera angle, head direction, or pose. Do not paste the reference head unchanged like a sticker. Rebuild the head, neck, and body coherently around 【new hair and makeup】, 【a new gaze direction】, and 【a new shoulder and neck posture】.
+
+Visual Design:
+Unify styling, makeup, and background around 【restrained avant-garde editorial design】. Create one memorable accent through 【a strong silhouette or a single accessory】. Retain real skin texture with polished but controlled retouching suitable for print.
+
+Camera and Composition:
+Use an 【85 mm portrait-lens feel】 with 【a bust or half-body crop】. Place the subject slightly toward 【the left side】 with the eyes near the upper third. Leave room in 【the top, right side, and lower area】 for masthead, cover lines, and barcode, but generate no text in the image.
+
+Lighting and Materials:
+Use 【a soft frontal key with one harder shaped side light】 to define facial structure, individual hair strands, fabric texture, and accessory edges. Maintain separation from the background, accurate color, and delicate highlights.
+
+Avoid:
+Avoid magazine names, cover lines, barcodes, watermarks, random letters, passport-photo symmetry, plastic skin, excessive smoothing, stiff shoulders, an unchanged reference hairstyle, identity drift, pasted head-to-body transitions, and unnatural eyes.`,
+    'poster-key-visual': `Goal:
+Create a professional poster key visual for 【an urban creative festival or product launch】. Use 【a central adult figure or iconic object】 to communicate 【connection, momentum, and a forward-looking idea】 with immediate visual recognition.
+
+Editable Elements:
+Set the hero to 【an adult person or signature product】, the action to 【moving forward while interacting with the space】, the environment to 【an abstracted city exhibition venue】, the visual motif to 【repeating geometric frames and one bright color ribbon】, the palette to 【charcoal, ivory, and fluorescent green】, and the format to 【2:3 portrait】.
+
+Reference Handling:
+Assign supplied references separately to 【identity, product structure, brand color, or spatial mood】 instead of averaging them together. For a person, preserve recognizable identity rather than the original head pixels. Do not paste the reference head unchanged like a sticker; reconstruct the full person using 【a directional new hairstyle】, 【a focused new expression】, 【a three-quarter side view】, and 【a dynamic but natural action】.
+
+Visual Design:
+Build hierarchy with 【one dominant focal point, two supporting graphic layers, and clear negative space】. Every motif should support the event concept rather than act as filler. The visual must be impactful while remaining practical for later typography.
+
+Camera and Composition:
+Use a 【35 mm wide-angle feel without obvious distortion】. Place the subject in 【the lower-left central area】 and build depth across foreground, middle ground, and background. Reserve 【roughly the top quarter and the lower-right corner】 for title, date, and venue information without generating text.
+
+Lighting and Materials:
+Use 【high-contrast side light with believable environmental bounce】. Make skin, product surfaces, metal frames, translucent panels, and ground shadows respond consistently. Keep color bold but controlled and edges suitable for a design-team key visual.
+
+Avoid:
+Avoid random text, invented logos, meaningless symbol piles, decoration covering the hero, conflicting perspective, excessive neon, cheap glow effects, stiff figures, poor head-to-body proportions, pasted reference heads, and busy detail inside the reserved information areas.`,
+    'beauty-editorial': `Goal:
+Create a high-end beauty editorial centered on 【luminous makeup for an adult subject】, showcasing 【precise eye makeup, natural lip color, and healthy skin texture】 at a level suitable for a beauty magazine or premium campaign.
+
+Editable Elements:
+Set the makeup concept to 【cool pearl luminosity】, the hairstyle to 【wet-look pulled-back hair that reveals the face】, the expression to 【relaxed strength with a slight side glance】, the background to 【a soft gray-pink studio gradient】, the accent prop to 【minimal clear acrylic or water droplets】, and the format to 【4:5 portrait】.
+
+Reference Handling:
+If a portrait reference is supplied, use it only to maintain 【the same identity, skin tone, and apparent age】 while allowing a new hairstyle, makeup, expression, gaze, and face angle. Do not paste the reference head unchanged like a sticker. Reconstruct facial perspective, ears, hairline, neck, shoulders, and body connection around 【a new three-quarter face angle】.
+
+Visual Design:
+Create a clear three-level focus across 【eye luminosity, lip color, and skin texture】. Accessories and background should remain supporting elements. Preserve pores, fine facial hair, and natural tonal variation while applying refined, restrained commercial retouching.
+
+Camera and Composition:
+Use a 【100 mm macro-portrait lens feel】 with 【a face-to-shoulder close-up】. Focus on 【the eye closest to camera】 and let the far side fall naturally into shallow depth of field. Crop cleanly without cutting through the chin, lips, or key makeup details.
+
+Lighting and Materials:
+Use 【a large front-side softbox, gentle lower fill, and a narrow rim light】. Differentiate skin, lip gloss, eye shadow, hair, and transparent props accurately. Highlights should be dewy rather than oily, with natural skin color.
+
+Avoid:
+Avoid plastic skin, excessive smoothing, clumped lashes, mismatched eye sizes, distorted teeth or lips, greasy highlights, blocky hair, an unchanged reference hairstyle, pasted reference heads, random text, brand logos, and watermarks.`,
+    'kpop-studio-concept': `Goal:
+Create an official comeback studio concept photo for 【an adult K-pop solo artist】 under the concept 【futuristic minimalism and controlled strength】. It should feel like the lead visual from a complete campaign, not an ordinary portrait session.
+
+Editable Elements:
+Use 【a clean high ponytail with a few loose strands】, 【muted cool eye makeup and a natural lip】, 【a structured silver-gray performance outfit with full public-facing coverage】, 【a restrained confident expression】, 【mirrored metal frames and translucent light panels】, and a 【4:5 portrait format】.
+
+Reference Handling:
+If a portrait reference is supplied, treat it as 【the identity reference for the same adult person】. Preserve face shape and core facial relationships while clearly allowing new hair, makeup, expression, head angle, pose, and wardrobe. Do not paste the reference head unchanged like a sticker. Rebuild coordinated head, neck, shoulders, torso, and limbs around 【a slightly raised three-quarter head angle】 and 【a standing pose with the shoulders turning toward camera】.
+
+Visual Design:
+Unify hair, makeup, wardrobe, accessories, set pieces, and color around 【cool silver with deep red futuristic stage energy】. Use 【one asymmetrical metal earring】 as the memorable accent. Keep the styling polished and recognizable without decorative overload.
+
+Camera and Composition:
+Use a 【70 mm studio-portrait lens feel】 with 【a knee-up composition】 from 【slightly below eye level】. Place the subject toward 【the right side】 and preserve clean space in the upper left for release copy. The pose should carry tension while keeping natural joints and believable weight.
+
+Lighting and Materials:
+Use 【a hard upper-side key, soft frontal fill, and red edge light】. Clearly render skin, hair strands, metal, fabric, and translucent panels. Retain natural skin texture and plausible garment folds with crisp but controlled detail.
+
+Avoid:
+Avoid random text, real group logos, watermarks, lingerie-like or revealing wardrobe, generic idol faces, an unchanged reference hairstyle, pasted reference heads, frozen expressions, malformed hands or feet, poor head-to-body proportions, mannequin-like bodies, and set pieces crossing through the subject.`,
+    'mv-concept-still': `Goal:
+Create a cinematic key frame from 【a high-budget K-pop music video】 in which 【an adult artist】 experiences 【one final look back before leaving】 inside 【an empty subway station just after midnight rain】.
+
+Editable Elements:
+Use 【a wet reflective last-train platform】, 【medium-length hair moving gently in the air】, 【a dark long coat over a simple performance outfit】, 【a sudden look back while walking quickly, breathing hard but alert】, 【teal ambient light with warm orange signal lamps】, and a 【16:9 landscape frame】.
+
+Reference Handling:
+If a portrait reference is supplied, use it only to maintain 【the same adult identity and apparent age】, not the original frontal angle, static expression, hairstyle silhouette, or studio pose. Do not paste the reference head unchanged like a sticker. Rebuild facial perspective, moving hair, neck and shoulder rotation, and full-body balance for 【a rear-side angle captured during the turn】.
+
+Visual Design:
+Let 【a departing train door, reflections on the floor, and the subject's glance】 tell one legible story beat. Environmental detail should support the moment without explaining it literally. The result should look like an authentic MV frame, not a posed poster.
+
+Camera and Composition:
+Use a 【40 mm cinema-lens feel】 from 【a slightly low handheld tracking position】. Place the subject on 【the right third】, with 【a softly blurred platform column】 in the foreground, the subject in the middle ground, and the train and vanishing lines behind. Keep mild motion blur while preserving a recognizable face.
+
+Lighting and Materials:
+Use 【cool overhead fluorescent ambience】 with 【warm train-interior light】 shaping the face and coat edge. Render wet flooring, metal, glass, and fabric with believable reflections. Preserve detail in shadows and cinematic color separation.
+
+Avoid:
+Avoid subtitles, lyrics, broadcast marks, watermarks, random text, excessive smoke, cheap neon, a face lost in darkness, an unchanged reference hairstyle, pasted reference heads, stiff movement, twisted necks or shoulders, duplicated limbs, and obvious posing.`,
+    'album-photobook': `Goal:
+Create a photobook page for 【a K-pop album about late-summer memories】, showing 【an adult artist pausing during a quiet journey】 with natural intimacy and complete editorial polish.
+
+Editable Elements:
+Set the location to 【a seaside motel walkway at dusk】, the hairstyle to 【a loose low ponytail】, the makeup to 【clear muted natural makeup】, the wardrobe to 【an oversized pale-blue shirt with white trousers】, the action to 【leaning on the railing, looking away, then turning slightly back】, the prop to 【a vintage film camera】, and the format to 【3:4 portrait】.
+
+Reference Handling:
+If a portrait reference is supplied, use it to confirm 【the same adult identity, skin tone, and apparent age】 while allowing the campaign to redesign hair, makeup, expression, viewpoint, action, and wardrobe. Do not paste the reference head unchanged like a sticker. Rebuild hairline, ear, jaw, neck, shoulders, torso, and limbs coherently for 【a natural turning side angle】.
+
+Visual Design:
+Unify the concept through 【faded blue, warm white, and sunset orange】. Let the architecture, sea breeze, clothing, and film camera reinforce the theme of travel memory. Keep believable signs of everyday life without unrelated clutter.
+
+Camera and Composition:
+Use a 【55 mm film-portrait lens feel】 with 【a thigh-up crop】. Place the subject toward 【the left side】 while the walkway lines lead toward the distant sea. Preserve 【clean space toward the facing page】 so the image can pair naturally in a spread.
+
+Lighting and Materials:
+Use 【sunset side-backlight with soft bounce from the walkway wall】. Render skin, cotton, aged plaster, metal railing, and the film camera realistically. Add restrained fine grain and gentle highlights while keeping natural skin color.
+
+Avoid:
+Avoid text, barcodes, logos, watermarks, heavy filters, plastic skin, cluttered props, an unchanged reference hairstyle, pasted reference heads, stiff standing poses, poor body proportions, malformed fingers, and overly polished commercial-ad styling.`,
     'photocard-portrait': 'Create a K-pop photocard collectible portrait. Use a close-up headshot or half-body composition with a natural friendly expression, refined makeup and hair, clear face, and a simple atmospheric background. It can feel like a backstage selfie, fansign selfie, or official photocard shoot. Do not add text, signatures, borders, or random graphics. The image should crop well into a vertical photocard.',
     'artist-profile-photo': 'Create an official artist profile photo. Use a simple clean background, front-facing or slight three-quarter pose, and clear face, hair, makeup, and upper-body styling. Lighting should be soft and even. The result should feel like an agency profile page, promotional material, or official avatar. Avoid excessive beauty filters and do not generate text, nameplates, logos, or watermarks.',
-    'comeback-teaser-poster': 'Create a K-pop comeback teaser poster key visual. The subject and scene should have a strong theme. The composition should leave room for adding title, date, and album information later, but do not generate any text in the image. Makeup, hair, outfit, props, and lighting should all support one concept. The result should feel like an official teaser poster or social teaser image: polished, clear, and suspenseful.',
-    'luxury-product-still': 'Create a luxury product still-life photograph. Place the subject on a refined surface or minimalist set. Reflections, shadows, edges, and textures should be realistic. Use restrained lighting, low-saturation color, and premium negative space. Suitable for perfume, jewelry, bags, electronics, packaging, or similar products.',
+    'comeback-teaser-poster': `Goal:
+Create a comeback teaser poster for 【an adult K-pop artist's new album】 based on the concept 【divided identity and reawakening】. The image should be polished, readable, and deliberately mysterious.
+
+Editable Elements:
+Use 【asymmetric wet-look short hair】, 【cool metallic eye makeup with a natural lip】, 【a structured black long coat with full public-facing coverage】, 【a dark studio divided by a cracked mirror】, 【one white flower and a red thread】, 【black, silver, and deep red】, and a 【4:5 portrait format】.
+
+Reference Handling:
+If a portrait reference is supplied, preserve only 【the same adult identity, facial structure, and apparent age】 while allowing substantial changes to hair, makeup, expression, camera angle, action, and wardrobe. Do not paste the reference head unchanged like a sticker. Reconstruct facial perspective, head and neck rotation, shoulder line, and full-body pose for 【a body facing the mirror while the face turns toward camera】.
+
+Visual Design:
+Build three layers from 【the real subject, a partial mirror reflection, and the red thread】, with every element supporting the divided-identity concept. The reflection should carry narrative meaning and must not create unrelated duplicate people. The result should feel like an official teaser rather than a standard fashion portrait.
+
+Camera and Composition:
+Use a 【65 mm portrait-lens feel】 with 【a knee-up vertical composition】. Place the subject 【low and slightly right】 while mirror cracks guide attention to the face. Reserve 【roughly the top fifth and the lower-left area】 for later title, date, and album information without generating text.
+
+Lighting and Materials:
+Use 【a narrow hard key, reflected mirror fill, and a deep-red rim light】. Render skin, wet hair, black fabric, cracked glass, and petals accurately. Keep dimensional shadows, crisp contours, and rich color without clipping highlights.
+
+Avoid:
+Avoid random text, dates, real logos, watermarks, revealing or lingerie-like wardrobe, duplicate mirror faces, meaningless broken glass, an unchanged reference hairstyle, pasted reference heads, stiff posing, poor head-to-body proportions, malformed hands, and cheap horror-film effects.`,
+    'luxury-product-still': `Goal:
+Create a luxury still-life campaign photograph for 【a premium fragrance or jewelry object】 expressing 【rare materials, restrained craft, and quiet strength】 at a quality suitable for a magazine spread or brand window display.
+
+Editable Elements:
+Use 【a clear glass fragrance bottle with a metal cap】, 【a dark polished stone surface】, 【one frosted-glass panel and a single white flower】, 【a muted warm-gray background】, 【smoke gray, ivory, and a small champagne-gold accent】, and a 【4:5 portrait format】.
+
+Reference Handling:
+If a product reference is supplied, use it as the authority for 【shape, proportion, material, and real label placement】. Keep the design recognizable while recalculating perspective, reflections, and occlusion for 【a new display angle】. Material or scene references may contribute only their assigned qualities and must not redesign the product or invent unreadable labels.
+
+Visual Design:
+Build a restrained hierarchy from 【the hero product, one supporting material, and a field of negative space】. The product must remain the only visual center. Use few props with meaningful material contrast, leaving space for later brand layout rather than signaling luxury through decoration.
+
+Camera and Composition:
+Use a 【90 mm still-life lens feel】 from 【a slightly elevated three-quarter angle】. Place the product 【low and left of center】 while keeping it vertically stable. Preserve clean space in 【the upper and right areas】 and enough depth of field for the label zone and defining edges.
+
+Lighting and Materials:
+Use 【a large strip softbox, a narrow rim light, and black flags for reflection control】. Accurately show glass thickness, liquid refraction, brushed metal, stone texture, and petal softness. Keep shadows consistent and highlights long, clean, and controlled.
+
+Avoid:
+Avoid random text, incorrect labels, invented logos, distorted product structure, floating caps, plastic-looking glass, clipped metal highlights, visible studio equipment in reflections, excessive props, too much gold, cheap glitter, and implausible contact shadows.`,
     'editorial-fashion-fullbody': 'Create a full-body fashion editorial image. Body proportions should be natural, with clear outfit silhouette, fabric texture, and styling layers. The pose should be confident but not stiff. Use a simple designed background and lighting that feels like a professional studio or editorial location shoot. Suitable for lookbooks, magazine pages, or brand styling images.',
     'phone-selfie-natural': 'Create a natural phone front-camera selfie. The subject looks at the camera with a slightly casual handheld composition, realistic skin texture, natural expression, and mild phone-lens distortion. Lighting should feel like indoor window light or street-side natural light. Avoid studio lighting, excessive smoothing, and commercial campaign polish. The image should feel like a real social media snapshot.',
     'korean-ootd-mirror': 'Create a Korean OOTD mirror selfie. The subject stands in front of a full-length mirror, holding a phone that may cover part of the face or sit naturally near the chest. The outfit should be clean, layered, and stylish, with relaxed posture. The background can be an apartment entryway, dressing room, cafe restroom, or clean street-store facade. Preserve vertical phone composition, reflections, natural light, and everyday realism.',
@@ -356,8 +736,46 @@ const builtinTemplateEnglishPrompts: Record<string, string> = {
     'korean-cafe-snapshot': 'Create a Korean cafe daily snapshot. The subject sits near a window, counter, or small round table, with a relaxed phone-snapshot feeling. Use soft light and background details such as coffee cups, desserts, glass windows, street view, or clean interior design. Keep it clean, natural, and social-media friendly. Avoid heavy filters and overly commercial styling.',
     'street-paparazzi': 'Create a street media candid photograph. The subject walks naturally or glances back, captured from a distance with a telephoto lens. The background includes city streets, cars, pedestrians, and slight compression. Expression and posture should not feel overly posed. Outfit details should be clear. The result should feel like real street photography or a news image, with a little grain, motion, and environmental imperfection.',
     'figure-collectible': 'Transform the reference character into a collectible desktop figure. Place the figure on a clean computer desk with a transparent round acrylic base. Add a premium toy packaging box nearby, using artwork inspired by the reference character. The background can include a screen showing a modeling process. Preserve the character identity, outfit colors, hairstyle, accessories, and proportions. Do not generate unreadable text on the base or packaging.',
-    'product-hero': 'Create a premium product hero visual. The subject should be clear and centered, with a clean background, precise lighting, and controlled shadows and reflections. The image should leave appropriate room for titles or layout design. Material edges should be crisp, colors restrained, and the scene uncluttered. The final result should feel like a modern consumer-brand ecommerce hero image or campaign visual.',
-    'cinematic-environment': 'Create a cinematic environmental scene. The subject should be clear, with layered foreground, midground, and background. Lighting should feel narrative but not exaggerated. The environment must be believable, with accurate materials and perspective, and colors should not be oversaturated. The image should feel like a still frame from a high-budget film.',
+    'product-hero': `Goal:
+Create a clear, credible, brand-ready product hero image for 【a modern consumer electronics product】 emphasizing 【thin construction, precise materials, and ease of use】 for an ecommerce header or product-launch page.
+
+Editable Elements:
+Set the product to 【wireless earbuds with their charging case】, the display state to 【the lid open with both earbuds suspended just above their correct slots】, the background to 【a bright soft-gray studio】, the brand-color accent to 【restrained coral red】, the supporting element to 【one soft light trace suggesting connection】, and the format to 【16:9 landscape】.
+
+Reference Handling:
+If a product reference is supplied, strictly preserve 【real shape, proportions, buttons, ports, seams, materials, and color】 while changing only display arrangement, camera angle, background, and lighting. If a scene reference is also supplied, extract only 【spatial mood and palette】 without importing other products, text, or logos.
+
+Visual Design:
+Create three clear levels: 【the hero product, the functional relationship, and negative space】. The product should be understood first and 【open-case wireless connection】 second. Keep the background simple but intentional, and use the brand accent only to guide attention.
+
+Camera and Composition:
+Use a 【70 mm product-photography lens feel】 from 【a slightly elevated three-quarter view】. Place the product group in 【the center-right area】 and reserve 【roughly the left third】 for title and benefits. Keep component spacing plausible, perspective consistent, and every product part fully inside the frame.
+
+Lighting and Materials:
+Use 【large overhead soft light, gentle frontal fill, and a narrow edge light】. Accurately render matte plastic, metal contacts, translucent indicators, and contact shadows. Preserve clear contours on a light-colored product without overexposing the background.
+
+Avoid:
+Avoid random text, invented logos, extra buttons, incorrect port counts, mismatched left and right earbuds, weightless floating parts, changed product proportions, cheap plastic texture, excessive mirror reflections, unnecessary props, cluttered backgrounds, and inconsistent shadows.`,
+    'cinematic-environment': `Goal:
+Create an environmental narrative frame from 【a grounded science-fiction film】: 【an adult traveler】 at 【a mountainside transit station just after heavy rain】 notices 【the final cable car lighting up again in the distance】. The result should feel like a real high-budget film scene rather than a concept-art collage.
+
+Editable Elements:
+Use 【an adult traveler in a dark rain shell】, 【a concrete transit station built into a steep hillside】, 【night just after blue hour】, 【post-rain mist】, 【the cable-car lights returning】, 【cool gray, wet teal, and small tungsten-yellow accents】, and a 【2.39:1 widescreen frame】.
+
+Reference Handling:
+Assign supplied images separately: a person reference provides 【identity and basic appearance】, an environment reference provides 【architecture, terrain, and climate】, and a wardrobe reference provides 【garment design and material】. Keep the identity recognizable while rebuilding hair, expression, head, neck, and body for 【a figure facing away and turning slightly back】. All references must obey one perspective and lighting system.
+
+Visual Design:
+Create three narrative layers using 【puddles and a nearby railing】 in the foreground, 【the traveler and waiting platform】 in the middle ground, and 【the cable car with layered hillside lights】 in the background. Let environmental detail establish location, weather, and event without explanatory text.
+
+Camera and Composition:
+Use a 【32 mm cinema-lens feel】 from 【a slightly low position behind the subject】. Place the traveler on 【the lower-left third】 while station lines lead toward the cable car in the upper right. Preserve believable architecture scale, human proportion, spatial depth, and subtle natural lens character.
+
+Lighting and Materials:
+Base the scene on 【overcast blue ambient light】 and use 【platform fixtures plus warm cable-car light】 as the narrative focus. Render concrete, wet metal, glass, puddles, mist, and rain-resistant fabric believably. Keep shadow detail and restrained cinematic color.
+
+Avoid:
+Avoid excessive neon, unmotivated light beams, explosions, random text, floating architecture, conflicting perspective, plastic materials, oversaturated teal-orange grading, incorrect background scale, pasted-on people, poor head-to-body proportions, stiff action, and excessive fog.`,
     'gpt-image2-edit-identity-scene': 'Editing goal: preserve the identity of the person in reference image 1 while placing that same person in [target environment] with [target photographic context or visual treatment]. Reference roles: use reference image 1 only as the identity anchor; the final person must be the exact same person, not a similar-looking replacement. Change the environment, lighting context, and capture style according to [specific changes]. Must preserve face shape, facial proportions, eyes, nose and lip structure, skin tone, apparent age, defining hairstyle, and natural body type. Unify perspective, light direction, color temperature, shadows, and edges. Avoid identity drift, generic beauty retouching, body deformation, extra prominent people, random text, and watermarks.',
     'gpt-image2-edit-outfit-only': 'Editing goal: replace only the clothing worn by the person in reference image 1. Reference roles: reference image 1 supplies identity, face, hair, body type, pose, camera, lighting, and background; reference image 2 supplies only the target garment silhouette, color, material, texture, and accessory details. Fit the complete outfit naturally to the original body and pose with plausible folds, occlusion, and lighting. Must preserve the face, hair, skin tone, apparent age, body proportions, hand positions, pose, composition, camera, background, and lighting from reference image 1. Do not borrow the person or background from reference image 2. Avoid floating garments, body intersections, extra accessories, random text, and watermarks.',
     'gpt-image2-edit-background-only': 'Editing goal: replace only the background of reference image 1 with the [target environment] shown by reference image 2. Reference roles: reference image 1 supplies the person, pose, clothing, foreground objects, composition, and camera position; reference image 2 supplies only the space, materials, background furnishings, and atmosphere. Rebuild the environment behind the subject and match perspective, depth of field, light direction, and color temperature. Must preserve identity, face, hair, clothing, body proportions, pose, hand positions, foreground objects, subject scale, and original framing. Keep hair edges and translucent details natural. Avoid copying people or foreground objects from reference image 2, redesigning the subject, glowing edges, collage artifacts, random text, and watermarks.',
