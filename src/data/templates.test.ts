@@ -35,7 +35,18 @@ const completedPreviewById = {
     'editorial-fashion-fullbody': '/template-previews/editorial-fashion-fullbody.webp',
     'korean-ootd-mirror': '/template-previews/korean-ootd-mirror.webp',
     'idol-backstage-selfie': '/template-previews/idol-backstage-selfie.webp',
-    'airport-preview': '/template-previews/airport-preview.webp'
+    'fancam-cover': '/template-previews/fancam-cover.webp',
+    'airport-preview': '/template-previews/airport-preview.webp',
+    'after-work-preview': '/template-previews/after-work-preview.webp',
+    'korean-cafe-snapshot': '/template-previews/korean-cafe-snapshot.webp',
+    'street-paparazzi': '/template-previews/street-paparazzi.webp',
+    'product-hero': '/template-previews/product-hero.webp',
+    'cinematic-environment': '/template-previews/cinematic-environment.webp',
+    'gpt-image2-edit-identity-scene': '/template-previews/gpt-image2-edit-identity-scene.webp',
+    'gpt-image2-edit-outfit-only': '/template-previews/gpt-image2-edit-outfit-only.webp',
+    'gpt-image2-edit-background-only': '/template-previews/gpt-image2-edit-background-only.webp',
+    'gpt-image2-edit-multi-reference': '/template-previews/gpt-image2-edit-multi-reference.webp',
+    'gpt-image2-edit-local-detail': '/template-previews/gpt-image2-edit-local-detail.webp'
 }
 
 function readWebpDimensions(buffer: Buffer) {
@@ -112,7 +123,7 @@ describe('template preview pilot', () => {
         }
     })
 
-    it('binds the 14 completed preview assets without exposing missing jobs', () => {
+    it('binds all 25 completed preview assets', () => {
         for (const [templateId, imagePath] of Object.entries(completedPreviewById)) {
             expect(styleTemplates.find(template => template.id === templateId)?.image).toBe(imagePath)
 
@@ -127,6 +138,6 @@ describe('template preview pilot', () => {
             expect(fileSize).toBeLessThan(350 * 1024)
         }
 
-        expect(styleTemplates.filter(template => template.image).length).toBe(47)
+        expect(styleTemplates.filter(template => template.image).length).toBe(58)
     })
 })

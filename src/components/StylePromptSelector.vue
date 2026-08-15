@@ -62,17 +62,35 @@
                 <button type="button" class="wb-secondary min-h-10 px-3 text-xs" @click="$emit('new-template')">新建模板</button>
             </div>
 
-            <div class="flex gap-2 overflow-x-auto pb-1">
+            <div class="flex gap-2 overflow-x-auto pb-1" aria-label="模板主分类">
                 <button
-                    v-for="category in categories"
+                    v-for="group in templateGroupOptions"
+                    :key="group.id"
+                    type="button"
+                    @click="selectTemplateGroup(group.id)"
+                    :class="[
+                        'flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition',
+                        activeGroupId === group.id
+                            ? 'border-brand-accent bg-brand-accent text-brand-surface'
+                            : 'border-brand-line bg-white text-brand-muted hover:text-brand-ink'
+                    ]"
+                >
+                    <span>{{ group.label }}</span>
+                    <span :class="['text-[10px]', activeGroupId === group.id ? 'text-brand-surface/80' : 'text-brand-muted/70']">{{ group.count }}</span>
+                </button>
+            </div>
+
+            <div v-if="fineCategoryOptions.length > 1" class="flex gap-2 overflow-x-auto pb-1" aria-label="模板细分类">
+                <button
+                    v-for="category in fineCategoryOptions"
                     :key="category"
                     type="button"
                     @click="activeCategory = category"
                     :class="[
                         'shrink-0 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition',
                         activeCategory === category
-                            ? 'border-brand-accent bg-brand-accent text-brand-surface'
-                            : 'border-brand-line bg-white text-brand-muted hover:text-brand-ink'
+                            ? 'border-brand-ink bg-brand-ink text-brand-surface'
+                            : 'border-brand-line bg-brand-surface text-brand-muted hover:bg-white hover:text-brand-ink'
                     ]"
                 >
                     {{ category }}
@@ -293,6 +311,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { PromptPoolGroup, StyleTemplate } from '../types'
 import PromptPhraseBuilder from './PromptPhraseBuilder.vue'
 import type { PromptPhrase, PromptPhraseGroup } from '../data/promptPhrases'
+import { findTemplateCategoryGroup, TEMPLATE_CATEGORY_GROUPS } from '../data/templateCategories'
 
 const props = defineProps<{
     selectedStyle: string
@@ -320,6 +339,7 @@ const emit = defineEmits<{
 const activeTab = ref<'style' | 'pool' | 'custom'>('style')
 const searchQuery = ref('')
 const activeCategory = ref('全部')
+const activeGroupId = ref('all')
 const activePoolGroupId = ref(props.promptPoolGroups[0]?.id || '')
 const poolSelection = ref<string[]>([])
 const previewImage = ref('')
@@ -358,14 +378,53 @@ const handlePreviewKeydown = (event: KeyboardEvent) => {
 onMounted(() => window.addEventListener('keydown', handlePreviewKeydown))
 onBeforeUnmount(() => window.removeEventListener('keydown', handlePreviewKeydown))
 
-const categories = computed(() => ['全部', ...Array.from(new Set(props.templates.map(template => template.category || '其他')))])
+const ungroupedCategories = computed(() => Array.from(new Set(
+    props.templates
+        .map(template => template.category || '其他')
+        .filter(category => !findTemplateCategoryGroup(category))
+)))
+
+const templateGroupOptions = computed(() => {
+    const options: Array<{ id: string; label: string; count: number }> = TEMPLATE_CATEGORY_GROUPS.map(group => ({
+        id: group.id,
+        label: group.label,
+        count: props.templates.filter(template => group.categories.includes((template.category || '其他') as never)).length
+    })).filter(group => group.count > 0)
+
+    if (ungroupedCategories.value.length) {
+        options.push({
+            id: 'other',
+            label: '其他',
+            count: props.templates.filter(template => !findTemplateCategoryGroup(template.category || '其他')).length
+        })
+    }
+
+    return [{ id: 'all', label: '全部', count: props.templates.length }, ...options]
+})
+
+const activeGroup = computed(() => TEMPLATE_CATEGORY_GROUPS.find(group => group.id === activeGroupId.value))
+
+const fineCategoryOptions = computed(() => {
+    if (activeGroupId.value === 'all') return ['全部']
+    if (activeGroupId.value === 'other') return ['全部', ...ungroupedCategories.value]
+    return ['全部', ...(activeGroup.value?.categories || [])]
+})
+
+const selectTemplateGroup = (groupId: string) => {
+    activeGroupId.value = groupId
+    activeCategory.value = '全部'
+}
 
 const filteredTemplates = computed(() => {
     const query = searchQuery.value.trim().toLowerCase()
 
     return props.templates.filter(template => {
+        const category = template.category || '其他'
+        const group = findTemplateCategoryGroup(category)
+        const matchesGroup = activeGroupId.value === 'all'
+            || (activeGroupId.value === 'other' ? !group : group?.id === activeGroupId.value)
         const matchesCategory = activeCategory.value === '全部' || (template.category || '其他') === activeCategory.value
-        if (!matchesCategory) return false
+        if (!matchesGroup || !matchesCategory) return false
         if (!query) return true
 
         const haystack = [
