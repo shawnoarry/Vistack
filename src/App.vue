@@ -143,6 +143,32 @@
                     </div>
                     <ImageUpload v-model="selectedImages" v-model:labels="referenceImageLabels" v-model:metadata="referenceImageMetadata" />
 
+                    <div v-if="characterReferenceCount" class="mt-3 border-t border-brand-line pt-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="wb-label">人物保持</span>
+                            <span class="text-[11px] text-brand-muted">只调整提示词</span>
+                        </div>
+                        <div class="mt-2 grid grid-cols-3 gap-1 rounded-md border border-brand-line bg-brand-surface p-1" role="radiogroup" aria-label="人物保持强度">
+                            <button
+                                v-for="option in identityFidelityOptions"
+                                :key="option.value"
+                                type="button"
+                                role="radio"
+                                :aria-checked="identityFidelity === option.value"
+                                @click="identityFidelity = option.value"
+                                :class="[
+                                    'min-h-9 rounded px-2 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-brand-accent/20',
+                                    identityFidelity === option.value
+                                        ? 'bg-brand-ink text-brand-surface'
+                                        : 'text-brand-muted hover:bg-white hover:text-brand-ink'
+                                ]"
+                            >
+                                {{ option.label }}
+                            </button>
+                        </div>
+                        <p class="mt-2 text-xs leading-5 text-brand-muted">{{ identityFidelityDescription }}</p>
+                    </div>
+
                     <div v-if="selectedImages.length" class="mt-3 rounded-lg border border-brand-line bg-white p-3">
                         <div class="flex items-center justify-between gap-3">
                             <span class="wb-label">参考图核对清单</span>
@@ -1211,7 +1237,13 @@ import {
     type PendingGenerationTaskItem,
     type GenerationHistorySource
 } from './utils/historyDb'
-import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerateResponse, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload, WorkspaceMode } from './types'
+import {
+    buildIdentityFidelityPrompt,
+    DEFAULT_IDENTITY_FIDELITY,
+    IDENTITY_FIDELITY_OPTIONS,
+    normalizeIdentityFidelity
+} from './utils/identityFidelity'
+import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerateResponse, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, IdentityFidelity, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 
 type ThemeMode = 'light' | 'dark'
@@ -1226,6 +1258,8 @@ const isApplyingApiConnectionPreset = ref(false)
 const selectedImages = ref<string[]>([])
 const referenceImageLabels = ref<string[]>([])
 const referenceImageMetadata = ref<ReferenceImageMeta[]>([])
+const identityFidelity = ref<IdentityFidelity>(DEFAULT_IDENTITY_FIDELITY)
+const identityFidelityOptions = IDENTITY_FIDELITY_OPTIONS
 const selectedStyle = ref('')
 const customPrompt = ref('')
 const templateLanguage = ref<'zh' | 'en' | 'bilingual'>('zh')
@@ -2568,6 +2602,7 @@ const buildGenerationRecipe = (compiledPrompt: string, mainPrompt = textToImageP
     referenceImages: [...references],
     referenceImageLabels: references.map((_, index) => labels[index] || `角色${index + 1}`),
     referenceImageMetadata: references.map((_, index) => normalizeReferenceRecipeMeta(metadata[index], index)),
+    identityFidelity: identityFidelity.value,
     count: generationCount.value,
     batchMode: generationBatchMode.value
 })
@@ -2957,17 +2992,21 @@ const canTranslatePrompt = computed(
 
 const referenceImageRolePrompt = computed(() => {
     if (!selectedImages.value.length) return ''
-    const mappings = selectedImages.value.map((_, index) => {
-        const meta = normalizeReferenceMeta(referenceImageMetadata.value[index], index)
+    const normalizedMetadata = selectedImages.value.map((_, index) =>
+        normalizeReferenceMeta(referenceImageMetadata.value[index], index)
+    )
+    const mappings = normalizedMetadata.map((meta, index) => {
         const note = meta.note ? `; note: ${meta.note}` : ''
         return `image ${index + 1}: ${roleLabel(meta.role)} "${meta.label}"${note}`
     })
+    const hasCharacterReference = normalizedMetadata.some(meta => meta.role === 'character')
 
     return [
         `Reference image mapping: ${mappings.join('; ')}.`,
         'Use character references to preserve identity; use outfit references for clothing and styling only; use background references for environment only; use product references as the main subject when present; use style references for visual treatment only.',
+        hasCharacterReference ? buildIdentityFidelityPrompt(identityFidelity.value) : '',
         'Do not merge separate character identities unless the prompt explicitly asks for it.'
-    ].join(' ')
+    ].filter(Boolean).join(' ')
 })
 
 const referenceImageChecklist = computed(() =>
@@ -2984,6 +3023,9 @@ const referenceImageChecklist = computed(() =>
 
 const characterReferenceCount = computed(() =>
     selectedImages.value.filter((_, index) => normalizeReferenceMeta(referenceImageMetadata.value[index], index).role === 'character').length
+)
+const identityFidelityDescription = computed(() =>
+    identityFidelityOptions.find(option => option.value === identityFidelity.value)?.description || ''
 )
 const portraitAssistAvailable = computed(() => characterReferenceCount.value >= 2)
 const portraitAssistStatus = computed(() => {
@@ -4785,6 +4827,7 @@ const applyGenerationRecipe = (recipe: GenerationRecipe | undefined, fallbackPro
     selectedStyle.value = recipe?.selectedStyle || ''
     generationCount.value = recipe?.count || 1
     generationBatchMode.value = recipe?.batchMode || 'fill'
+    identityFidelity.value = normalizeIdentityFidelity(recipe?.identityFidelity)
 
     if (recipe?.referenceImages?.length) {
         selectedImages.value = [...recipe.referenceImages]

@@ -153,6 +153,7 @@ export interface PromptPoolGroup {
 }
 
 export type ReferenceImageRole = 'character' | 'outfit' | 'background' | 'product' | 'style' | 'other'
+export type IdentityFidelity = 'free' | 'balanced' | 'strict'
 
 export interface ReferenceImageMeta {
     role: ReferenceImageRole
@@ -182,6 +183,7 @@ export interface GenerationRecipe {
     referenceImages: string[]
     referenceImageLabels: string[]
     referenceImageMetadata: ReferenceImageMeta[]
+    identityFidelity?: IdentityFidelity
     count: number
     batchMode?: GenerationBatchMode
 }
