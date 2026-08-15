@@ -771,7 +771,7 @@
                         <h2 class="mt-1 text-lg font-semibold text-brand-ink">创作模板与补充提示词</h2>
                         <p class="mt-1 text-sm text-brand-muted">点击模板会插入到底部主提示词框，之后可以直接为本次生成微调。</p>
                     </div>
-                    <button type="button" class="wb-secondary min-h-9 px-3 text-xs" @click="showTemplatePanel = false">关闭</button>
+                    <button type="button" class="wb-secondary min-h-9 shrink-0 whitespace-nowrap px-3 text-xs" @click="showTemplatePanel = false">关闭</button>
                 </div>
                 <div class="max-h-[calc(86vh-88px)] overflow-y-auto p-4">
                     <StylePromptSelector

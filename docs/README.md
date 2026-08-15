@@ -15,6 +15,7 @@
 - [GPT Image2 Skill 融合评估](gpt-image2-skill-integration-brief.md)：评估 Prompt Gallery、Agent Skill 和 Python CLI 与 Vistack 的重叠能力；G3-lite 已接入六条精准改图配方，G1/G2 暂缓。
 - [GPT Image2 提示词价值验证包](gpt-image2-prompt-validation-pack.md)：六个高频改图场景的人工 A/B 提示词、评分方法和后续留存标准；尚未自动或人工调用付费 API。
 - [模板示例图与配方扩展简报](template-preview-expansion-brief.md)：记录全模板预览、12 个新增配方、`codex-image` 生产流程、4 张试产和费用安全门槛。
+- [GPT Image2 Gallery 模板选择清单](gpt-image2-gallery-selection.md)：记录已接入的 28 条 Curated 成品 Prompt、对应示例图、固定上游版本和许可边界。
 
 ## 历史归档
 

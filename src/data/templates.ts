@@ -1,4 +1,5 @@
 import type { StyleTemplate } from '../types'
+import { gptImage2GalleryTemplates } from './gptImage2GalleryTemplates'
 
 export const styleTemplates: StyleTemplate[] = [
     {
@@ -301,7 +302,8 @@ export const styleTemplates: StyleTemplate[] = [
         prompt: '编辑目标：只替换参考图 1 中的【目标文字区域】，保持原设计不变。\n\n需要显示的准确文字：\n【字段名称 1】：“【逐字填写最终文字】”\n【字段名称 2】：“【逐字填写最终文字；不需要可删除本行】”\n\n文字要求：逐字准确、清晰可读，不得改写、增删、翻译或生成拼音。新文字继续使用原文字的区域、层级、对齐方式和相近视觉重量。\n\n必须保持：原画布比例、背景图像、人物或主体、颜色、材质、装饰、留白、版式网格，以及目标区域以外的现有内容。不要重新设计整张图片。\n\n避免：乱码、错别字、额外英文、伪造 logo、重复文字、随机小字、水印，以及改变非目标文字。',
         image: '/template-previews/gpt-image2-edit-exact-text.webp',
         description: '插入后逐字填写【】内容；适合海报标题、日期和其他指定文字。'
-    }
+    },
+    ...gptImage2GalleryTemplates
 ]
 
 const builtinTemplateEnglishPrompts: Record<string, string> = {
