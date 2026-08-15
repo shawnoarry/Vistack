@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-07-17 16:24 (Asia/Shanghai)
+Last updated: 2026-08-15 13:41 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -45,6 +45,7 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Studio Phase 2B is implemented: the couple-photo assistant now opens from a compact toolbar icon as a PC popover/mobile bottom sheet, while preserving its prompt behavior.
 - The calendar illustration assistant is implemented as a separate prompt-only workflow: copy plus a flexible time context produce three short 9:16 or 4:5 options that can be written into the existing prompt field without changing image generation.
 - Studio Phase 3 is implemented: successful history is the persistent waterfall, each image can be hidden without deletion and restored from the asset library, and failed generations use a separate bounded diagnostic log.
+- GPT Image2 G3-lite is implemented as six bilingual `精准改图配方` templates in the existing template panel; no paid A/B generation has been run yet, and G1/G2 remain deferred.
 - The playground integration P0 gate remains satisfied at runtime checkpoint `4d2bb94`; the next product-planning task is a bounded provider/model parameter-capability brief.
 - The IndexedDB version, generation requests, provider routing, existing history/images/prompts, and API preset storage are unchanged. Phase 3 adds only backward-compatible optional visibility/diagnostic fields and a separate local failure-record key.
 - Production build succeeds with Vite 5.4.19.
@@ -162,6 +163,13 @@ The original broad Phase 2 studio restructure was not approved and has been with
 - Kept author, work, source, and nationality text out of visual-style inference. Abstract copy defaults to non-figurative options, while explicit people/activity contexts allow at most one people-based option.
 - Added button-based 9:16 / 4:5 selection, local calendar-layout and no-text constraints, plus safe non-figurative fallbacks for malformed assistant output.
 
+### 10. GPT Image2 G3-lite prompt recipes
+
+- Added exactly six bilingual, image-only recipes under the existing `精准改图配方` template category: identity-preserving scene change, outfit-only replacement, background-only replacement, role-based multi-reference composition, visual-mask local correction, and exact text replacement.
+- Generalized the validation prompts with editable `【】` placeholders and explicit reference roles/invariants; no upstream gallery images or externally attributed community prompts were copied.
+- Reused the existing template panel and prompt insertion path. API payloads, provider routing, model parameters, endpoint/model presets, references, history, and storage schemas are unchanged.
+- Added data-level characterization tests for fixed IDs, category/mode/image boundaries, bilingual content, reference roles, invariants, and exact-text constraints.
+
 ## Verification Baseline
 
 Latest successful command:
@@ -173,8 +181,8 @@ npm run check
 Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
-- Test files: 11 passed.
-- Tests: 61 passed.
+- Test files: 13 passed.
+- Tests: 71 passed.
 - Production build: passed.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 - UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
@@ -183,6 +191,7 @@ Latest result:
 - Phase 2B browser verification: PC dock remained 241px high at 1440×900, 1280×800, and 1024×768; the 440px popover stayed above it; the 390×844 bottom sheet fit the viewport with no horizontal overflow; fresh-page console logs were clean.
 - Phase 3 browser verification: four successful images rendered once in the persistent waterfall with natural proportions and no horizontal overflow at 1440×900, 1280×800, 1024×768, or 390×844. Hiding reduced 4 images to 3 and survived reload; the asset library still held all 4 and restored the hidden image. Failed-task diagnostics were copied with token redaction; closing the task removed its error while the bounded failure record survived reload.
 - Calendar assistant browser verification: the 1440×900 popover stayed above the fixed prompt dock; the 390×844 bottom sheet and its 9:16 / 4:5 segmented control fit without horizontal overflow; `Esc` closed the panel and returned focus to its toolbar trigger. A real assistant request was not sent because no assistant key is configured and external API cost was intentionally avoided.
+- G3-lite desktop browser verification: the existing template panel displayed the `精准改图配方` category and all six approved bilingual cards. Browser automation then became unstable while simulating template insertion and the 390×844 viewport, so those two interactive checks were not completed in this turn; no app console error attributable to the template data was observed before the connection timeouts.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
 
@@ -206,14 +215,15 @@ The diagnostic enhancement was saved as a separate checkpoint before starting UI
 
 ## Next TODO
 
-1. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback; do not implement before approval.
-2. Design and implement storage v2 only after the model-parameter boundary and migration plan are agreed.
+1. Review `docs/gpt-image2-prompt-validation-pack.md`; execute its A/B generations only after separately confirming acceptable API cost and test images, then record scores before considering any product integration.
+2. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback only if complete GPT Image 2 parameters or native masks become a confirmed need; do not implement before approval.
+3. Design and implement storage v2 only after the model-parameter boundary and migration plan are agreed.
    - Store large image data in IndexedDB rather than `localStorage`.
    - Preserve existing history images, prompts, API presets, and canvas data during migration.
-3. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
-4. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
-5. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
-6. Use `docs/gpt-image-playground-integration-plan.md` for selective integration after the current UI work has a verified checkpoint; the fork roadmap does not authorize implementing its remaining P1-P3 items automatically.
+4. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
+5. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
+6. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
+7. Use `docs/gpt-image-playground-integration-plan.md` for selective integration after the current UI work has a verified checkpoint; the fork roadmap does not authorize implementing its remaining P1-P3 items automatically.
 
 Deferred by user decision:
 
@@ -237,6 +247,60 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-08-15 13:41 (Asia/Shanghai)
+
+- User explicitly chose G3-lite as the safest useful next step. Added six bilingual, image-only `精准改图配方` entries to `src/data/templates.ts` without adding a page, navigation entry, bundled image, API parameter, request branch, provider route, preset field, history field, or storage migration.
+- Added `src/data/templates.test.ts`; the targeted test first failed because the recipes were absent, then passed after implementation. It locks the six IDs, category, image mode, empty image assets, bilingual prompts, reference roles/invariants, and exact-text wording.
+- Restored the already-declared local `@lucide/vue` package because it was missing from `node_modules`; `package.json` and `package-lock.json` were unchanged. `npm run check` then passed: both type checks, 13 test files/71 tests, and the Vite production build (449.53 kB JS / 156.24 kB gzip; 54.71 kB CSS / 8.98 kB gzip).
+- Desktop browser verification confirmed the existing template panel shows the new category and all six cards. The browser-control connection timed out during insertion and mobile-viewport automation, so those two browser checks remain unverified; the implementation itself changes only template data and keeps the existing insertion event path.
+- Updated the GPT Image2 integration brief, validation pack, documentation index, and this handoff. No real generation request was sent, no API cost was incurred, G1/G2 remain deferred, and the user-owned untracked `排查/` directory remains untouched.
+- Created a focused checkpoint (`feat: add precise image edit recipes`). The local Vite development server is running at `http://127.0.0.1:4173/` for review.
+- Working tree is on `main`, ahead of `origin/main` by one local checkpoint and behind it by one remote commit. Next concrete product step is optional paid A/B evaluation with user-approved images/cost; do not start G1 or G2 without separate approval.
+
+### 2026-08-15 13:21 (Asia/Shanghai)
+
+- User approved preparation of the safest prompt-value validation material, without authorizing runtime/product integration or paid API calls.
+- Added `docs/gpt-image2-prompt-validation-pack.md` with six Vistack-specific A/B scenarios: identity-preserving environment edits, outfit replacement, background replacement, three-role multi-reference composition, visual-mask local correction, and exact Chinese text replacement.
+- Added a common 10-point scoring rubric, fixed-condition test protocol, cost-limiting repeat rule, sanitized result table, and a stop condition requiring meaningful improvement in at least four scenarios before product integration is considered.
+- Rewrote all validation prompts for Vistack rather than copying the upstream gallery's externally attributed community prompts. Added the pinned upstream repository/commit to `THIRD_PARTY_NOTICES.md`, indexed the pack in `docs/README.md`, and linked its completed status from the integration brief.
+- Verification: `git diff --check` passed with line-ending warnings only; structural checks found 6 scenario headings, 6 A prompts, 6 B prompts, and all referenced local documents. No runtime source, UI, API payload, dependency, configuration, storage, preset, history, asset, template, phrase, or user-owned `排查/` content changed.
+- `npm run check` was not run because this turn changed documentation and provenance only. No real generation was sent, so there was no API cost and no result score yet.
+- Next concrete step requires a separate decision to perform manual A/B generations with acceptable test images and cost; until then, G1/G2/G3 runtime work remains unapproved.
+
+### 2026-08-15 13:16 (Asia/Shanghai)
+
+- Gave a current safety recommendation after comparing G1a with a prompt-first validation step. The safest useful next action is not runtime implementation: prepare a six-scenario prompt-value validation pack for Vistack's high-frequency image-editing cases.
+- The proposed validation covers identity-preserving edits, outfit replacement, background replacement, multi-reference composition, local-detail invariants, and exact text replacement. It remains documentation/test material only, with no bundled upstream images and no automatic paid API calls.
+- Updated `docs/gpt-image2-skill-integration-brief.md` to record this G0-style validation step. G1a remains deferred until a real complete-parameter or native-mask requirement appears; prompt recipes enter the product only after their value is demonstrated and separately approved.
+- No runtime source, UI, API request, dependency, connection preset, model cache, storage, history, asset, template, phrase, or user-owned `排查/` content changed. `npm run check` was not required for this documentation-only decision; `git diff --check` remains the verification step.
+- Next concrete decision: the user may approve preparation of the six-scenario validation pack. That approval would still not authorize product/runtime integration or external API spending.
+
+### 2026-08-15 13:12 (Asia/Shanghai)
+
+- Answered the user's configuration-impact question by auditing persisted connection presets and current parameter state. Saved connection presets contain API key, endpoint, model, proxy switch, and proxy token; aspect ratio, resolution, quality, `autoPrompt`, and translation are primarily session/history values rather than preset fields.
+- Identified the main compatibility risk: current model metadata can automatically normalize the selected aspect ratio and resolution, so wiring a new profile directly into that logic could change current selections even without a storage migration.
+- Updated `docs/gpt-image2-skill-integration-brief.md` to split G1 into G1a, a read-only capability registry with identical UI/payload/storage behavior, and separately approved G1b, which may later expose or send new parameters only after explicit selection.
+- Recorded that G1a must not migrate, clear, or rewrite API presets, prompt-assistant presets, model-cache storage, history, assets, templates, phrases, IndexedDB, or user-owned `排查/` content. Missing advanced fields must preserve the current omitted-parameter behavior rather than becoming explicit defaults such as `auto`.
+- No runtime source, API request, UI, dependency, storage, preset, history, or user data changed. Source inspection and `git diff --check` are sufficient for this documentation clarification; `npm run check` was not run.
+- Next decision remains open. If G1 is approved later, approval should apply to G1a only unless the user separately approves a specific G1b parameter and its visible/request behavior.
+
+### 2026-08-15 13:04 (Asia/Shanghai)
+
+- Clarified the product necessity of G1 after the user questioned its priority: G1 is not required for developer-only Skill use or a prompt-knowledge-only integration; it is a safety prerequisite for native masks and strongly recommended before adding more endpoint/model-specific API parameters.
+- Updated `docs/gpt-image2-skill-integration-brief.md` with a goal-based decision table and a separate G3-lite path that reuses the existing template/prompt-assistant surfaces without changing generation payloads.
+- Confirmed the current evidence: quality is currently attached only behind Doraverse-specific controls, request/provider decisions are split across endpoint/model checks, and the toolbox mask is currently sent as a visual reference constraint rather than a native alpha mask.
+- No runtime source, API request, UI, dependency, storage, preset, history, or user-owned `排查/` content changed. Verification is limited to source inspection and `git diff --check`; `npm run check` is not required for this documentation clarification.
+- The decision remains open: choose G3-lite first for prompt value, or G1 first only if the intended next value is complete GPT Image 2 parameters/native mask.
+
+### 2026-08-15 12:57 (Asia/Shanghai)
+
+- Audited `wuyoscar/GPT-Image2-Skill` at commit `068dd9e24aadc8731e46f38548ca4dcd94515d35` and compared its Agent Skill, Python CLI, 162-prompt gallery, Images API parameters, and mask workflow with the current Vistack code.
+- Confirmed Vistack already routes GPT Image models to Images generation/edit endpoints, supports multiple references and GPT Image sizing, stores actual parameters/history, and has templates, Prompt Pool, a prompt assistant, and a visual mask fallback.
+- Identified the practical gaps as provider/model capability profiles, standard OpenAI parameter coverage, and a true alpha-mask request path. The current black/white mask must remain as the fallback for providers without native mask support.
+- Added `docs/gpt-image2-skill-integration-brief.md` and indexed it in `docs/README.md`. The recommendation is G1 capability profiles first, G2 native masks second, and G3 a small attributed prompt-rule pack last; do not vendor the Python runtime or the approximately 419 MB upstream repository.
+- Verification was documentation and source inspection only. No runtime source, dependency, API payload, UI, storage, preset, history, or user-owned `排查/` content changed; `npm run check` was not required for this documentation-only turn.
+- Working tree remains on `main`, behind `origin/main` by one commit, with the pre-existing user-owned untracked `排查/` directory untouched. Next concrete step requires explicit user approval of G1 before tests or runtime implementation begin.
 
 ### 2026-07-17 16:24 (Asia/Shanghai)
 

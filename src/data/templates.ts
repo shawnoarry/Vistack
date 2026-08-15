@@ -241,6 +241,66 @@ export const styleTemplates: StyleTemplate[] = [
         prompt: '生成一张电影剧照感环境图。主体明确，前景、中景、背景有层次，光影有叙事感但不要过度夸张。环境需要真实可信，材质和透视准确，颜色不要过饱和。画面像高预算电影里的一个静帧。',
         image: '',
         description: '适合把人物或主体放进更完整的故事环境。'
+    },
+    {
+        id: 'gpt-image2-edit-identity-scene',
+        title: '保持身份换场景',
+        category: '精准改图配方',
+        mode: 'image',
+        tags: ['精准改图', '身份保持', '换场景', '人物'],
+        prompt: '编辑目标：保持参考图 1 中的人物身份，把人物放到【目标环境】，并呈现【目标拍摄语境或质感】。\n\n参考职责：参考图 1 只作为人物身份锚点。最终人物必须是参考图中的同一位人物，而不是外貌相似的新人物。\n\n需要改变：将环境、光线语境和拍摄质感调整为【具体变化】，让人物像在目标环境中被真实拍摄。\n\n必须保持：脸型、五官比例、眼型、鼻唇结构、肤色、年龄感、发型主体特征和自然体型。不要改变人物身份，不要过度磨皮或改成通用偶像脸。\n\n画面要求：统一人物与环境的透视、光线、色温、阴影和边缘。避免多余人物抢占主体、脸部漂移、身体变形、随机文字和水印。',
+        image: '',
+        description: '插入后替换【】内容；适合保留同一人物，只改变环境和拍摄语境。'
+    },
+    {
+        id: 'gpt-image2-edit-outfit-only',
+        title: '只换服装',
+        category: '精准改图配方',
+        mode: 'image',
+        tags: ['精准改图', '换装', '身份保持', '双参考图'],
+        prompt: '编辑目标：只替换参考图 1 中人物的服装。\n\n参考职责：参考图 1 提供人物身份、脸部、发型、体型、姿态、镜头和背景；参考图 2 只提供目标服装的版型、颜色、材质、纹理和配饰细节。\n\n需要改变：把参考图 2 的完整服装自然穿到参考图 1 的人物身上，服装应符合原有身体比例和姿态，并呈现合理褶皱、遮挡和受光。\n\n必须保持：参考图 1 的脸、发型、肤色、年龄感、身体比例、手部位置、姿态、构图、镜头、背景和光线。不要换脸，不要改变动作，不要重做背景。\n\n避免：混入参考图 2 的人物身份或背景，避免服装漂浮、肢体穿模、额外配饰、随机文字和水印。',
+        image: '',
+        description: '人物图放参考图 1，服装图放参考图 2；只替换服装。'
+    },
+    {
+        id: 'gpt-image2-edit-background-only',
+        title: '只换背景',
+        category: '精准改图配方',
+        mode: 'image',
+        tags: ['精准改图', '换背景', '人物保持', '双参考图'],
+        prompt: '编辑目标：只把参考图 1 的背景替换为参考图 2 中的【目标环境】。\n\n参考职责：参考图 1 提供人物、姿态、服装、前景物体、构图和相机位置；参考图 2 只提供空间类型、环境材料、背景陈设和氛围。\n\n需要改变：重建人物身后的环境，使其自然成为【目标环境】，并让背景透视、景深、光线方向和色温与人物一致。\n\n必须保持：人物身份、脸、发型、服装、身体比例、姿态、手部位置、前景物体、主体尺寸和原始构图。人物轮廓、头发边缘和半透明细节必须自然。\n\n避免：把参考图 2 中的人或前景物体复制进画面，避免人物被重新设计、边缘发光、明显拼贴、随机文字和水印。',
+        image: '',
+        description: '插入后替换【】内容；原图放参考图 1，环境图放参考图 2。'
+    },
+    {
+        id: 'gpt-image2-edit-multi-reference',
+        title: '多参考图按角色合成',
+        category: '精准改图配方',
+        mode: 'image',
+        tags: ['精准改图', '多参考图', '人物', '服装', '背景'],
+        prompt: '合成目标：生成一张【目标画面类型】，人物、服装和背景分别来自不同参考图。\n\n参考职责：参考图 1 只负责人物身份、脸部结构、发型、肤色、年龄感和自然体型；参考图 2 只负责服装版型、颜色、材质、纹理和配饰，不采用其中的人物或背景；参考图 3 只负责场景空间、环境材料、背景陈设和整体光线语境，不采用其中的人物。\n\n组合方式：让参考图 1 的同一人物自然穿着参考图 2 的服装，处于参考图 3 的环境中。统一三者的透视、人物尺度、光线方向、阴影、色温和景深，使画面像一次真实拍摄。\n\n必须保持：人物身份不能与参考图 2 或 3 混合；服装不能被随意改款；背景不能覆盖人物或改变人物姿态。\n\n避免：平均五官、换脸、复制其他人物、服装与身体穿模、明显拼贴边缘、随机文字和水印。',
+        image: '',
+        description: '插入后替换【】内容；按人物、服装、背景顺序放置三张参考图。'
+    },
+    {
+        id: 'gpt-image2-edit-local-detail',
+        title: '视觉遮罩局部修正',
+        category: '精准改图配方',
+        mode: 'image',
+        tags: ['精准改图', '局部修正', '视觉遮罩', '细节'],
+        prompt: '局部编辑目标：只修正【需要修正的部位或细节】，目标结果是【正确形态或效果】。\n\n参考职责：参考图 1 是原始底图；参考图 2 是黑白视觉遮罩。白色区域对应允许修改的范围，黑色区域对应必须尽量保持的画面。\n\n需要改变：只在白色区域内完成【具体修改】，并让结构、遮挡、材质、边缘和受光与原图自然一致。\n\n必须保持：遮罩外的人物身份、脸、发型、身体、服装、饰品、姿态、背景、构图、颜色和光线。不要扩大编辑范围，不要重绘整张图片。\n\n避免：【该部位常见错误】、遮罩外内容漂移、结构变形、边缘拼贴、随机文字和水印。',
+        image: '',
+        description: '插入后替换【】内容；用于“底图 + 黑白视觉遮罩”，不是原生 alpha mask。'
+    },
+    {
+        id: 'gpt-image2-edit-exact-text',
+        title: '准确替换图片文字',
+        category: '精准改图配方',
+        mode: 'image',
+        tags: ['精准改图', '准确文字', '海报', '排版'],
+        prompt: '编辑目标：只替换参考图 1 中的【目标文字区域】，保持原设计不变。\n\n需要显示的准确文字：\n【字段名称 1】：“【逐字填写最终文字】”\n【字段名称 2】：“【逐字填写最终文字；不需要可删除本行】”\n\n文字要求：逐字准确、清晰可读，不得改写、增删、翻译或生成拼音。新文字继续使用原文字的区域、层级、对齐方式和相近视觉重量。\n\n必须保持：原画布比例、背景图像、人物或主体、颜色、材质、装饰、留白、版式网格，以及目标区域以外的现有内容。不要重新设计整张图片。\n\n避免：乱码、错别字、额外英文、伪造 logo、重复文字、随机小字、水印，以及改变非目标文字。',
+        image: '',
+        description: '插入后逐字填写【】内容；适合海报标题、日期和其他指定文字。'
     }
 ]
 
@@ -267,7 +327,13 @@ const builtinTemplateEnglishPrompts: Record<string, string> = {
     'street-paparazzi': 'Create a street media candid photograph. The subject walks naturally or glances back, captured from a distance with a telephoto lens. The background includes city streets, cars, pedestrians, and slight compression. Expression and posture should not feel overly posed. Outfit details should be clear. The result should feel like real street photography or a news image, with a little grain, motion, and environmental imperfection.',
     'figure-collectible': 'Transform the reference character into a collectible desktop figure. Place the figure on a clean computer desk with a transparent round acrylic base. Add a premium toy packaging box nearby, using artwork inspired by the reference character. The background can include a screen showing a modeling process. Preserve the character identity, outfit colors, hairstyle, accessories, and proportions. Do not generate unreadable text on the base or packaging.',
     'product-hero': 'Create a premium product hero visual. The subject should be clear and centered, with a clean background, precise lighting, and controlled shadows and reflections. The image should leave appropriate room for titles or layout design. Material edges should be crisp, colors restrained, and the scene uncluttered. The final result should feel like a modern consumer-brand ecommerce hero image or campaign visual.',
-    'cinematic-environment': 'Create a cinematic environmental scene. The subject should be clear, with layered foreground, midground, and background. Lighting should feel narrative but not exaggerated. The environment must be believable, with accurate materials and perspective, and colors should not be oversaturated. The image should feel like a still frame from a high-budget film.'
+    'cinematic-environment': 'Create a cinematic environmental scene. The subject should be clear, with layered foreground, midground, and background. Lighting should feel narrative but not exaggerated. The environment must be believable, with accurate materials and perspective, and colors should not be oversaturated. The image should feel like a still frame from a high-budget film.',
+    'gpt-image2-edit-identity-scene': 'Editing goal: preserve the identity of the person in reference image 1 while placing that same person in [target environment] with [target photographic context or visual treatment]. Reference roles: use reference image 1 only as the identity anchor; the final person must be the exact same person, not a similar-looking replacement. Change the environment, lighting context, and capture style according to [specific changes]. Must preserve face shape, facial proportions, eyes, nose and lip structure, skin tone, apparent age, defining hairstyle, and natural body type. Unify perspective, light direction, color temperature, shadows, and edges. Avoid identity drift, generic beauty retouching, body deformation, extra prominent people, random text, and watermarks.',
+    'gpt-image2-edit-outfit-only': 'Editing goal: replace only the clothing worn by the person in reference image 1. Reference roles: reference image 1 supplies identity, face, hair, body type, pose, camera, lighting, and background; reference image 2 supplies only the target garment silhouette, color, material, texture, and accessory details. Fit the complete outfit naturally to the original body and pose with plausible folds, occlusion, and lighting. Must preserve the face, hair, skin tone, apparent age, body proportions, hand positions, pose, composition, camera, background, and lighting from reference image 1. Do not borrow the person or background from reference image 2. Avoid floating garments, body intersections, extra accessories, random text, and watermarks.',
+    'gpt-image2-edit-background-only': 'Editing goal: replace only the background of reference image 1 with the [target environment] shown by reference image 2. Reference roles: reference image 1 supplies the person, pose, clothing, foreground objects, composition, and camera position; reference image 2 supplies only the space, materials, background furnishings, and atmosphere. Rebuild the environment behind the subject and match perspective, depth of field, light direction, and color temperature. Must preserve identity, face, hair, clothing, body proportions, pose, hand positions, foreground objects, subject scale, and original framing. Keep hair edges and translucent details natural. Avoid copying people or foreground objects from reference image 2, redesigning the subject, glowing edges, collage artifacts, random text, and watermarks.',
+    'gpt-image2-edit-multi-reference': 'Composition goal: create a [target image type] in which person, clothing, and environment come from separate references. Reference roles: reference image 1 supplies only identity, facial structure, hair, skin tone, apparent age, and natural body type; reference image 2 supplies only garment silhouette, color, material, texture, and accessories, not its person or background; reference image 3 supplies only the location, environmental materials, furnishings, and lighting context, not its people. Place the exact person from image 1 naturally in the outfit from image 2 and environment from image 3. Unify perspective, subject scale, lighting, shadows, color temperature, and depth of field. Must preserve identity, garment design, and pose. Avoid blended identities, face replacement, copied bystanders, body intersections, collage edges, random text, and watermarks.',
+    'gpt-image2-edit-local-detail': 'Local editing goal: change only [part or detail to repair] so that it has [correct structure or intended result]. Reference roles: reference image 1 is the original image; reference image 2 is a black-and-white visual mask. The white area marks the allowed edit region, while the black area marks content that must remain as unchanged as possible. Make only [specific correction] inside the white area and match the original structure, occlusion, material, edges, and lighting. Must preserve identity, face, hair, body, clothing, accessories, pose, background, composition, color, lighting, and everything outside the mask. Do not expand the edit area or redraw the full image. Avoid [common errors for this detail], changes outside the mask, deformation, pasted edges, random text, and watermarks.',
+    'gpt-image2-edit-exact-text': 'Editing goal: replace only [target text area] in reference image 1 while keeping the original design unchanged. Exact text to display: [field 1]: "[enter final text exactly]"; [field 2]: "[enter final text exactly, or remove this field]". Render every character exactly as provided, clearly and legibly, without rewriting, adding, deleting, translating, or transliterating it. Keep each replacement in the original text region with the same hierarchy, alignment, and similar visual weight. Must preserve the canvas ratio, background image, people or subject, colors, materials, decoration, negative space, layout grid, and all content outside the target text areas. Do not redesign the whole image. Avoid garbled text, spelling errors, extra English, fake logos, duplicated text, random small text, watermarks, and changes to non-target text.'
 }
 
 for (const template of styleTemplates) {
