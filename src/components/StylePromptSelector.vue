@@ -80,18 +80,33 @@
             </div>
 
             <div class="max-h-[420px] flex-1 space-y-2 overflow-y-auto pr-1">
-                <button
+                <article
                     v-for="template in filteredTemplates"
                     :key="template.id"
-                    type="button"
+                    role="button"
+                    tabindex="0"
                     @click="applyTemplateToPrompt(template)"
+                    @keydown.enter.self.prevent="applyTemplateToPrompt(template)"
+                    @keydown.space.self.prevent="applyTemplateToPrompt(template)"
                     :class="[
                         'w-full rounded-lg border p-3 text-left transition',
                         selectedStyle === template.id ? 'border-brand-accent bg-brand-accent/10' : 'border-brand-line bg-white hover:border-brand-muted hover:bg-brand-surface'
                     ]"
                 >
                     <div class="flex items-start gap-3">
-                        <img v-if="template.image" :src="template.image" :alt="template.title" class="h-[100px] w-20 flex-shrink-0 rounded-md border border-brand-line object-cover" loading="lazy" decoding="async" />
+                        <button
+                            v-if="template.image"
+                            type="button"
+                            class="group relative h-[100px] w-20 flex-shrink-0 overflow-hidden rounded-md border border-brand-line bg-brand-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2"
+                            :aria-label="`放大查看${template.title}示例图`"
+                            title="放大示例图"
+                            @click.stop="openTemplatePreview(template, $event)"
+                        >
+                            <img :src="template.image" :alt="template.title" class="h-full w-full object-cover transition duration-150 group-hover:scale-[1.02]" loading="lazy" decoding="async" />
+                            <span class="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded bg-brand-ink/75 text-brand-surface opacity-90 transition group-hover:bg-brand-accent">
+                                <Maximize2 class="h-3.5 w-3.5" aria-hidden="true" />
+                            </span>
+                        </button>
                         <div v-else class="flex h-[100px] w-20 flex-shrink-0 items-center justify-center rounded-md border border-brand-line bg-brand-surface px-2 text-center text-xs font-semibold text-brand-ink/60 dark:bg-night-panel dark:text-brand-surface/70">
                             {{ template.category || 'Prompt' }}
                         </div>
@@ -148,7 +163,7 @@
                             </details>
                         </div>
                     </div>
-                </button>
+                </article>
 
                 <div v-if="filteredTemplates.length === 0" class="rounded-lg border border-dashed border-brand-line bg-white p-4 text-sm text-brand-muted">
                     没有找到匹配的提示词。
@@ -239,11 +254,42 @@
                 editable
             />
         </div>
+
+        <Teleport to="body">
+            <div
+                v-if="previewImage"
+                class="fixed inset-0 z-[120] flex items-center justify-center bg-brand-ink/90 p-3 sm:p-5"
+                role="dialog"
+                aria-modal="true"
+                :aria-label="`${previewTitle}示例图预览`"
+                @click.self="closeTemplatePreview"
+            >
+                <section class="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-brand-surface/20 bg-brand-ink shadow-2xl">
+                    <header class="flex min-h-12 items-center justify-between gap-3 border-b border-brand-surface/15 px-3 py-2 text-brand-surface sm:px-4">
+                        <h3 class="min-w-0 truncate text-sm font-semibold">{{ previewTitle }}</h3>
+                        <button
+                            ref="previewCloseButton"
+                            type="button"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-brand-surface/20 text-brand-surface transition hover:bg-brand-surface/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                            aria-label="关闭示例图预览"
+                            title="关闭"
+                            @click="closeTemplatePreview"
+                        >
+                            <X class="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    </header>
+                    <div class="flex min-h-0 flex-1 items-center justify-center overflow-auto p-3 sm:p-4">
+                        <img :src="previewImage" :alt="`${previewTitle}放大示例图`" class="max-h-[calc(92vh-76px)] w-auto max-w-full object-contain" />
+                    </div>
+                </section>
+            </div>
+        </Teleport>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { Maximize2, X } from '@lucide/vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { PromptPoolGroup, StyleTemplate } from '../types'
 import PromptPhraseBuilder from './PromptPhraseBuilder.vue'
 import type { PromptPhrase, PromptPhraseGroup } from '../data/promptPhrases'
@@ -276,11 +322,41 @@ const searchQuery = ref('')
 const activeCategory = ref('全部')
 const activePoolGroupId = ref(props.promptPoolGroups[0]?.id || '')
 const poolSelection = ref<string[]>([])
+const previewImage = ref('')
+const previewTitle = ref('')
+const previewCloseButton = ref<HTMLButtonElement | null>(null)
+let previewTrigger: HTMLButtonElement | null = null
 const templateLanguageOptions = [
     { value: 'zh' as const, label: '中文' },
     { value: 'en' as const, label: 'English' },
     { value: 'bilingual' as const, label: '双语' }
 ]
+
+const openTemplatePreview = (template: StyleTemplate, event: Event) => {
+    if (!template.image) return
+
+    previewImage.value = template.image
+    previewTitle.value = template.title
+    previewTrigger = event.currentTarget instanceof HTMLButtonElement ? event.currentTarget : null
+    void nextTick(() => previewCloseButton.value?.focus())
+}
+
+const closeTemplatePreview = () => {
+    if (!previewImage.value) return
+
+    const trigger = previewTrigger
+    previewImage.value = ''
+    previewTitle.value = ''
+    previewTrigger = null
+    void nextTick(() => trigger?.focus())
+}
+
+const handlePreviewKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && previewImage.value) closeTemplatePreview()
+}
+
+onMounted(() => window.addEventListener('keydown', handlePreviewKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', handlePreviewKeydown))
 
 const categories = computed(() => ['全部', ...Array.from(new Set(props.templates.map(template => template.category || '其他')))])
 

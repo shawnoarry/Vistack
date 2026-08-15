@@ -1,6 +1,23 @@
 import type { StyleTemplate } from '../types'
 import { gptImage2GalleryTemplates } from './gptImage2GalleryTemplates'
 
+const completedTemplatePreviewById: Record<string, string> = {
+    'kbo-broadcast-identity-anchor': '/template-previews/kbo-broadcast-identity-anchor.webp',
+    'commercial-campaign': '/template-previews/commercial-campaign.webp',
+    'magazine-cover': '/template-previews/magazine-cover.webp',
+    'poster-key-visual': '/template-previews/poster-key-visual.webp',
+    'beauty-editorial': '/template-previews/beauty-editorial.webp',
+    'mv-concept-still': '/template-previews/mv-concept-still.webp',
+    'album-photobook': '/template-previews/album-photobook.webp',
+    'photocard-portrait': '/template-previews/photocard-portrait.webp',
+    'artist-profile-photo': '/template-previews/artist-profile-photo.webp',
+    'comeback-teaser-poster': '/template-previews/comeback-teaser-poster.webp',
+    'editorial-fashion-fullbody': '/template-previews/editorial-fashion-fullbody.webp',
+    'korean-ootd-mirror': '/template-previews/korean-ootd-mirror.webp',
+    'idol-backstage-selfie': '/template-previews/idol-backstage-selfie.webp',
+    'airport-preview': '/template-previews/airport-preview.webp'
+}
+
 export const styleTemplates: StyleTemplate[] = [
     {
         id: 'kbo-broadcast-identity-anchor',
@@ -169,7 +186,7 @@ export const styleTemplates: StyleTemplate[] = [
         category: 'K-pop 生态',
         mode: 'both',
         tags: ['直拍', '舞台', '封面'],
-        prompt: '生成一张 K-pop 直拍视频封面感图片。主体在舞台上处于清晰的高光瞬间，眼神有抓取感，动作停在最有记忆点的一帧。舞台灯光、LED 背景和浅景深要明显，但主体脸部和服装细节保持清楚。构图适合竖版或方形封面，不添加文字，不生成水印。',
+        prompt: '生成一张 K-pop 直拍视频封面感图片。主体在舞台上处于清晰的高光瞬间，眼神有抓取感，动作停在最有记忆点的一帧。服装应为适合公开演出的完整覆盖舞台造型，不使用内衣式服装、胸前镂空、低胸、露腰或强调身体曲线的姿势。舞台灯光、LED 背景和浅景深要明显，但主体脸部和服装细节保持清楚。构图适合竖版或方形封面，不添加文字，不生成水印。',
         image: '',
         description: '偏舞台直拍截图和粉丝会收藏的封面图。'
     },
@@ -322,7 +339,7 @@ const builtinTemplateEnglishPrompts: Record<string, string> = {
     'phone-selfie-natural': 'Create a natural phone front-camera selfie. The subject looks at the camera with a slightly casual handheld composition, realistic skin texture, natural expression, and mild phone-lens distortion. Lighting should feel like indoor window light or street-side natural light. Avoid studio lighting, excessive smoothing, and commercial campaign polish. The image should feel like a real social media snapshot.',
     'korean-ootd-mirror': 'Create a Korean OOTD mirror selfie. The subject stands in front of a full-length mirror, holding a phone that may cover part of the face or sit naturally near the chest. The outfit should be clean, layered, and stylish, with relaxed posture. The background can be an apartment entryway, dressing room, cafe restroom, or clean street-store facade. Preserve vertical phone composition, reflections, natural light, and everyday realism.',
     'idol-backstage-selfie': 'Create a K-pop idol backstage selfie style image. The subject appears to be taking a phone selfie in a music-show backstage room, makeup room, or practice studio. Makeup and hair are refined but expression is natural; the outfit has stage-styling energy. The background may include soft vanity lights, clothing racks, blurred staff, or practice-room mirrors, but should not be messy. The image should feel like an official social media update, not a movie still or commercial ad.',
-    'fancam-cover': 'Create a K-pop fancam video cover image. The subject is on stage at a crisp highlight moment, with eye contact that grabs attention and movement frozen at a memorable frame. Stage lighting, LED background, and shallow depth of field should be visible, while the face and outfit details remain clear. The composition should work as a vertical or square cover. Do not add text or watermarks.',
+    'fancam-cover': 'Create a K-pop fancam video cover image. The subject is on stage at a crisp highlight moment, with eye contact that grabs attention and movement frozen at a memorable frame. Use a performance-appropriate stage outfit with full torso coverage. Avoid lingerie styling, chest cutouts, plunging necklines, exposed midriff, and body-emphasizing poses. Stage lighting, LED background, and shallow depth of field should be visible, while the face and outfit details remain clear. The composition should work as a vertical or square cover. Do not add text or watermarks.',
     'airport-preview': 'Create a Korean entertainment airport preview image. The subject wears everyday but styled airport fashion and walks naturally near an airport entrance, terminal corridor, or van. The image should feel like a telephoto media shot or fansite preview, with crowds, luggage, flashes, and slight motion blur in the background. Keep a realistic candid feel, not a red-carpet or studio-shoot look.',
     'after-work-preview': 'Create an idol after-work preview image. The subject is leaving a TV station, practice room, or event venue in private clothes or partial stage styling, with a van, staff, fans, and flashes nearby. Use night telephoto candid photography, slight noise, background blur, and authentic media-photo texture. The subject should be clear and atmospheric, but not look like a formal photoshoot.',
     'korean-cafe-snapshot': 'Create a Korean cafe daily snapshot. The subject sits near a window, counter, or small round table, with a relaxed phone-snapshot feeling. Use soft light and background details such as coffee cups, desserts, glass windows, street view, or clean interior design. Keep it clean, natural, and social-media friendly. Avoid heavy filters and overly commercial styling.',
@@ -339,5 +356,6 @@ const builtinTemplateEnglishPrompts: Record<string, string> = {
 }
 
 for (const template of styleTemplates) {
+    template.image = completedTemplatePreviewById[template.id] || template.image
     template.promptEn = template.promptEn || builtinTemplateEnglishPrompts[template.id]
 }

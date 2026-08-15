@@ -21,6 +21,51 @@ const pilotPreviewById = {
     'gpt-image2-edit-exact-text': '/template-previews/gpt-image2-edit-exact-text.webp'
 }
 
+const completedPreviewById = {
+    'kbo-broadcast-identity-anchor': '/template-previews/kbo-broadcast-identity-anchor.webp',
+    'commercial-campaign': '/template-previews/commercial-campaign.webp',
+    'magazine-cover': '/template-previews/magazine-cover.webp',
+    'poster-key-visual': '/template-previews/poster-key-visual.webp',
+    'beauty-editorial': '/template-previews/beauty-editorial.webp',
+    'mv-concept-still': '/template-previews/mv-concept-still.webp',
+    'album-photobook': '/template-previews/album-photobook.webp',
+    'photocard-portrait': '/template-previews/photocard-portrait.webp',
+    'artist-profile-photo': '/template-previews/artist-profile-photo.webp',
+    'comeback-teaser-poster': '/template-previews/comeback-teaser-poster.webp',
+    'editorial-fashion-fullbody': '/template-previews/editorial-fashion-fullbody.webp',
+    'korean-ootd-mirror': '/template-previews/korean-ootd-mirror.webp',
+    'idol-backstage-selfie': '/template-previews/idol-backstage-selfie.webp',
+    'airport-preview': '/template-previews/airport-preview.webp'
+}
+
+function readWebpDimensions(buffer: Buffer) {
+    const chunkType = buffer.subarray(12, 16).toString('ascii')
+
+    if (chunkType === 'VP8 ') {
+        return {
+            width: buffer.readUInt16LE(26) & 0x3fff,
+            height: buffer.readUInt16LE(28) & 0x3fff
+        }
+    }
+
+    if (chunkType === 'VP8L') {
+        const bits = buffer.readUInt32LE(21)
+        return {
+            width: (bits & 0x3fff) + 1,
+            height: ((bits >> 14) & 0x3fff) + 1
+        }
+    }
+
+    if (chunkType === 'VP8X') {
+        return {
+            width: buffer.readUIntLE(24, 3) + 1,
+            height: buffer.readUIntLE(27, 3) + 1
+        }
+    }
+
+    throw new Error(`Unsupported WebP chunk type: ${chunkType}`)
+}
+
 describe('GPT Image2 precise edit templates', () => {
     const templates = styleTemplates.filter(template => template.category === '精准改图配方')
 
@@ -65,5 +110,23 @@ describe('template preview pilot', () => {
             expect(fileSize).toBeGreaterThan(20_000)
             expect(fileSize).toBeLessThan(350 * 1024)
         }
+    })
+
+    it('binds the 14 completed preview assets without exposing missing jobs', () => {
+        for (const [templateId, imagePath] of Object.entries(completedPreviewById)) {
+            expect(styleTemplates.find(template => template.id === templateId)?.image).toBe(imagePath)
+
+            const filePath = resolve(process.cwd(), 'public', imagePath.slice(1))
+            const image = readFileSync(filePath)
+            const fileSize = statSync(filePath).size
+
+            expect(image.subarray(0, 4).toString('ascii')).toBe('RIFF')
+            expect(image.subarray(8, 12).toString('ascii')).toBe('WEBP')
+            expect(readWebpDimensions(image)).toEqual({ width: 1024, height: 1280 })
+            expect(fileSize).toBeGreaterThan(20_000)
+            expect(fileSize).toBeLessThan(350 * 1024)
+        }
+
+        expect(styleTemplates.filter(template => template.image).length).toBe(47)
     })
 })
