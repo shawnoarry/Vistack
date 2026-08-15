@@ -91,8 +91,8 @@
                     ]"
                 >
                     <div class="flex items-start gap-3">
-                        <img v-if="template.image" :src="template.image" :alt="template.title" class="h-16 w-16 flex-shrink-0 rounded-md border border-brand-line object-cover" />
-                        <div v-else class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md border border-brand-line bg-brand-surface text-xs font-semibold text-brand-ink/60 dark:bg-night-panel dark:text-brand-surface/70">
+                        <img v-if="template.image" :src="template.image" :alt="template.title" class="h-[100px] w-20 flex-shrink-0 rounded-md border border-brand-line object-cover" loading="lazy" decoding="async" />
+                        <div v-else class="flex h-[100px] w-20 flex-shrink-0 items-center justify-center rounded-md border border-brand-line bg-brand-surface px-2 text-center text-xs font-semibold text-brand-ink/60 dark:bg-night-panel dark:text-brand-surface/70">
                             {{ template.category || 'Prompt' }}
                         </div>
 

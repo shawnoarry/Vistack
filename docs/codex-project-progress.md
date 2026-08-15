@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-08-15 13:41 (Asia/Shanghai)
+Last updated: 2026-08-15 14:14 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -45,11 +45,11 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Studio Phase 2B is implemented: the couple-photo assistant now opens from a compact toolbar icon as a PC popover/mobile bottom sheet, while preserving its prompt behavior.
 - The calendar illustration assistant is implemented as a separate prompt-only workflow: copy plus a flexible time context produce three short 9:16 or 4:5 options that can be written into the existing prompt field without changing image generation.
 - Studio Phase 3 is implemented: successful history is the persistent waterfall, each image can be hidden without deletion and restored from the asset library, and failed generations use a separate bounded diagnostic log.
-- GPT Image2 G3-lite is implemented as six bilingual `精准改图配方` templates in the existing template panel; no paid A/B generation has been run yet, and G1/G2 remain deferred.
+- GPT Image2 G3-lite is implemented as six bilingual `精准改图配方` templates in the existing template panel. Four separately approved paid preview pilots are now bound to representative templates; prompt A/B validation has not been run, G1/G2 remain deferred, and the 42-image batch plus 12 new recipes remain unapproved.
 - The playground integration P0 gate remains satisfied at runtime checkpoint `4d2bb94`; the next product-planning task is a bounded provider/model parameter-capability brief.
 - The IndexedDB version, generation requests, provider routing, existing history/images/prompts, and API preset storage are unchanged. Phase 3 adds only backward-compatible optional visibility/diagnostic fields and a separate local failure-record key.
 - Production build succeeds with Vite 5.4.19.
-- Current production bundle is approximately 427.94 kB JS / 148.61 kB gzip and 53.80 kB CSS / 8.73 kB gzip.
+- Current production bundle is approximately 449.77 kB JS / 156.31 kB gzip and 54.73 kB CSS / 8.98 kB gzip.
 
 ## Active Product Brief: Full UI/UX Plan
 
@@ -182,7 +182,7 @@ Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
 - Test files: 13 passed.
-- Tests: 71 passed.
+- Tests: 72 passed.
 - Production build: passed.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 - UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
@@ -192,6 +192,7 @@ Latest result:
 - Phase 3 browser verification: four successful images rendered once in the persistent waterfall with natural proportions and no horizontal overflow at 1440×900, 1280×800, 1024×768, or 390×844. Hiding reduced 4 images to 3 and survived reload; the asset library still held all 4 and restored the hidden image. Failed-task diagnostics were copied with token redaction; closing the task removed its error while the bounded failure record survived reload.
 - Calendar assistant browser verification: the 1440×900 popover stayed above the fixed prompt dock; the 390×844 bottom sheet and its 9:16 / 4:5 segmented control fit without horizontal overflow; `Esc` closed the panel and returned focus to its toolbar trigger. A real assistant request was not sent because no assistant key is configured and external API cost was intentionally avoided.
 - G3-lite desktop browser verification: the existing template panel displayed the `精准改图配方` category and all six approved bilingual cards. Browser automation then became unstable while simulating template insertion and the 390×844 viewport, so those two interactive checks were not completed in this turn; no app console error attributable to the template data was observed before the connection timeouts.
+- Template preview pilot browser verification: all four approved templates were found through the existing search and rendered their assigned 80×100 4:5 previews on desktop. At a 390×844 viewport, the document client width and scroll width were both 375 px, so there was no horizontal overflow; all four resources reported complete 1024×1280 loads and no application console errors were present.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
 
@@ -215,15 +216,16 @@ The diagnostic enhancement was saved as a separate checkpoint before starting UI
 
 ## Next TODO
 
-1. Review `docs/gpt-image2-prompt-validation-pack.md`; execute its A/B generations only after separately confirming acceptable API cost and test images, then record scores before considering any product integration.
-2. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback only if complete GPT Image 2 parameters or native masks become a confirmed need; do not implement before approval.
-3. Design and implement storage v2 only after the model-parameter boundary and migration plan are agreed.
+1. Present the four Stage A preview pilots for user review. Do not generate the remaining 42 previews or add the proposed 12 recipes until the user separately approves Stage B.
+2. Review `docs/gpt-image2-prompt-validation-pack.md`; execute its A/B generations only after separately confirming acceptable API cost and test images, then record scores before considering any product integration.
+3. Prepare a separate model-parameter brief for incremental provider/model capability profiles with a generic fallback only if complete GPT Image 2 parameters or native masks become a confirmed need; do not implement before approval.
+4. Design and implement storage v2 only after the model-parameter boundary and migration plan are agreed.
    - Store large image data in IndexedDB rather than `localStorage`.
    - Preserve existing history images, prompts, API presets, and canvas data during migration.
-4. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
-5. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
-6. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
-7. Use `docs/gpt-image-playground-integration-plan.md` for selective integration after the current UI work has a verified checkpoint; the fork roadmap does not authorize implementing its remaining P1-P3 items automatically.
+5. Redesign toolbox and canvas architecture as Phase 5 discovery; do not continue feature-by-feature expansion before defining validated workflows.
+6. Keep proxy security in compatibility mode for limited team use, then upgrade vulnerable dependencies in small tested groups.
+7. Only after behavior coverage is broader, extract small state modules from `App.vue` without changing provider behavior.
+8. Use `docs/gpt-image-playground-integration-plan.md` for selective integration after the current UI work has a verified checkpoint; the fork roadmap does not authorize implementing its remaining P1-P3 items automatically.
 
 Deferred by user decision:
 
@@ -247,6 +249,25 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-08-15 14:14 (Asia/Shanghai)
+
+- Completed only the user-approved Stage A pilot: exactly 4 paid `gpt-image-2` medium-quality 4:5 WebP requests were sent through the configured `codex-image` CLI. All four succeeded on the first attempt, with no retries and no fifth request.
+- Added the reproducible, credential-free batch manifest `scripts/template-preview-pilot.jsonl` and four 1024×1280 assets under `public/template-previews/`: natural phone selfie (98,520 bytes), K-pop studio concept (68,922 bytes), luxury product still (62,876 bytes), and exact-text poster (119,628 bytes).
+- Visual review passed for the selfie, K-pop concept, and unbranded product still. The poster accurately shows `夏夜影像计划` and `2026.08.15 / 19:30`; minor tiny city signage remains in the background, and no unapproved paid retry was attempted.
+- Bound the four previews to their matching templates and changed the existing thumbnail slot from 64×64 to a stable 80×100 4:5 preview with lazy loading and async decoding. Search, categories, language selection, prompt insertion, API payloads, routing, model/endpoint presets, storage, history, and existing images remain unchanged.
+- Added tests for exact template-to-image mappings, WebP signatures, and 20–350 KB size bounds. `npm run check` passed: both type checks, 13 test files/72 tests, and the production build (449.77 kB JS / 156.31 kB gzip; 54.73 kB CSS / 8.98 kB gzip).
+- Desktop browser verification found each pilot through the existing template search and displayed its 4:5 preview. At the 390×844 mobile viewport, client width and scroll width were both 375 px, with no horizontal overflow; all four assets loaded at 1024×1280 and browser logs contained no application errors.
+- Updated `docs/template-preview-expansion-brief.md` with the completed Stage A results. The remaining 42-image batch and 12 proposed new recipes are not approved and must not be started automatically. The user-owned untracked `排查/` directory remains untouched.
+
+### 2026-08-15 13:48 (Asia/Shanghai)
+
+- User reported that text-only template cards are too hard to scan and requested preview images for all templates plus more precise-edit recipes. Audited the current data: 30 built-in templates, only one bound preview image, 29 text fallbacks, and one additional unused `public/2.png` asset.
+- Confirmed the installed `codex-image` CLI supports generation, editing, JSONL batch generation, exact size/quality/format/compression, concurrency, output paths, and dry-run. `OPENAI_API_KEY` and `OPENAI_BASE_URL` are present; a no-cost dry-run resolved `gpt-image-2`, `4:5@1k`, medium WebP to a valid `1024x1280` Images API request. Actual endpoint authentication and visual quality remain unverified until a paid request is approved.
+- Reviewed the existing template card: it already renders an image or a stable 64×64 text fallback and preserves category/search/language/prompt insertion. Recommended a light card polish to an 80×100 4:5 lazy-loaded preview without adding navigation or changing prompt behavior.
+- Added `docs/template-preview-expansion-brief.md` proposing 4 paid pilot images first, then 42 total previews for 30 existing templates plus 12 new high-frequency edit recipes. New recipes cover hair, makeup, expression, pose, accessories, object removal, product color/material, relighting/weather, outpainting, identity-safe style transfer, restoration, and product placement.
+- No real generation request was sent, so no API cost was incurred. No runtime source, templates, API payload, model/endpoint preset, storage, history, existing image, or user-owned `排查/` content changed. Verification was CLI help, environment presence checks without reading secrets, asset counting, component source inspection, and a successful CLI dry-run.
+- Next concrete decision: approve or reject stage A, exactly four paid `gpt-image-2` medium-quality 4:5 WebP pilot generations. Do not start the 42-image batch or runtime/template expansion before reviewing the pilot.
 
 ### 2026-08-15 13:41 (Asia/Shanghai)
 

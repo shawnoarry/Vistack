@@ -59,7 +59,7 @@ export const styleTemplates: StyleTemplate[] = [
         mode: 'both',
         tags: ['棚拍', '概念照', '回归'],
         prompt: '生成一张 K-pop 回归棚拍概念照。人物造型、妆发、服装和背景需要围绕同一个视觉主题展开，像官方 teaser image 或 concept photo。使用专业棚拍布光，脸部、发丝、服装材质和配饰清楚，姿态有记忆点但不过度摆拍。画面保留适当留白，不添加文字、水印或真实 logo。',
-        image: '',
+        image: '/template-previews/kpop-studio-concept.webp',
         description: '适合回归预告、概念视觉和官方社媒物料。'
     },
     {
@@ -119,7 +119,7 @@ export const styleTemplates: StyleTemplate[] = [
         mode: 'both',
         tags: ['产品', '静物', '高级'],
         prompt: '生成一张奢侈品静物摄影。主体放置在精致台面或极简布景中，材质反射、阴影、边缘和纹理都要真实。光线克制，色彩低饱和，画面有高级留白。适合香水、首饰、包袋、电子产品或包装盒。',
-        image: '',
+        image: '/template-previews/luxury-product-still.webp',
         description: '适合产品质感、包装展示和电商高级主图。'
     },
     {
@@ -139,7 +139,7 @@ export const styleTemplates: StyleTemplate[] = [
         mode: 'both',
         tags: ['自拍', '手机感', '真实皮肤'],
         prompt: '生成一张像手机前置摄像头拍摄的自然自拍。主体看向镜头，构图轻微随手感，保留真实皮肤纹理、自然表情和轻微镜头畸变。光线像室内窗边或街边自然光，不要棚拍感，不要过度磨皮，不要商业大片质感。画面应该像真实社交平台随手发布的照片。',
-        image: '',
+        image: '/template-previews/phone-selfie-natural.webp',
         description: '更接近真实手机自拍，而不是精修写真。'
     },
     {
@@ -299,7 +299,7 @@ export const styleTemplates: StyleTemplate[] = [
         mode: 'image',
         tags: ['精准改图', '准确文字', '海报', '排版'],
         prompt: '编辑目标：只替换参考图 1 中的【目标文字区域】，保持原设计不变。\n\n需要显示的准确文字：\n【字段名称 1】：“【逐字填写最终文字】”\n【字段名称 2】：“【逐字填写最终文字；不需要可删除本行】”\n\n文字要求：逐字准确、清晰可读，不得改写、增删、翻译或生成拼音。新文字继续使用原文字的区域、层级、对齐方式和相近视觉重量。\n\n必须保持：原画布比例、背景图像、人物或主体、颜色、材质、装饰、留白、版式网格，以及目标区域以外的现有内容。不要重新设计整张图片。\n\n避免：乱码、错别字、额外英文、伪造 logo、重复文字、随机小字、水印，以及改变非目标文字。',
-        image: '',
+        image: '/template-previews/gpt-image2-edit-exact-text.webp',
         description: '插入后逐字填写【】内容；适合海报标题、日期和其他指定文字。'
     }
 ]

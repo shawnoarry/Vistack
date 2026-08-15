@@ -14,6 +14,7 @@
 - [GPT Image Playground 优化整合计划](gpt-image-playground-integration-plan.md)：以用户 fork 的固定 commit 为异机参考基线，记录可整合能力、优先级、后置/搁置项和分阶段安全门禁。
 - [GPT Image2 Skill 融合评估](gpt-image2-skill-integration-brief.md)：评估 Prompt Gallery、Agent Skill 和 Python CLI 与 Vistack 的重叠能力；G3-lite 已接入六条精准改图配方，G1/G2 暂缓。
 - [GPT Image2 提示词价值验证包](gpt-image2-prompt-validation-pack.md)：六个高频改图场景的人工 A/B 提示词、评分方法和后续留存标准；尚未自动或人工调用付费 API。
+- [模板示例图与配方扩展简报](template-preview-expansion-brief.md)：记录全模板预览、12 个新增配方、`codex-image` 生产流程、4 张试产和费用安全门槛。
 
 ## 历史归档
 
