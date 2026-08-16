@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-08-15 23:59:59 (Asia/Shanghai)
+Last updated: 2026-08-16 11:38:15 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -259,6 +259,17 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-08-16 11:38:15 (Asia/Shanghai)
+
+- User requested committing all current project changes and asked whether the work was only prompt-related. Confirmed the only pending tracked change was this handoff clarification; user-owned untracked `排查/` remains intentionally excluded and untouched.
+- Clarified that the seven local commits ahead of `origin/main` are broader than prompt copy: precise-edit recipes, preview pilot/assets, gallery expansion, completed preview bindings, category organization and enlarged preview, prompt-only identity fidelity controls, and the latest 11-template bilingual prompt rewrite. No new runtime source changed in this turn, so the latest verification remains `npm run check` with 16 test files / 85 tests and a successful production build.
+- Saved the handoff as the focused checkpoint with subject `docs: update project handoff`. Branch is now `main...origin/main [ahead 8, behind 1]`; the tracked working tree is clean and only user-owned untracked `排查/` remains. Syncing the one remote commit is a separate operation and was not requested.
+
+### 2026-08-16 11:28:09 (Asia/Shanghai)
+
+- Rechecked checkpoint `b4c01fc` for the user's scope question. The runtime change is limited to rewriting the Chinese and English text of 11 existing built-in templates into editable seven-section prompts; no template ID/category/preview, UI layout, generation request, endpoint, provider/model parameter, reference upload, storage, history, or user data changed.
+- The same checkpoint added data tests for section order, editable `【】` phrases, and non-pasted-head reference handling, plus the required handoff entry. No source change, image request, external API call, or new verification run was needed for this clarification. Branch remains `main...origin/main [ahead 7, behind 1]`; only this handoff is newly modified, and user-owned untracked `排查/` remains untouched.
 
 ### 2026-08-15 23:59:59 (Asia/Shanghai)
 
