@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-08-16 11:38:15 (Asia/Shanghai)
+Last updated: 2026-08-16 11:47:48 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -51,7 +51,7 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - The playground integration P0 gate remains satisfied at runtime checkpoint `4d2bb94`; the next product-planning task is a bounded provider/model parameter-capability brief.
 - The IndexedDB version, generation requests, provider routing, existing history/images/prompts, and API preset storage are unchanged. Phase 3 adds only backward-compatible optional visibility/diagnostic fields and a separate local failure-record key.
 - Production build succeeds with Vite 5.4.19.
-- Current production bundle is approximately 528.24 kB JS / 199.21 kB gzip and 56.23 kB CSS / 9.14 kB gzip.
+- Current production bundle is approximately 528.35 kB JS / 199.27 kB gzip and 56.23 kB CSS / 9.14 kB gzip.
 
 ## Active Product Brief: Full UI/UX Plan
 
@@ -259,6 +259,14 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-08-16 11:47:48 (Asia/Shanghai)
+
+- User requested safely integrating and pushing the one remote `main` update. Fetched and inspected remote commit `eab8de1` (`Fix duplicate API preset selection`): it preserves the currently selected preset when duplicate presets share the same API configuration, extracts the matching logic to `src/utils/apiPreset.ts`, and adds three focused tests.
+- Used `git merge-tree --write-tree HEAD origin/main` to confirm a conflict-free merge before touching the worktree, then merged with ordinary Git history preservation as merge commit `9ee93d4`. `src/App.vue` auto-merged cleanly: the remote API-preset fix and the local identity-fidelity controls remain present in separate logic areas. No rebase, force push, history rewrite, data migration, API payload change, or user-file modification occurred.
+- Pre-merge `npm run check` passed with 16 test files / 85 tests. Post-merge `npm run check` passed with type checks, 17 test files / 88 tests, and the production build. The new API-preset tests and all template, preview, identity, storage, provider, and generation compatibility tests passed.
+- Direct GitHub pushes failed before upload because the network connection to port 443 timed out or reset. Confirmed the existing local proxy at `127.0.0.1:7890` could reach GitHub, then used it only for the individual push command without changing repository or global Git configuration. Push succeeded from remote `eab8de1` through merge `9ee93d4` on `origin/main`.
+- Saved and pushed the final handoff checkpoint with subject `docs: record safe remote merge`. Local and remote `main` are synchronized; the tracked working tree is clean, and user-owned untracked `排查/` remains untouched. No image generation, external image API request, upload, or charge occurred.
 
 ### 2026-08-16 11:38:15 (Asia/Shanghai)
 
