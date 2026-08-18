@@ -211,8 +211,8 @@ const closeButtonRef = ref<HTMLButtonElement | null>(null)
 const aspectRatios: CalendarAspectRatio[] = ['9:16', '4:5']
 const peopleStrategies: Array<{ value: CalendarPeopleStrategy; label: string; title: string }> = [
     { value: 'avoid', label: '避开人物', title: '三组方案均不出现人物' },
-    { value: 'auto', label: '自动判断', title: '根据文案决定是否允许一组人物方案' },
-    { value: 'allow', label: '允许人物', title: '允许其中一组使用人物表达' }
+    { value: 'auto', label: '自动判断', title: '根据文案语义决定是否允许人物表达' },
+    { value: 'allow', label: '允许人物', title: '三组方案都可以按文案使用人物表达，包括不露脸的人物局部' }
 ]
 const styleStrategies: Array<{ value: CalendarStyleStrategy; label: string }> = [
     { value: 'diverse', label: '自动发散' },
@@ -222,8 +222,8 @@ const styleStrategies: Array<{ value: CalendarStyleStrategy; label: string }> = 
 ]
 const canDraw = computed(() => props.assistantReady && props.sourceCopy.trim().length > 0 && !props.loading)
 const sharedConstraintSummary = computed(() => props.aspectRatio === '4:5'
-    ? '4:5 竖幅，视觉重点位于中上部，底部约四分之一保持简洁；写入时自动加入无文字与标识约束。'
-    : '9:16 竖幅，视觉重点位于中上部，底部约三分之一保持简洁；写入时自动加入无文字与标识约束。')
+    ? '4:5 竖幅满版底图，主体可偏置、出界或局部特写，并保留一处相对安静的排版区域；底部约 20%~25% 避免密集小细节但不要求纯空白，写入时自动禁止文字、数字、日期、日历网格、Logo、二维码和水印。'
+    : '9:16 竖幅满版底图，主体可偏置、出界或局部特写，并保留一处相对安静的排版区域；底部约 20%~25% 避免密集小细节但不要求纯空白，写入时自动禁止文字、数字、日期、日历网格、Logo、二维码和水印。')
 
 const emitClose = () => emit('close')
 

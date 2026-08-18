@@ -37,6 +37,14 @@ describe('prompt assistant network transport', () => {
         expect(body.temperature).toBe(0.95)
         expect(body.messages[1].content).toContain('严格按创作条件中列出的方案 1、2、3 风格路线逐条输出')
         expect(body.messages[1].content).toContain('方案 1：自然光摄影')
+        expect(body.messages[0].content).toContain('允许具体人物、自然物、静物、空间和场景')
+        expect(body.messages[0].content).not.toContain('优先输出非人物、非具象')
+        expect(body.messages[1].content).toContain('允许具体人物、自然物、静物、空间和场景')
+        expect(body.messages[1].content).toContain('不限制人物方案数量')
+        expect(body.messages[1].content).toContain('作品名、书名、专有名词与出处信息可以提供创意线索')
+        expect(body.messages[1].content).toContain('不要机械推断作者国籍或地域')
+        expect(body.messages[1].content).toContain('不要在结果中复述原文、生成书名或作者署名')
+        expect(body.messages[1].content).not.toContain('最多只有一组')
     })
 
     it('reconstructs a streamed proxy response and requests NDJSON keepalive mode', async () => {

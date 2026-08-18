@@ -4,6 +4,7 @@ import {
     CALENDAR_LAYOUT_CONSTRAINTS,
     CALENDAR_NO_PEOPLE_CONSTRAINT,
     calendarSourceAllowsPeople,
+    isCurrentCalendarPromptRequest,
     parseCalendarPromptResponse,
     selectCalendarStyleRoutes,
     type CalendarStyleRoute
@@ -14,6 +15,11 @@ describe('calendar prompt context', () => {
         expect(calendarSourceAllowsPeople('开心的人都不笨。', '儿童节')).toBe(true)
         expect(calendarSourceAllowsPeople('孩子们在山坡上奔跑。', '6月上旬')).toBe(true)
         expect(calendarSourceAllowsPeople('我总是黑白分明，而她是全部色彩。', '7月中旬')).toBe(false)
+    })
+
+    it('recognizes non-facing people expressions as explicit people context', () => {
+        expect(calendarSourceAllowsPeople('远处一个人的背影停在海边。', '')).toBe(true)
+        expect(calendarSourceAllowsPeople('只留下侧后方的剪影和伸出的手部。', '')).toBe(true)
     })
 })
 
@@ -37,7 +43,7 @@ describe('calendar prompt response parsing', () => {
         expect(options[0].prompt).not.toContain('无字日历底图')
     })
 
-    it('applies assigned style routes to the final prompts without repeating them in card copy', () => {
+    it('keeps each assigned style route bound to its final prompt without repeating it in card copy', () => {
         const styleRoutes: CalendarStyleRoute[] = [
             { id: 'photo', label: '摄影路线', prompt: '真实摄影质感。' },
             { id: 'paint', label: '绘画路线', prompt: '手绘插画质感。' },
@@ -46,8 +52,8 @@ describe('calendar prompt response parsing', () => {
         const options = parseCalendarPromptResponse(response, { styleRoutes })
 
         expect(options.map(option => option.style)).toEqual(['摄影路线', '绘画路线', '设计路线'])
-        expect(options[0].prompt).toContain('真实摄影质感。')
-        expect(options[0].creativePrompt).not.toContain('真实摄影质感。')
+        expect(options.every((option, index) => option.prompt.includes(styleRoutes[index].prompt))).toBe(true)
+        expect(options.every((option, index) => !option.creativePrompt.includes(styleRoutes[index].prompt))).toBe(true)
     })
 
     it('accepts fenced JSON responses', () => {
@@ -55,7 +61,7 @@ describe('calendar prompt response parsing', () => {
         expect(options.map(option => option.title)).toEqual(['几何', '拼贴', '静物'])
     })
 
-    it('replaces unwanted people routes with non-figurative fallbacks', () => {
+    it('replaces unwanted people routes with person-free fallbacks', () => {
         const peopleResponse = JSON.stringify({
             options: [
                 { title: '人物', direction: '情侣', prompt: '一对情侣站在彩色光线中。', people: true }
@@ -68,18 +74,19 @@ describe('calendar prompt response parsing', () => {
         expect(options.every(option => option.prompt.includes(CALENDAR_NO_PEOPLE_CONSTRAINT))).toBe(true)
     })
 
-    it('allows at most one people route when the source calls for it', () => {
+    it('keeps multiple non-facing people routes when people are allowed', () => {
         const peopleResponse = JSON.stringify({
             options: [
-                { title: '儿童', direction: '跳跃', prompt: '一群孩子在开阔草地上自然跳跃。', people: true },
-                { title: '朋友', direction: '同行', prompt: '两个朋友沿着明亮街道同行。', people: true },
-                { title: '风筝', direction: '风与色彩', prompt: '彩色风筝掠过安静天空，轻盈而自由。', people: false }
+                { title: '背影', direction: '远望', prompt: '一个人的背影站在开阔海边，风吹动衣角，电影静帧般克制。', people: true },
+                { title: '剪影', direction: '侧后方', prompt: '侧后方人物与树影重叠，只见清晰剪影和自然逆光。', people: true },
+                { title: '手部', direction: '局部特写', prompt: '局部手部捧着一枚自然物，微距景深强调皮肤与材质触感。', people: true }
             ]
         })
         const options = parseCalendarPromptResponse(peopleResponse, { allowPeople: true, random: () => 0 })
 
         expect(options).toHaveLength(3)
-        expect(options.filter(option => option.includesPeople)).toHaveLength(1)
+        expect(options.filter(option => option.includesPeople)).toHaveLength(3)
+        expect(options.every(option => !option.prompt.includes(CALENDAR_NO_PEOPLE_CONSTRAINT))).toBe(true)
     })
 
     it('falls back to three usable options for malformed responses', () => {
@@ -97,6 +104,15 @@ describe('calendar prompt response parsing', () => {
         expect(fallbackOptions.every(option => option.prompt.includes(CALENDAR_LAYOUT_CONSTRAINTS['4:5']))).toBe(true)
         expect(fallbackOptions.every(option => !option.prompt.includes('9:16'))).toBe(true)
     })
+
+    it('keeps layout constraints flexible while retaining full-bleed calendar exclusions', () => {
+        expect(CALENDAR_LAYOUT_CONSTRAINTS['9:16']).toContain('满版底图')
+        expect(CALENDAR_LAYOUT_CONSTRAINTS['9:16']).toContain('可偏置、出界或局部特写')
+        expect(CALENDAR_LAYOUT_CONSTRAINTS['9:16']).toContain('底部约20%~25%')
+        expect(CALENDAR_LAYOUT_CONSTRAINTS['9:16']).toContain('不要求纯空白')
+        expect(CALENDAR_LAYOUT_CONSTRAINTS['9:16']).toContain('不出现文字、数字、日期、日历网格、Logo、水印或二维码')
+        expect(CALENDAR_LAYOUT_CONSTRAINTS['9:16']).not.toContain('底部约三分之一')
+    })
 })
 
 describe('calendar style routes', () => {
@@ -105,12 +121,20 @@ describe('calendar style routes', () => {
 
         expect(routes).toHaveLength(3)
         expect(new Set(routes.map(route => route.id)).size).toBe(3)
+        expect(routes.every(route => route.label && route.prompt)).toBe(true)
     })
 
     it('keeps a selected style strategy within its route family', () => {
         const routes = selectCalendarStyleRoutes('photography', () => 0)
 
         expect(routes).toHaveLength(3)
-        expect(routes.every(route => ['自然光摄影', '微距静物', '电影静帧', '实验摄影'].includes(route.label))).toBe(true)
+        expect(routes.every(route => ['自然光摄影', '自然逆光', '微距静物', '电影静帧', '纪实胶片', '实验摄影'].includes(route.label))).toBe(true)
+    })
+})
+
+describe('calendar prompt request versions', () => {
+    it('only lets the current request release the loading state', () => {
+        expect(isCurrentCalendarPromptRequest(7, 8)).toBe(false)
+        expect(isCurrentCalendarPromptRequest(8, 8)).toBe(true)
     })
 })

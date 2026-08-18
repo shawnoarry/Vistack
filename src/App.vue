@@ -1201,6 +1201,7 @@ import { buildGenerationActionLabel, resolveGenerationMode } from './utils/gener
 import { buildPortraitAssistPrompt, portraitAssistIconTitle, resolvePortraitAssistUiState } from './utils/portraitAssist'
 import {
     calendarSourceAllowsPeople,
+    isCurrentCalendarPromptRequest,
     parseCalendarPromptResponse,
     selectCalendarStyleRoutes,
     type CalendarAspectRatio,
@@ -1661,6 +1662,9 @@ watch(
         calendarPromptRequestVersion += 1
         calendarPromptOptions.value = []
         calendarPromptError.value = null
+        if (isCalendarPromptLoading.value) {
+            isCalendarPromptLoading.value = false
+        }
     }
 )
 
@@ -3695,12 +3699,12 @@ const handleCalendarPromptDraw = async () => {
     const allowPeople = calendarPeopleStrategy.value === 'allow'
         || (calendarPeopleStrategy.value === 'auto' && sourceAllowsPeople)
     const peopleContext = calendarPeopleStrategy.value === 'avoid'
-        ? '人物策略：避开人物，三组方案均不得出现人物、人脸、人形轮廓或情侣。'
+        ? '人物策略：避开人物，三组方案均不得出现人物、人物局部、手部、人脸或可辨认的人形/人体轮廓。'
         : calendarPeopleStrategy.value === 'allow'
-          ? '人物策略：允许人物，最多一组可以使用人物，其余方案保持非人物表达。'
+          ? '人物策略：允许人物表达。可以使用具体人物、背影、侧后方、剪影、局部身体或手部，不要求露脸；三组方案都可按文案使用人物，不限制人物方案数量。'
           : sourceAllowsPeople
-            ? '人物策略：自动判断为可含人物，最多一组可以使用人物，其余方案保持非人物表达。'
-            : '人物策略：自动判断为非人物，三组方案均不得出现人物、人脸、人形轮廓或情侣。'
+            ? '人物策略：自动判断为可含人物。可以使用具体人物、背影、侧后方、剪影、局部身体或手部，不要求露脸；三组方案都可按文案使用人物，不限制人物方案数量。'
+            : '人物策略：自动判断为非人物，三组方案均不得出现人物、人物局部、手部、人脸或可辨认的人形/人体轮廓。'
     const styleRoutes = selectCalendarStyleRoutes(calendarStyleStrategy.value)
     const styleRouteContext = styleRoutes
         .map((route, index) => `方案 ${index + 1}：${route.label}。${route.prompt}`)
@@ -3732,15 +3736,17 @@ const handleCalendarPromptDraw = async () => {
             aspectRatio: calendarAspectRatio.value,
             styleRoutes
         })
-        if (requestVersion === calendarPromptRequestVersion) {
+        if (isCurrentCalendarPromptRequest(requestVersion, calendarPromptRequestVersion)) {
             calendarPromptOptions.value = nextOptions
         }
     } catch (assistantError) {
-        if (requestVersion === calendarPromptRequestVersion) {
+        if (isCurrentCalendarPromptRequest(requestVersion, calendarPromptRequestVersion)) {
             calendarPromptError.value = assistantError instanceof Error ? assistantError.message : '日历配图方案生成失败'
         }
     } finally {
-        isCalendarPromptLoading.value = false
+        if (isCurrentCalendarPromptRequest(requestVersion, calendarPromptRequestVersion)) {
+            isCalendarPromptLoading.value = false
+        }
     }
 }
 
