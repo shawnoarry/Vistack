@@ -28,6 +28,12 @@ const expandedPromptTemplateIds = [
     'cinematic-environment'
 ]
 
+const heavyRedrawStyleTemplateIds = [
+    'retro-minimal-concept-illustration',
+    'retro-flatlay-packaging-print',
+    'japanese-retro-goods-packaging'
+]
+
 const chinesePromptSections = [
     '生成目标：',
     '可编辑内容：',
@@ -182,6 +188,53 @@ describe('expanded built-in prompt templates', () => {
             expect(template.prompt).toContain('不要把参考图的头部像贴纸一样原样复制')
             expect(template.promptEn).toContain('Do not paste the reference head unchanged')
         }
+    })
+})
+
+describe('heavy redraw style templates', () => {
+    const templates = heavyRedrawStyleTemplateIds.map(templateId => {
+        const template = styleTemplates.find(candidate => candidate.id === templateId)
+        expect(template, `missing template ${templateId}`).toBeDefined()
+        return template!
+    })
+
+    it('ships the redraw styles as bilingual general-purpose illustration presets', () => {
+        for (const template of templates) {
+            expect(template.category).toBe('插画艺术')
+            expect(template.mode).toBe('both')
+            expect(template.tags).toContain('重画风')
+            expect(template.promptEn?.trim().length).toBeGreaterThan(500)
+            expect(template.image).toBe('')
+        }
+    })
+
+    it('does not lock either style to the source examples subject matter', () => {
+        expect(templates[0].prompt).toContain('不要默认生成草原、山脉或风景')
+        expect(templates[1].prompt).toContain('不要默认生成食物、甜品、商品或塑料包装盒')
+
+        for (const template of templates.slice(0, 2)) {
+            expect(template.prompt).toContain('任意主题')
+            expect(template.prompt).toContain('彻底重构')
+            expect(template.prompt).toContain('不做写实修图或浅层滤镜')
+        }
+    })
+
+    it('provides a dedicated food-and-object packaging preset with random fallback', () => {
+        const template = templates[2]
+        expect(template.prompt).toContain('食品或日常物品')
+        expect(template.prompt).toContain('如果用户没有指定具体主题')
+        expect(template.prompt).toContain('透明塑料盒')
+        expect(template.prompt).toContain('文字排版是画面风格的重要部分')
+        expect(template.prompt).toContain('一个醒目的商品名称')
+        expect(template.prompt).toContain('两到四个短标签')
+        expect(template.prompt).toContain('所有可读文字必须只使用简洁英文')
+        expect(template.prompt).toContain('即使用户用中文描述主题')
+        expect(template.prompt).toContain('也不得自行生成中文汉字')
+        expect(template.prompt).toContain('不使用真实品牌')
+        expect(template.promptEn).toContain('render it verbatim and clearly')
+        expect(template.promptEn).toContain('one prominent product name')
+        expect(template.promptEn).toContain('simple English only')
+        expect(template.promptEn).toContain('does not authorize Chinese packaging copy')
     })
 })
 
