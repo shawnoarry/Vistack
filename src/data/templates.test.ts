@@ -82,6 +82,9 @@ const completedPreviewById = {
     'street-paparazzi': '/template-previews/street-paparazzi.webp',
     'product-hero': '/template-previews/product-hero.webp',
     'cinematic-environment': '/template-previews/cinematic-environment.webp',
+    'retro-minimal-concept-illustration': '/template-previews/retro-minimal-concept-illustration.webp',
+    'retro-flatlay-packaging-print': '/template-previews/retro-flatlay-packaging-print.webp',
+    'japanese-retro-goods-packaging': '/template-previews/japanese-retro-goods-packaging.webp',
     'gpt-image2-edit-identity-scene': '/template-previews/gpt-image2-edit-identity-scene.webp',
     'gpt-image2-edit-outfit-only': '/template-previews/gpt-image2-edit-outfit-only.webp',
     'gpt-image2-edit-background-only': '/template-previews/gpt-image2-edit-background-only.webp',
@@ -204,7 +207,7 @@ describe('heavy redraw style templates', () => {
             expect(template.mode).toBe('both')
             expect(template.tags).toContain('重画风')
             expect(template.promptEn?.trim().length).toBeGreaterThan(500)
-            expect(template.image).toBe('')
+            expect(template.image).toMatch(/^\/template-previews\/.+\.webp$/)
         }
     })
 
@@ -254,7 +257,7 @@ describe('template preview pilot', () => {
         }
     })
 
-    it('binds all 25 completed preview assets', () => {
+    it('binds all completed preview assets', () => {
         for (const [templateId, imagePath] of Object.entries(completedPreviewById)) {
             expect(styleTemplates.find(template => template.id === templateId)?.image).toBe(imagePath)
 
@@ -269,6 +272,6 @@ describe('template preview pilot', () => {
             expect(fileSize).toBeLessThan(350 * 1024)
         }
 
-        expect(styleTemplates.filter(template => template.image).length).toBe(58)
+        expect(styleTemplates.filter(template => template.image).length).toBe(61)
     })
 })
