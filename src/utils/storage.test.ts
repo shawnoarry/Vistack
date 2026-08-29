@@ -75,3 +75,50 @@ describe('API connection preset storage', () => {
         ])
     })
 })
+
+describe('custom template storage', () => {
+    it('preserves valid structured taxonomy fields', () => {
+        LocalStorage.saveCustomStyleTemplates([{
+            id: 'custom-info',
+            title: 'Custom infographic',
+            prompt: 'Build a clear diagram.',
+            image: '',
+            description: 'A structured test template.',
+            category: '我的模板',
+            mode: 'text',
+            tags: ['diagram'],
+            taxonomy: {
+                output: 'infographic',
+                styles: ['infographic'],
+                scenes: ['education'],
+                tasks: ['layout']
+            },
+            source: 'custom'
+        }])
+
+        expect(LocalStorage.getCustomStyleTemplates()[0]?.taxonomy).toEqual({
+            output: 'infographic',
+            styles: ['infographic'],
+            scenes: ['education'],
+            tasks: ['layout']
+        })
+    })
+
+    it('keeps legacy custom templates readable without taxonomy', () => {
+        values.set('vistack-custom-style-templates', JSON.stringify([{
+            id: 'legacy',
+            title: 'Legacy',
+            prompt: 'Legacy prompt',
+            image: '',
+            description: 'Legacy template',
+            category: '我的模板',
+            tags: ['旧模板']
+        }]))
+
+        expect(LocalStorage.getCustomStyleTemplates()[0]).toMatchObject({
+            id: 'legacy',
+            taxonomy: undefined,
+            source: 'custom'
+        })
+    })
+})

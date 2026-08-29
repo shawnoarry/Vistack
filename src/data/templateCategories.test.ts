@@ -13,7 +13,7 @@ describe('template category groups', () => {
 
         expect(assignments.filter(item => item.groups.length === 0)).toEqual([])
         expect(assignments.filter(item => item.groups.length > 1)).toEqual([])
-        expect(categories).toHaveLength(18)
+        expect(categories).toHaveLength(23)
     })
 
     it('keeps main group ids and labels unique', () => {

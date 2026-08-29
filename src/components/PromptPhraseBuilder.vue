@@ -76,11 +76,16 @@
                 <div
                     v-for="phrase in activeGroup.phrases"
                     :key="phrase.id || phrase.value"
-                    class="group inline-flex max-w-full items-center overflow-hidden rounded-md border border-brand-line bg-brand-surface text-xs font-semibold text-brand-ink transition hover:border-brand-accent"
+                    :class="[
+                        'group inline-flex max-w-full items-center overflow-hidden rounded-md border text-xs font-semibold transition',
+                        selectedValues?.includes(phrase.value)
+                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent'
+                            : 'border-brand-line bg-brand-surface text-brand-ink hover:border-brand-accent'
+                    ]"
                 >
                     <button
                         type="button"
-                        @click="$emit('insert', phrase.value)"
+                        @click="$emit('insert', phrase)"
                         class="min-h-8 min-w-0 truncate px-2.5 py-1.5 transition group-hover:text-brand-accent"
                         :title="phrase.value"
                     >
@@ -115,10 +120,11 @@ const props = defineProps<{
     title?: string
     description?: string
     editable?: boolean
+    selectedValues?: string[]
 }>()
 
 defineEmits<{
-    insert: [value: string]
+    insert: [phrase: PromptPhrase]
     add: [groupId: string]
     edit: [groupId: string, phrase: PromptPhrase]
     'add-group': []

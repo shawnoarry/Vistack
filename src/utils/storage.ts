@@ -1,4 +1,5 @@
 import type { ApiConnectionPreset, GenerationBatchMode, ModelOption, StyleTemplate } from '../types'
+import { sanitizeTemplateTaxonomy } from '../data/templateTaxonomy'
 
 export interface StoredPromptPhrase {
     id: string
@@ -477,6 +478,7 @@ export class LocalStorage {
                     category: typeof template?.category === 'string' ? template.category : '我的模板',
                     mode: template?.mode === 'text' || template?.mode === 'image' || template?.mode === 'both' ? template.mode : 'both',
                     tags: Array.isArray(template?.tags) ? template.tags.filter((tag: unknown): tag is string => typeof tag === 'string' && tag.trim() !== '') : [],
+                    taxonomy: sanitizeTemplateTaxonomy(template?.taxonomy),
                     source: 'custom' as const
                 }))
                 .filter(template => template.id && template.title.trim() && template.prompt.trim())

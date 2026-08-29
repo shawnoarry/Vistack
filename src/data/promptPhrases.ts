@@ -2,6 +2,8 @@ export interface PromptPhrase {
     id?: string
     label: string
     value: string
+    conflictGroup?: string
+    legacyLabels?: string[]
     source?: 'builtin' | 'custom'
     isCustomized?: boolean
 }
@@ -18,31 +20,31 @@ export const promptPhraseGroups: PromptPhraseGroup[] = [
     {
         id: 'universal-subject',
         title: '通用主体',
-        description: '快速补充主体、动作和环境，不绑定任何特定题材。',
+        description: '补足主体、动作与环境关系；适合用户只有一句简单描述时继续完善。',
         phrases: [
-            { label: '明确主体', value: '主体清晰明确，画面第一眼能识别主要对象' },
-            { label: '自然动作', value: '自然可信的动作和姿态，避免僵硬摆拍' },
-            { label: '环境交代', value: '环境信息清楚，主体与场景有真实关系' },
-            { label: '细节丰富', value: '主体细节丰富，材质、边缘和纹理清楚' },
-            { label: '干净画面', value: '画面干净，没有多余杂物和干扰元素' },
-            { label: '真实尺度', value: '主体比例和空间尺度真实可信' },
-            { label: '情绪明确', value: '画面情绪明确但不过度夸张' },
-            { label: '叙事瞬间', value: '像故事中的一个瞬间，有自然的前后文' }
+            { label: '主体聚焦', value: '把用户描述的主要对象设为唯一视觉中心，用位置、尺度和明暗对比建立清楚主次，避免次要元素抢夺注意力', legacyLabels: ['明确主体'] },
+            { label: '自然动作', value: '让主体正在完成一个具体而自然的动作，重心、视线和手部姿态彼此呼应，避免正对镜头僵硬摆拍' },
+            { label: '环境关系', value: '保留能说明地点与用途的环境线索，并让主体通过接触、遮挡或投影真实地处于场景中，而不是贴在背景上', legacyLabels: ['环境交代'] },
+            { label: '材质细节', value: '呈现与主体有关的材质差异，例如织物纹理、金属反射、皮肤细节或物体边缘，不用无关装饰堆砌细节', legacyLabels: ['细节丰富'] },
+            { label: '干净画面', value: '移除与主题无关的杂物、重复物体和抢眼背景，仅保留能说明场景或支持叙事的元素' },
+            { label: '可信尺度', value: '保持主体、道具和空间之间的相对尺寸与透视关系可信，接触面、阴影方向和遮挡关系一致', legacyLabels: ['真实尺度'] },
+            { label: '微表情叙事', value: '通过眼神方向、嘴角、呼吸状态和身体朝向表达克制情绪，不使用夸张表情或戏剧化手势', legacyLabels: ['情绪明确'] },
+            { label: '叙事瞬间', value: '选择动作刚发生或即将发生的瞬间，让视线、道具和环境留下可见的前后文线索，画面像连续故事中的一帧' }
         ]
     },
     {
         id: 'camera-general',
         title: '通用镜头',
-        description: '常用摄影镜头和视角，可用于商业、人像、产品和场景图。',
+        description: '镜头焦段会相互替换，视角会相互替换，避免同一画面出现矛盾机位。',
         phrases: [
-            { label: '35mm 纪实', value: '35mm 纪实摄影视角，自然空间感' },
-            { label: '50mm 标准', value: '50mm 标准镜头，接近人眼观察' },
-            { label: '85mm 人像', value: '85mm 人像镜头，浅景深，主体突出' },
-            { label: '广角环境', value: '广角镜头，保留更多环境信息' },
-            { label: '长焦压缩', value: '长焦压缩感，背景柔和虚化' },
-            { label: '俯拍', value: '轻微俯拍视角，画面结构清楚' },
-            { label: '低角度', value: '低角度拍摄，主体更有力量感' },
-            { label: '微距细节', value: '微距镜头，突出材质纹理和细节' }
+            { label: '35mm 纪实', value: '使用 35mm 纪实视角，在主体清楚的同时保留足够环境与自然透视，画面有临场感但边缘不夸张变形', conflictGroup: 'camera-lens' },
+            { label: '50mm 标准', value: '使用 50mm 标准视角，透视接近人眼观察，主体与背景比例自然，避免明显广角拉伸或长焦压缩', conflictGroup: 'camera-lens' },
+            { label: '85mm 人像', value: '使用 85mm 人像视角与中等浅景深，面部清晰、五官透视自然，背景仍保留可辨认的场景线索，不要虚化成纯色块', conflictGroup: 'camera-lens' },
+            { label: '广角环境', value: '使用约 24mm 的广角环境视角，完整展示主体与周围空间，保持水平垂直线稳定，避免人物四肢和画面边缘被过度拉伸', conflictGroup: 'camera-lens' },
+            { label: '长焦压缩', value: '使用远距离长焦视角压缩前后景，主体从环境中分离，背景层次柔和但关键地点仍可辨认', conflictGroup: 'camera-lens' },
+            { label: '俯拍', value: '机位略高于主体并向下拍摄，清楚展示物体排布或人物与环境关系，透视保持自然', conflictGroup: 'camera-angle' },
+            { label: '低角度', value: '机位略低于主体并向上拍摄，用稳定垂直线增强力量感，同时避免头身比例和腿部被夸张拉伸', conflictGroup: 'camera-angle' },
+            { label: '微距细节', value: '使用微距近摄，只聚焦一个关键局部，呈现表面纹理、边缘与细微反光，背景简化且焦点准确', conflictGroup: 'camera-lens' }
         ]
     },
     {
@@ -50,29 +52,29 @@ export const promptPhraseGroups: PromptPhraseGroup[] = [
         title: '商业视觉',
         description: '电商主图、品牌海报、杂志封面和广告大片常用表达。',
         phrases: [
-            { label: '商业大片', value: '高级商业大片质感，布光精准，主体有品牌感' },
-            { label: '品牌海报', value: '品牌宣传海报构图，主体突出，留出版式空间' },
-            { label: '杂志封面', value: '杂志封面摄影，强视觉中心，适合标题排版' },
-            { label: '电商主图', value: '干净电商主图，白底或浅色背景，产品边缘清楚' },
-            { label: '广告场景', value: '广告级生活方式场景，产品自然融入使用环境' },
-            { label: '高级棚拍', value: '高级棚拍布光，柔和阴影，材质反射真实' },
-            { label: '留白版式', value: '保留干净留白，方便后期添加文字和 logo' },
-            { label: '奢侈品质感', value: '克制奢侈品质感，精致材质，低调高级' }
+            { label: '商业大片', value: '以主体作为唯一视觉中心，使用方向明确的主光和克制轮廓光，材质反射准确，背景道具服务产品或人物定位，呈现可直接用于品牌 Campaign 的完成稿', conflictGroup: 'commercial-format' },
+            { label: '品牌海报', value: '使用单一主视觉与清楚层级，主体占据主要画面，在一侧或顶部预留完整标题区，装饰元素遵循同一品牌配色，不生成无关文字', conflictGroup: 'commercial-format' },
+            { label: '杂志封面', value: '采用杂志封面式强视觉中心，人物或产品轮廓完整，在页眉与侧边保留排版空间，背景细节克制，不自动生成刊名或随机小字', conflictGroup: 'commercial-format' },
+            { label: '电商主图', value: '产品完整可见并占据画面中心，使用白色或浅中性色无缝背景，边缘、材质与真实投影清楚，不添加道具、文字、促销标签或水印', conflictGroup: 'commercial-format' },
+            { label: '广告场景', value: '把产品放进可信的实际使用场景，通过人物动作或周边道具展示用途，产品标识和外形仍清楚，避免无关陈设分散注意力', conflictGroup: 'commercial-format' },
+            { label: '高级棚拍', value: '使用大面积柔光作为主光、轻微轮廓光分离背景，并保留接触阴影与材质反射；背景简洁，避免塑料质感和过度锐化', conflictGroup: 'commercial-format' },
+            { label: '留白版式', value: '将主体安排在画面一侧，另一侧保留连续、干净且对比度稳定的负空间，方便后期添加标题与 logo，留白区不放复杂纹理' },
+            { label: '克制奢华', value: '使用少量高品质材质、深浅中性色与一个低饱和强调色，通过精确边缘、细腻反射和充足留白表现品质，避免金色堆砌、厚重装饰和廉价高光', legacyLabels: ['奢侈品质感'] }
         ]
     },
     {
         id: 'art-style',
         title: '通用风格',
-        description: '不偏题材的视觉风格词，适合快速改变整体审美。',
+        description: '每次选择一种主要视觉语言；词组同时限定颜色、材质和容易跑偏的部分。',
         phrases: [
-            { label: '写实摄影', value: '写实摄影风格，真实光线和真实材质' },
-            { label: '电影剧照', value: '电影剧照感，光影有层次，色彩克制' },
-            { label: '编辑大片', value: '时尚编辑大片风格，构图利落，姿态高级' },
-            { label: '极简高级', value: '极简高级风格，干净背景，少量重点元素' },
-            { label: '复古胶片', value: '复古胶片质感，柔和颗粒，低对比色彩' },
-            { label: '未来科技', value: '未来科技感，冷静光线，精密材质' },
-            { label: '梦幻柔焦', value: '梦幻柔焦氛围，柔和光晕但主体清楚' },
-            { label: '概念艺术', value: '概念艺术风格，清晰设计语言和完整世界观' }
+            { label: '写实摄影', value: '采用可信的写实摄影语言：光源方向统一，材质响应真实，保留少量皮肤、织物或环境的不完美，避免插画轮廓、塑料表面和过度 HDR', conflictGroup: 'visual-style' },
+            { label: '电影剧照', value: '呈现电影叙事中的单帧，使用有动机的场景光、克制色彩与前中后景层次，让人物视线和环境线索暗示正在发生的事件，避免普通摆拍加黑边', conflictGroup: 'visual-style' },
+            { label: '编辑大片', value: '采用时尚编辑摄影语言，用有意的姿态、利落轮廓和非对称版式建立视觉张力，造型与背景共享统一色彩逻辑，避免随意堆叠潮流元素', conflictGroup: 'visual-style' },
+            { label: '极简留白', value: '使用单一视觉重点、两到三种克制颜色和大面积连续留白，通过比例、对齐与材质细节建立品质，避免空泛装饰、复杂背景和多余道具', conflictGroup: 'visual-style', legacyLabels: ['极简高级'] },
+            { label: '复古胶片', value: '模拟自然胶片成像：柔和高光、略抬黑位、细颗粒与轻微色偏，肤色仍可信，避免重度漏光、脏旧划痕和一键滤镜感', conflictGroup: 'visual-style' },
+            { label: '未来科技', value: '使用精密金属、半透明材料与受控冷暖光表现近未来技术，结构和交互用途清楚，避免随意霓虹、无意义线路与廉价赛博装饰', conflictGroup: 'visual-style' },
+            { label: '梦幻柔焦', value: '在主体边缘和高光周围加入轻柔扩散与细腻光晕，同时保持眼睛、产品标识或关键轮廓清晰，色彩柔和，避免整幅失焦和过曝白雾', conflictGroup: 'visual-style' },
+            { label: '概念艺术', value: '围绕一个明确设计命题统一形状语言、材质、尺度与环境规则，用关键道具和空间结构说明世界观，输出一张完成画面而不是混杂的灵感拼贴', conflictGroup: 'visual-style' }
         ]
     },
     {
@@ -80,14 +82,14 @@ export const promptPhraseGroups: PromptPhraseGroup[] = [
         title: '手机镜头',
         description: '让画面更像真实手机拍摄，而不是棚拍或广告大片。',
         phrases: [
-            { label: '前置自拍', value: '手机前置摄像头自拍，轻微广角畸变，真实皮肤纹理' },
-            { label: '镜自拍', value: '全身镜自拍，手机入镜，自然室内光' },
-            { label: '随手抓拍', value: '像手机随手抓拍，构图略微不完美但主体清楚' },
-            { label: '社媒日常', value: '真实社交平台日常照片质感，不要商业棚拍感' },
-            { label: '夜间手机', value: '夜间手机拍摄，轻微噪点，环境光真实' },
-            { label: '闪光灯自拍', value: '手机闪光灯自拍，近距离，高对比，真实抓拍感' },
-            { label: 'Live 图感', value: '像 Live Photo 截帧，表情自然，轻微动态模糊' },
-            { label: '低清预览', value: '站姐预览图质感，轻微压缩感和颗粒感' }
+            { label: '前置自拍', value: '手机前置摄像头近距离自拍，视线看向屏幕，保留轻微广角透视、真实皮肤纹理和不完全对称的取景，避免棚拍布光', conflictGroup: 'capture-mode' },
+            { label: '镜自拍', value: '全身镜自拍，手机与持机手自然入镜，镜面反射方向正确，人物、镜框和室内空间关系可信', conflictGroup: 'capture-mode' },
+            { label: '随手抓拍', value: '像朋友用手机临时拍到的瞬间，构图略有偏移，动作和表情未完全准备好，但主体与关键动作仍清楚', conflictGroup: 'capture-mode' },
+            { label: '社媒日常', value: '呈现未经商业修饰的社交平台日常照片，使用普通环境光、生活化背景与轻微成像瑕疵，避免棚拍姿势和广告级磨皮', conflictGroup: 'capture-mode' },
+            { label: '夜间手机', value: '模拟夜间手机拍摄，保留暗部噪点、局部高光和混合色温，人物仍可辨认，避免把夜景提亮成白天或使用影棚轮廓光', conflictGroup: 'capture-mode' },
+            { label: '闪光灯自拍', value: '近距离手机闪光灯自拍，正面硬光形成明确高光和快速衰减的背景，肤色仍自然，高光不过曝', conflictGroup: 'capture-mode' },
+            { label: 'Live 图感', value: '像 Live Photo 中截取的一帧，表情与发丝处于动作中，只有运动部位出现轻微模糊，脸部识别和主体轮廓保持清楚', conflictGroup: 'capture-mode' },
+            { label: '低清预览', value: '模拟远距离饭拍预览图，保留适度压缩、细颗粒和轻微锐化痕迹，五官与服装仍可辨认，不要整幅糊成低分辨率色块', conflictGroup: 'capture-mode' }
         ]
     },
     {
@@ -95,16 +97,16 @@ export const promptPhraseGroups: PromptPhraseGroup[] = [
         title: '自拍背景',
         description: '常见自拍和生活照背景，用来快速指定真实场景与环境信息。',
         phrases: [
-            { label: '卧室镜前', value: '真实卧室镜前自拍背景，衣柜、床品和柔和室内光自然入镜' },
-            { label: '浴室镜前', value: '浴室镜前自拍，干净瓷砖、洗手台和柔和顶灯，手机自然入镜' },
-            { label: '电梯镜面', value: '电梯镜面自拍背景，金属墙面反射、窄空间和真实顶灯' },
-            { label: '车内副驾', value: '车内副驾驶自拍，车窗自然光、座椅和安全带细节清楚' },
-            { label: '咖啡店窗边', value: '咖啡店窗边自拍背景，木桌、杯子、街景虚化和自然日光' },
-            { label: '便利店货架', value: '便利店货架前随手自拍，商品陈列、冷白灯和生活化背景' },
-            { label: '地铁站台', value: '地铁站台或车厢自拍背景，冷白灯、扶手和通勤人群轻微虚化' },
-            { label: '酒店房间', value: '酒店房间镜前自拍，行李箱、床头灯和干净临时居住感' },
-            { label: '校园走廊', value: '校园走廊或教室门口自拍背景，储物柜、白墙和自然人流' },
-            { label: '夜晚街边', value: '夜晚街边自拍，路灯、店招和城市背景虚化，真实手机夜拍质感' }
+            { label: '卧室镜前', value: '真实卧室镜前自拍背景，衣柜、床品和柔和室内光自然入镜', conflictGroup: 'scene-setting' },
+            { label: '浴室镜前', value: '浴室镜前自拍，干净瓷砖、洗手台和柔和顶灯，手机自然入镜', conflictGroup: 'scene-setting' },
+            { label: '电梯镜面', value: '电梯镜面自拍背景，金属墙面反射、窄空间和真实顶灯', conflictGroup: 'scene-setting' },
+            { label: '车内副驾', value: '车内副驾驶自拍，车窗自然光、座椅和安全带细节清楚', conflictGroup: 'scene-setting' },
+            { label: '咖啡店窗边', value: '咖啡店窗边自拍背景，木桌、杯子、街景虚化和自然日光', conflictGroup: 'scene-setting' },
+            { label: '便利店货架', value: '便利店货架前随手自拍，商品陈列、冷白灯和生活化背景', conflictGroup: 'scene-setting' },
+            { label: '地铁站台', value: '地铁站台或车厢自拍背景，冷白灯、扶手和通勤人群轻微虚化', conflictGroup: 'scene-setting' },
+            { label: '酒店房间', value: '酒店房间镜前自拍，行李箱、床头灯和干净临时居住感', conflictGroup: 'scene-setting' },
+            { label: '校园走廊', value: '校园走廊或教室门口自拍背景，储物柜、白墙和自然人流', conflictGroup: 'scene-setting' },
+            { label: '夜晚街边', value: '夜晚街边自拍，路灯、店招和城市背景虚化，真实手机夜拍质感', conflictGroup: 'scene-setting' }
         ]
     },
     {
@@ -188,84 +190,79 @@ export const promptPhraseGroups: PromptPhraseGroup[] = [
     },
     {
         id: 'beauty-body',
-        title: '美颜美体',
-        description: '肤质、比例、肩颈和曲线词组，可按需要组合。',
+        title: '人物质感与体态',
+        description: '改善肤质、姿态和衣物表现，同时保持人物身份与人体结构可信。',
         phrases: [
-            { label: '皮肤光洁', value: '皮肤光洁细腻' },
-            { label: '白皙透亮', value: '白皙透亮肤色' },
-            { label: '小头比例', value: '小头比例' },
-            { label: '九头身', value: '九头身超模比例 (model-like proportions)' },
-            { label: '小头小脸', value: '小头小脸，超模头身比 (small head, tiny face)' },
-            { label: '天鹅颈', value: '纤长天鹅颈' },
-            { label: '直角肩', value: '超模直角肩' },
-            { label: '精致锁骨', value: '精致锁骨' },
-            { label: '沙漏轮廓', value: '夸张沙漏型轮廓 (exaggerated hourglass)' },
-            { label: '蜂腰', value: '极细蜂腰 (snatched waist)' },
-            { label: '宽髋曲线', value: '宽阔饱满的髋部曲线 (wide flared hips)' },
-            { label: '丰满上围', value: '健康丰满的上身曲线 (full upper-body curves)' },
-            { label: '紧身张力', value: '紧身上衣呈现拉伸张力 (fitted fabric tension)' },
-            { label: '纤细四肢', value: '四肢纤长纤细' },
-            { label: '体态挺拔', value: '体态挺拔舒展' }
+            { label: '真实肤质', value: '保留毛孔、细小纹理与自然肤色过渡，弱化临时瑕疵但不改变五官，不使用塑料磨皮或大面积无纹理高光', legacyLabels: ['皮肤光洁'] },
+            { label: '自然气色', value: '肤色与现场光源保持一致，通过轻微面部血色和柔和明暗呈现健康气色，不强行漂白皮肤', legacyLabels: ['白皙透亮'] },
+            { label: '比例自然', value: '保持符合人物身份与姿势的自然头身比例，肩、腰、髋和四肢连接准确，不缩头、不拉长腿部', legacyLabels: ['小头比例', '九头身', '小头小脸'] },
+            { label: '肩颈舒展', value: '肩部自然下沉，颈部与锁骨线条舒展，姿态挺拔但不刻意凹出直角肩或异常细长颈部', legacyLabels: ['天鹅颈', '直角肩', '精致锁骨'] },
+            { label: '站姿稳定', value: '双脚与地面接触明确，身体重心落在支撑腿上，脊柱、骨盆和肩线共同形成自然站姿', legacyLabels: ['体态挺拔'] },
+            { label: '坐姿自然', value: '坐姿符合座椅高度和受力关系，骨盆、腿部与手臂有可信支撑，避免悬空、扭曲或刻意收缩身体' },
+            { label: '四肢完整', value: '手臂和腿部长度自然、关节方向正确，遮挡关系清楚，避免重复肢体、融合手指或异常弯折', legacyLabels: ['纤细四肢'] },
+            { label: '衣物贴合', value: '衣物沿身体结构自然垂落或拉伸，在肩、肘、腰和膝部形成符合动作的褶皱，不用夸张曲线改变人体结构', legacyLabels: ['沙漏轮廓', '蜂腰', '宽髋曲线', '丰满上围', '紧身张力'] },
+            { label: '发丝边缘', value: '保留发际线与细碎发丝，发束走向跟随头部和动作，避免头发形成塑料块或与背景粘连' },
+            { label: '身份不变', value: '只优化光线、肤质和姿态，不改变人物脸型、五官间距、年龄特征、体型与可识别身份' }
         ]
     },
     {
         id: 'shot',
         title: '景别',
-        description: '控制主体距离和画面信息密度。',
+        description: '每次保留一个景别，让主体距离和画面信息量保持一致。',
         phrases: [
-            { label: '大头自拍', value: '近距离大头自拍，脸部占画面主要区域' },
-            { label: '半身自拍', value: '半身手机自拍，肩颈和上半身清楚' },
-            { label: '全身 OOTD', value: '全身穿搭照，鞋子和整体比例完整可见' },
-            { label: '腰部以上', value: '腰部以上构图，适合社交头像和日常照' },
-            { label: '远处长焦', value: '远处长焦抓拍，背景压缩，主体自然行走' },
-            { label: '舞台半身', value: '舞台半身特写，表情和动作都清楚' },
-            { label: '人群中主体', value: '人群环境中的清晰主体，背景人物虚化' },
-            { label: '低角度路透', value: '轻微低角度抓拍，腿部比例自然拉长' }
+            { label: '大头自拍', value: '近距离头肩自拍，脸部占画面主要区域，额头、下巴和发型边缘完整保留，五官不因广角而夸张变形', conflictGroup: 'framing-distance' },
+            { label: '半身自拍', value: '半身手机自拍，从头顶保留到腰部附近，肩颈、双手与上半身动作完整可见，避免在关节处裁切', conflictGroup: 'framing-distance' },
+            { label: '全身 OOTD', value: '全身穿搭照，从头顶到鞋底完整入镜，服装层次与配饰清楚，脚部接触地面且人体比例自然', conflictGroup: 'framing-distance' },
+            { label: '腰部以上', value: '腰部以上构图，头顶保留适量空间，脸部、手势和上衣细节清楚，背景仍能说明地点', conflictGroup: 'framing-distance' },
+            { label: '远处长焦', value: '从较远距离拍摄人物全身或大半身，利用长焦压缩背景，保留自然行走动作和周围人群层次', conflictGroup: 'framing-distance' },
+            { label: '舞台半身', value: '舞台半身特写，完整保留头部、肩部和主要手势，脸部表情清楚，灯光与 LED 背景不遮挡五官', conflictGroup: 'framing-distance' },
+            { label: '人群中主体', value: '使用中远景展示人群环境，主体通过焦点、位置和光线被明确识别，背景人物保持自然比例且不过度复制', conflictGroup: 'framing-distance' },
+            { label: '低角度路透', value: '轻微低机位的全身路透构图，保留脚部和环境地面，腿部仅由透视自然延伸，不进行夸张拉长', conflictGroup: 'framing-distance' }
         ]
     },
     {
         id: 'lighting',
         title: '光线',
-        description: '用中文描述光线，减少抽象英文摄影词。',
+        description: '每次选择一种主光环境，明确光源方向、色温和阴影表现。',
         phrases: [
-            { label: '窗边自然光', value: '窗边柔和自然光，皮肤质感真实' },
-            { label: '阴天漫射光', value: '阴天漫射光，没有强烈阴影' },
-            { label: '便利店夜光', value: '夜晚便利店或街边店铺灯光，真实环境色' },
-            { label: '舞台追光', value: '舞台追光照在主体脸部，背景灯光虚化' },
-            { label: '闪光灯抓拍', value: '媒体闪光灯抓拍，高光明显但不过曝' },
-            { label: '地铁冷光', value: '地铁站或机场冷白灯，干净真实' },
-            { label: '黄昏街边', value: '黄昏街边自然光，肤色柔和' },
-            { label: '车窗光', value: '车窗透进来的侧光，安静私密的氛围' }
+            { label: '窗边自然光', value: '大面积窗光从主体一侧柔和照入，脸部或产品形成自然明暗过渡，阴影保留细节，皮肤与材质不过曝', conflictGroup: 'primary-light' },
+            { label: '阴天漫射光', value: '使用阴天户外漫射光，整体反差较低、阴影边缘柔和，颜色保持真实，不额外添加影棚轮廓光', conflictGroup: 'primary-light' },
+            { label: '便利店夜光', value: '以夜晚便利店或街边店铺的冷白灯为主光，混入少量招牌环境色，保留真实色温差与暗部噪点', conflictGroup: 'primary-light' },
+            { label: '舞台追光', value: '舞台追光准确落在主体面部与上身，五官不过曝，背景 LED 与彩色灯形成层次但不污染肤色', conflictGroup: 'primary-light' },
+            { label: '闪光灯抓拍', value: '使用正面媒体闪光灯形成明确高光、硬边投影和快速变暗的背景，高光不过曝，保留临场抓拍感', conflictGroup: 'primary-light' },
+            { label: '地铁冷光', value: '以地铁站或机场顶部冷白灯为主光，保留眼窝和下颌的自然阴影，环境亮度均匀但不过度美化', conflictGroup: 'primary-light' },
+            { label: '黄昏街边', value: '黄昏低角度自然光从侧后方照来，轮廓带暖色，天空与街景仍有层次，肤色不过度橙化', conflictGroup: 'primary-light' },
+            { label: '车窗光', value: '车窗侧光在脸部形成柔和窄幅明暗过渡，车内保持较暗并保留座椅细节，营造安静私密感', conflictGroup: 'primary-light' }
         ]
     },
     {
         id: 'composition',
         title: '构图',
-        description: '控制画面读感、主体位置和社媒裁切。',
+        description: '画幅会相互替换；主体位置、前景和景深仍可自由组合。',
         phrases: [
-            { label: '竖版构图', value: '竖版手机构图，适合社交平台发布' },
-            { label: '方图封面', value: '方形封面构图，主体居中，缩略图清楚' },
+            { label: '竖版构图', value: '采用竖版画幅，主体在手机屏幕尺寸下仍清楚，上下保留合理呼吸空间，重要面部、手部和文字安全区不贴边', conflictGroup: 'output-frame' },
+            { label: '方图封面', value: '采用 1:1 方形封面构图，缩略图尺寸下仍有单一清楚主体，关键轮廓与内容远离裁切边缘', conflictGroup: 'output-frame' },
             { label: '轻微歪斜', value: '构图轻微歪斜，像真实随手拍' },
             { label: '主体居中', value: '主体居中，脸部和服装重点清晰' },
             { label: '留出环境', value: '保留周围环境信息，画面有生活感' },
             { label: '前景遮挡', value: '前景有轻微遮挡，增加抓拍真实感' },
-            { label: '背景虚化', value: '背景自然虚化，主体锐利' },
+            { label: '背景虚化', value: '使用中等浅景深让背景逐渐柔化，主体眼睛、产品标识或关键边缘清晰，地点线索仍可辨认，不要把背景化成纯色色块' },
             { label: '不加文字', value: '画面中不要添加文字、水印或随机标志' }
         ]
     },
     {
         id: 'mood',
         title: '氛围',
-        description: '快速指定情绪，不需要堆太多风格词。',
+        description: '通过可见的表情、动作、色彩和环境状态表达氛围，而不是只添加抽象形容词。',
         phrases: [
-            { label: '松弛日常', value: '松弛自然的日常氛围' },
-            { label: '清冷韩系', value: '清冷韩系氛围，克制、干净、不甜腻' },
-            { label: '甜酷女团', value: '甜酷女团感，自信、有活力但不过度夸张' },
-            { label: '刚下班', value: '刚结束行程的疲惫但好看的状态' },
-            { label: '粉丝视角', value: '像粉丝在现场远处拍到的真实瞬间' },
-            { label: '官方花絮', value: '像官方账号发布的后台花絮照片' },
-            { label: '低调高级', value: '低调高级，不要网红滤镜过重' },
-            { label: '青春明亮', value: '青春明亮，干净活泼，颜色自然' }
+            { label: '松弛日常', value: '人物肩部放松、视线自然偏离镜头，动作像正在进行而非刻意摆拍；使用普通环境光和生活化背景，保留少量真实杂乱', conflictGroup: 'scene-mood' },
+            { label: '清冷韩系', value: '使用低饱和冷灰与柔和蓝色调、简洁背景和利落造型，表情克制疏离；避免浓重青色滤镜、甜美元素和过度磨皮', conflictGroup: 'scene-mood' },
+            { label: '甜酷女团', value: '用自信眼神、有力度的动作、亮色小面积点缀与金属或皮革配饰形成甜与酷的对比，避免幼态表情和元素堆满画面', conflictGroup: 'scene-mood' },
+            { label: '刚下班', value: '呈现刚结束行程的状态：步伐略慢、肩部放松、发丝和衣物有轻微凌乱，表情疲惫但自然，不使用精修棚拍姿势', conflictGroup: 'scene-mood' },
+            { label: '粉丝视角', value: '从人群外较远位置捕捉主体，保留前景遮挡、长焦压缩和轻微运动痕迹，让主体清楚但画面不像官方摆拍', conflictGroup: 'scene-mood' },
+            { label: '官方花絮', value: '展示真实工作现场中的准备或间歇瞬间，背景保留灯架、工作人员或化妆台等线索，人物状态自然，同时构图与曝光达到官方发布质量', conflictGroup: 'scene-mood' },
+            { label: '克制质感', value: '使用有限配色、真实材质和干净层级建立品质，只保留一个视觉重点，避免网红滤镜、金色堆砌、强磨皮和无关装饰', conflictGroup: 'scene-mood', legacyLabels: ['低调高级'] },
+            { label: '青春明亮', value: '使用自然明亮肤色、清澈中高亮度配色和轻快动作，背景简洁有生活气息，避免荧光高饱和与幼态化处理', conflictGroup: 'scene-mood' }
         ]
     },
     {

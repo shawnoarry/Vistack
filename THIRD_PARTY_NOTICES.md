@@ -21,3 +21,17 @@ entries marked with an individual `Author + Source` were imported in this
 batch. The upstream MIT license is reproduced at
 `docs/licenses/GPT-Image2-Skill-LICENSE.txt`, and the exact selection is
 recorded in `docs/gpt-image2-gallery-selection.md`.
+
+This project also adapts six prompt-blueprint structures and a template
+classification approach from the following MIT-licensed project:
+
+- https://github.com/freestylefly/awesome-gpt-image-2, distributed locally as
+  `gpt-image-2-style-library` version `1.0.4`
+
+The selected blueprints cover infographics, scientific scale diagrams, brand
+identity systems, character sheets, publishing layouts, and concept-product
+breakdowns. Vistack rewrites them as bilingual editable templates and does not
+bundle the upstream gallery or example images. Exact template IDs and example
+case references are recorded in `src/data/awesomeGptImage2Templates.ts`. The
+upstream MIT license is reproduced at
+`docs/licenses/awesome-gpt-image-2-LICENSE.txt`.

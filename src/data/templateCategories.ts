@@ -18,7 +18,7 @@ export const TEMPLATE_CATEGORY_GROUPS = [
     {
         id: 'commercial',
         label: '商业设计',
-        categories: ['商业视觉', '海报排版']
+        categories: ['商业视觉', '海报排版', '品牌系统']
     },
     {
         id: 'cinematic',
@@ -28,7 +28,7 @@ export const TEMPLATE_CATEGORY_GROUPS = [
     {
         id: 'ui-technical',
         label: 'UI / 技术',
-        categories: ['UI 与图形', '建筑与技术']
+        categories: ['UI 与图形', '建筑与技术', '信息图与知识', '文档出版', '产品研发']
     },
     {
         id: 'precise-edit',
@@ -38,7 +38,7 @@ export const TEMPLATE_CATEGORY_GROUPS = [
     {
         id: 'character',
         label: '角色创作',
-        categories: ['角色商品化']
+        categories: ['角色商品化', '角色创作']
     },
     {
         id: 'gaming',

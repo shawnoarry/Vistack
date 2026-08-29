@@ -417,8 +417,9 @@
                 <div v-if="showPromptTools" class="absolute bottom-[calc(100%+10px)] left-1/2 z-40 w-[min(1040px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-brand-line bg-white p-3 shadow-2xl shadow-black/20 dark:border-night-muted/35 dark:bg-night-surface dark:text-brand-surface">
                     <PromptPhraseBuilder
                         :groups="mergedPromptPhraseGroups"
+                        :selected-values="selectedTextPromptPhraseValues"
                         title="提示词词组"
-                        description="点击后追加到主提示词。"
+                        description="按主体、镜头、光线和氛围逐步补全画面。"
                         @insert="insertTextPromptPhrase"
                         @add="openPhraseEditor"
                         @edit="openPhraseEditor"
@@ -950,6 +951,35 @@
                             </select>
                         </label>
                     </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="block">
+                            <span class="mb-1 block wb-label">产物类型</span>
+                            <select v-model="templateFormOutput" class="wb-input w-full">
+                                <option v-for="option in TEMPLATE_OUTPUT_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="mb-1 block wb-label">视觉风格</span>
+                            <select v-model="templateFormStyle" class="wb-input w-full">
+                                <option value="">未指定</option>
+                                <option v-for="option in TEMPLATE_STYLE_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="mb-1 block wb-label">使用场景</span>
+                            <select v-model="templateFormScene" class="wb-input w-full">
+                                <option value="">未指定</option>
+                                <option v-for="option in TEMPLATE_SCENE_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                            </select>
+                        </label>
+                        <label class="block">
+                            <span class="mb-1 block wb-label">任务能力</span>
+                            <select v-model="templateFormTask" class="wb-input w-full">
+                                <option value="">未指定</option>
+                                <option v-for="option in TEMPLATE_TASK_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                            </select>
+                        </label>
+                    </div>
                     <label class="block">
                         <span class="mb-1 block wb-label">说明</span>
                         <input v-model="templateFormDescription" class="wb-input w-full" placeholder="这个模板适合什么场景。" />
@@ -1180,6 +1210,7 @@ import { styleTemplates } from './data/templates'
 import { promptPoolGroups } from './data/promptPool'
 import { promptPhraseGroups, type PromptPhrase, type PromptPhraseGroup } from './data/promptPhrases'
 import { LocalStorage, type StoredPromptPhrase, type StoredPromptPhraseGroup, type StoredPromptPhraseOverride } from './utils/storage'
+import { composePromptWithPhrase } from './utils/promptPhraseComposer'
 import { getEndpointPath, isDoraverseImageProxyEndpoint, isGrsaiEndpoint, isLjqclubImageEndpoint, isOpenAiImageModelId, resolveChatCompletionsEndpoint, resolveImageGenerationEndpoint } from './utils/apiEndpoint'
 import {
     aspectRatioToDoraverseGptImageSize,
@@ -1244,9 +1275,10 @@ import {
     IDENTITY_FIDELITY_OPTIONS,
     normalizeIdentityFidelity
 } from './utils/identityFidelity'
-import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerateResponse, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, IdentityFidelity, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload, WorkspaceMode } from './types'
+import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenchItemSource, GenerateRequest, GenerateResponse, GenerationBatchMode, GenerationRecipe, GenerationTask, GenerationTaskHandle, IdentityFidelity, ModelOption, PromptAssistantRequest, ReferenceImageMeta, ReferenceImageRole, StyleTemplate, TemplateOutputType, TemplateScene, TemplateTask, TemplateVisualStyle, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload, WorkspaceMode } from './types'
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 import { findMatchingApiPresetId, resolveSelectedApiPresetId } from './utils/apiPreset'
+import { getTemplateTaxonomy, TEMPLATE_OUTPUT_OPTIONS, TEMPLATE_SCENE_OPTIONS, TEMPLATE_STYLE_OPTIONS, TEMPLATE_TASK_OPTIONS } from './data/templateTaxonomy'
 
 type ThemeMode = 'light' | 'dark'
 
@@ -1331,6 +1363,10 @@ const templateFormTags = ref('')
 const templateFormDescription = ref('')
 const templateFormPrompt = ref('')
 const templateFormPromptEn = ref('')
+const templateFormOutput = ref<TemplateOutputType>('other')
+const templateFormStyle = ref<TemplateVisualStyle | ''>('')
+const templateFormScene = ref<TemplateScene | ''>('')
+const templateFormTask = ref<TemplateTask | ''>('')
 const templateFormSourceLanguage = ref<'zh' | 'en' | 'bilingual'>('zh')
 const templateTranslationTarget = ref<'zh' | 'en' | null>(null)
 const templateAssistantError = ref<string | null>(null)
@@ -3163,7 +3199,10 @@ const mergedPromptPhraseGroups = computed<PromptPhraseGroup[]>(() => {
     for (const group of promptPhraseGroups) {
         for (const phrase of group.phrases) {
             const id = getPhraseId(group.id, phrase)
-            const override = overrides.get(id)
+            const compatibleLabels = [phrase.label, ...(phrase.legacyLabels || [])]
+            const override = overrides.get(id) || promptPhraseOverrides.value.find(candidate =>
+                compatibleLabels.some(label => candidate.id.startsWith(`${group.id}:${label}:`))
+            )
             const targetGroupId = override?.groupId || group.id
             if (!groupMap.has(targetGroupId)) {
                 groupMap.set(targetGroupId, {
@@ -3177,7 +3216,7 @@ const mergedPromptPhraseGroups = computed<PromptPhraseGroup[]>(() => {
 
             groupMap.get(targetGroupId)?.phrases.push({
                 ...phrase,
-                id,
+                id: override?.id || id,
                 label: override?.label || phrase.label,
                 value: override?.value || phrase.value,
                 source: 'builtin' as const,
@@ -3241,6 +3280,10 @@ const activeSupplementLabel = computed(() => {
 const supplementPrompt = computed(() => selectedTemplatePrompt.value || customPrompt.value.trim())
 const availableStyleTemplates = computed(() => allStyleTemplates.value)
 const canUndoPromptPhrase = computed(() => promptPhraseUndoStack.value.length > 0)
+const selectedTextPromptPhraseValues = computed(() => mergedPromptPhraseGroups.value
+    .flatMap(group => group.phrases)
+    .filter(phrase => textToImagePrompt.value.includes(phrase.value))
+    .map(phrase => phrase.value))
 
 const setTextToImagePromptFromHistory = (nextPrompt: string) => {
     isApplyingPromptHistory.value = true
@@ -3250,11 +3293,16 @@ const setTextToImagePromptFromHistory = (nextPrompt: string) => {
     })
 }
 
-const insertTextPromptPhrase = (phrase: string) => {
+const insertTextPromptPhrase = (phrase: PromptPhrase) => {
     const current = textToImagePrompt.value
+    const nextPrompt = composePromptWithPhrase(
+        current,
+        phrase,
+        mergedPromptPhraseGroups.value.flatMap(group => group.phrases)
+    )
+    if (nextPrompt === current.trim()) return
     promptPhraseUndoStack.value = [...promptPhraseUndoStack.value, current]
-    const normalizedCurrent = current.trim()
-    setTextToImagePromptFromHistory(normalizedCurrent ? `${normalizedCurrent}, ${phrase}` : phrase)
+    setTextToImagePromptFromHistory(nextPrompt)
 }
 
 const undoLastPromptPhrase = () => {
@@ -3510,6 +3558,10 @@ const closeTemplateEditor = () => {
     templateFormDescription.value = ''
     templateFormPrompt.value = ''
     templateFormPromptEn.value = ''
+    templateFormOutput.value = 'other'
+    templateFormStyle.value = ''
+    templateFormScene.value = ''
+    templateFormTask.value = ''
     templateFormSourceLanguage.value = 'zh'
     templateTranslationTarget.value = null
     templateAssistantError.value = null
@@ -3518,6 +3570,7 @@ const closeTemplateEditor = () => {
 
 const openTemplateEditor = (template: StyleTemplate) => {
     if (template.source !== 'custom') return
+    const taxonomy = getTemplateTaxonomy(template)
     editingTemplateId.value = template.id
     templateFormTitle.value = template.title
     templateFormCategory.value = template.category || '我的模板'
@@ -3525,6 +3578,10 @@ const openTemplateEditor = (template: StyleTemplate) => {
     templateFormDescription.value = template.description
     templateFormPrompt.value = template.prompt
     templateFormPromptEn.value = template.promptEn || ''
+    templateFormOutput.value = taxonomy.output
+    templateFormStyle.value = taxonomy.styles[0] || ''
+    templateFormScene.value = taxonomy.scenes[0] || ''
+    templateFormTask.value = taxonomy.tasks[0] || ''
     templateFormSourceLanguage.value = template.promptEn ? 'bilingual' : 'zh'
     templateAssistantError.value = null
     templateFormMode.value = template.mode || 'both'
@@ -3607,6 +3664,10 @@ const translateTemplatePrompt = async (targetLanguage: 'zh' | 'en') => {
             context: [
                 `模板名称：${templateFormTitle.value.trim() || '未命名模板'}`,
                 `模板分类：${templateFormCategory.value.trim() || '我的模板'}`,
+                `产物类型：${templateFormOutput.value}`,
+                templateFormStyle.value ? `视觉风格：${templateFormStyle.value}` : '',
+                templateFormScene.value ? `使用场景：${templateFormScene.value}` : '',
+                templateFormTask.value ? `任务能力：${templateFormTask.value}` : '',
                 `模板模式：${templateFormMode.value || 'both'}`,
                 `语言来源：${templateFormSourceLanguage.value}`
             ].join('\n'),
@@ -3651,6 +3712,12 @@ const saveCustomTemplate = () => {
             .split(/[,，]/)
             .map(tag => tag.trim())
             .filter(Boolean),
+        taxonomy: {
+            output: templateFormOutput.value,
+            styles: templateFormStyle.value ? [templateFormStyle.value] : [],
+            scenes: templateFormScene.value ? [templateFormScene.value] : [],
+            tasks: templateFormTask.value ? [templateFormTask.value] : []
+        },
         source: 'custom'
     }
 

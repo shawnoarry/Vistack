@@ -1,5 +1,7 @@
 import type { StyleTemplate } from '../types'
+import { awesomeGptImage2Templates } from './awesomeGptImage2Templates'
 import { gptImage2GalleryTemplates } from './gptImage2GalleryTemplates'
+import { withTemplateTaxonomy } from './templateTaxonomy'
 
 const completedTemplatePreviewById: Record<string, string> = {
     'kbo-broadcast-identity-anchor': '/template-previews/kbo-broadcast-identity-anchor.webp',
@@ -32,7 +34,7 @@ const completedTemplatePreviewById: Record<string, string> = {
     'gpt-image2-edit-local-detail': '/template-previews/gpt-image2-edit-local-detail.webp'
 }
 
-export const styleTemplates: StyleTemplate[] = [
+const styleTemplateRecords: StyleTemplate[] = [
     {
         id: 'kbo-broadcast-identity-anchor',
         title: 'KBO 观众席转播抓拍',
@@ -576,8 +578,11 @@ export const styleTemplates: StyleTemplate[] = [
         image: '/template-previews/gpt-image2-edit-exact-text.webp',
         description: '插入后逐字填写【】内容；适合海报标题、日期和其他指定文字。'
     },
+    ...awesomeGptImage2Templates,
     ...gptImage2GalleryTemplates
 ]
+
+export const styleTemplates = styleTemplateRecords.map(withTemplateTaxonomy)
 
 const builtinTemplateEnglishPrompts: Record<string, string> = {
     'commercial-campaign': `Goal:

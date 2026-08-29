@@ -57,9 +57,69 @@
                     </button>
                 </div>
             </div>
-            <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                 <input v-model="searchQuery" type="search" placeholder="搜索提示词、分类或标签" class="wb-input w-full" />
+                <button
+                    type="button"
+                    :class="[
+                        'wb-secondary flex min-h-10 items-center justify-center gap-1.5 px-3 text-xs',
+                        showFacetFilters || activeFilterCount ? 'border-brand-ink text-brand-ink' : ''
+                    ]"
+                    :aria-expanded="showFacetFilters"
+                    aria-controls="template-facet-filters"
+                    @click="showFacetFilters = !showFacetFilters"
+                >
+                    <SlidersHorizontal class="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>筛选</span>
+                    <span v-if="activeFilterCount" class="flex h-4 min-w-4 items-center justify-center rounded bg-brand-ink px-1 text-[10px] text-brand-surface">{{ activeFilterCount }}</span>
+                </button>
                 <button type="button" class="wb-secondary min-h-10 px-3 text-xs" @click="$emit('new-template')">新建模板</button>
+            </div>
+
+            <div v-if="showFacetFilters" id="template-facet-filters" class="border-y border-brand-line py-3">
+                <div class="mb-2 flex items-center justify-between gap-3">
+                    <p class="text-xs font-semibold text-brand-ink">模板属性</p>
+                    <button
+                        type="button"
+                        class="flex h-7 w-7 items-center justify-center rounded-md text-brand-muted transition hover:bg-brand-surface hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                        title="清除筛选"
+                        aria-label="清除模板筛选"
+                        :disabled="!activeFilterCount"
+                        @click="resetFacetFilters"
+                    >
+                        <RotateCcw class="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                </div>
+                <div class="grid gap-2 sm:grid-cols-2">
+                    <label class="block">
+                        <span class="mb-1 block text-[11px] font-medium text-brand-muted">产物类型</span>
+                        <select v-model="outputFilter" class="wb-input min-h-9 w-full py-1.5 text-xs">
+                            <option value="">全部类型</option>
+                            <option v-for="option in TEMPLATE_OUTPUT_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block text-[11px] font-medium text-brand-muted">视觉风格</span>
+                        <select v-model="styleFilter" class="wb-input min-h-9 w-full py-1.5 text-xs">
+                            <option value="">全部风格</option>
+                            <option v-for="option in TEMPLATE_STYLE_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block text-[11px] font-medium text-brand-muted">使用场景</span>
+                        <select v-model="sceneFilter" class="wb-input min-h-9 w-full py-1.5 text-xs">
+                            <option value="">全部场景</option>
+                            <option v-for="option in TEMPLATE_SCENE_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block text-[11px] font-medium text-brand-muted">任务能力</span>
+                        <select v-model="taskFilter" class="wb-input min-h-9 w-full py-1.5 text-xs">
+                            <option value="">全部能力</option>
+                            <option v-for="option in TEMPLATE_TASK_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
+                    </label>
+                </div>
             </div>
 
             <div class="flex gap-2 overflow-x-auto pb-1" aria-label="模板主分类">
@@ -137,8 +197,10 @@
                             </div>
                             <p class="mt-1 line-clamp-2 text-xs leading-5 text-brand-muted">{{ template.description }}</p>
 
-                            <div v-if="template.tags?.length" class="mt-2 flex flex-wrap gap-1.5">
-                                <span v-for="tag in template.tags" :key="tag" class="rounded bg-brand-ink/6 px-1.5 py-0.5 text-[11px] text-brand-ink/70 dark:bg-night-muted/12 dark:text-brand-surface/75">{{ tag }}</span>
+                            <div class="mt-2 flex flex-wrap gap-1.5">
+                                <span v-for="label in templateFacetLabels(template)" :key="label" class="rounded border border-brand-line bg-brand-surface px-1.5 py-0.5 text-[11px] font-medium text-brand-ink/75 dark:bg-night-muted/12 dark:text-brand-surface/80">{{ label }}</span>
+                                <span v-for="tag in (template.tags || []).slice(0, 2)" :key="tag" class="rounded bg-brand-ink/6 px-1.5 py-0.5 text-[11px] text-brand-ink/70 dark:bg-night-muted/12 dark:text-brand-surface/75">{{ tag }}</span>
+                                <span v-if="(template.tags?.length || 0) > 2" class="px-1 py-0.5 text-[11px] text-brand-muted">+{{ (template.tags?.length || 0) - 2 }}</span>
                             </div>
 
                             <div class="mt-2 flex flex-wrap gap-1.5">
@@ -262,8 +324,9 @@
 
             <PromptPhraseBuilder
                 :groups="phraseGroups"
+                :selected-values="selectedPhraseValues"
                 title="词组积木"
-                description="点击词组追加到自定义补充提示词。"
+                description="补充镜头、光线、构图与细节约束。"
                 @insert="insertPhrase"
                 @add="groupId => $emit('new-phrase', groupId)"
                 @edit="(groupId, phrase) => $emit('edit-phrase', groupId, phrase)"
@@ -306,12 +369,21 @@
 </template>
 
 <script setup lang="ts">
-import { Maximize2, X } from '@lucide/vue'
+import { Maximize2, RotateCcw, SlidersHorizontal, X } from '@lucide/vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import type { PromptPoolGroup, StyleTemplate } from '../types'
+import type { PromptPoolGroup, StyleTemplate, TemplateOutputType, TemplateScene, TemplateTask, TemplateVisualStyle } from '../types'
 import PromptPhraseBuilder from './PromptPhraseBuilder.vue'
 import type { PromptPhrase, PromptPhraseGroup } from '../data/promptPhrases'
+import { composePromptWithPhrase } from '../utils/promptPhraseComposer'
 import { findTemplateCategoryGroup, TEMPLATE_CATEGORY_GROUPS } from '../data/templateCategories'
+import {
+    filterAndRankTemplates,
+    TEMPLATE_OUTPUT_OPTIONS,
+    TEMPLATE_SCENE_OPTIONS,
+    TEMPLATE_STYLE_OPTIONS,
+    TEMPLATE_TASK_OPTIONS,
+    templateFacetLabels
+} from '../data/templateTaxonomy'
 
 const props = defineProps<{
     selectedStyle: string
@@ -340,6 +412,11 @@ const activeTab = ref<'style' | 'pool' | 'custom'>('style')
 const searchQuery = ref('')
 const activeCategory = ref('全部')
 const activeGroupId = ref('all')
+const showFacetFilters = ref(false)
+const outputFilter = ref<TemplateOutputType | ''>('')
+const styleFilter = ref<TemplateVisualStyle | ''>('')
+const sceneFilter = ref<TemplateScene | ''>('')
+const taskFilter = ref<TemplateTask | ''>('')
 const activePoolGroupId = ref(props.promptPoolGroups[0]?.id || '')
 const poolSelection = ref<string[]>([])
 const previewImage = ref('')
@@ -415,29 +492,35 @@ const selectTemplateGroup = (groupId: string) => {
     activeCategory.value = '全部'
 }
 
-const filteredTemplates = computed(() => {
-    const query = searchQuery.value.trim().toLowerCase()
+const activeFilterCount = computed(() => [
+    outputFilter.value,
+    styleFilter.value,
+    sceneFilter.value,
+    taskFilter.value
+].filter(Boolean).length)
 
-    return props.templates.filter(template => {
+const resetFacetFilters = () => {
+    outputFilter.value = ''
+    styleFilter.value = ''
+    sceneFilter.value = ''
+    taskFilter.value = ''
+}
+
+const filteredTemplates = computed(() => {
+    const scopedTemplates = props.templates.filter(template => {
         const category = template.category || '其他'
         const group = findTemplateCategoryGroup(category)
         const matchesGroup = activeGroupId.value === 'all'
             || (activeGroupId.value === 'other' ? !group : group?.id === activeGroupId.value)
         const matchesCategory = activeCategory.value === '全部' || (template.category || '其他') === activeCategory.value
-        if (!matchesGroup || !matchesCategory) return false
-        if (!query) return true
+        return matchesGroup && matchesCategory
+    })
 
-        const haystack = [
-            template.title,
-            template.description,
-            template.category || '',
-            template.prompt,
-            ...(template.tags || [])
-        ]
-            .join(' ')
-            .toLowerCase()
-
-        return haystack.includes(query)
+    return filterAndRankTemplates(scopedTemplates, searchQuery.value, {
+        output: outputFilter.value,
+        style: styleFilter.value,
+        scene: sceneFilter.value,
+        task: taskFilter.value
     })
 })
 
@@ -528,8 +611,16 @@ const updateCustomPrompt = (value: string) => {
     emit('update:customPrompt', value)
 }
 
-const insertPhrase = (phrase: string) => {
-    const current = props.customPrompt.trim()
-    updateCustomPrompt(current ? `${current}, ${phrase}` : phrase)
+const selectedPhraseValues = computed(() => props.phraseGroups
+    .flatMap(group => group.phrases)
+    .filter(phrase => props.customPrompt.includes(phrase.value))
+    .map(phrase => phrase.value))
+
+const insertPhrase = (phrase: PromptPhrase) => {
+    updateCustomPrompt(composePromptWithPhrase(
+        props.customPrompt,
+        phrase,
+        props.phraseGroups.flatMap(group => group.phrases)
+    ))
 }
 </script>

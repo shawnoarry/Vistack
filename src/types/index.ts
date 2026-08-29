@@ -134,7 +134,66 @@ export interface StyleTemplate {
     category?: string
     mode?: 'text' | 'image' | 'both'
     tags?: string[]
+    taxonomy?: TemplateTaxonomy
     source?: 'builtin' | 'custom'
+}
+
+export type TemplateOutputType =
+    | 'photography'
+    | 'poster'
+    | 'product'
+    | 'ui'
+    | 'infographic'
+    | 'brand'
+    | 'architecture'
+    | 'illustration'
+    | 'character'
+    | 'scene'
+    | 'history'
+    | 'document'
+    | 'other'
+
+export type TemplateVisualStyle =
+    | 'realistic'
+    | 'photography'
+    | 'poster'
+    | 'product'
+    | 'ui'
+    | 'infographic'
+    | 'brand'
+    | 'architecture'
+    | 'illustration'
+    | 'character'
+    | 'classical'
+    | '3d'
+
+export type TemplateScene =
+    | 'commerce'
+    | 'education'
+    | 'social'
+    | 'fashion'
+    | 'food'
+    | 'travel'
+    | 'story'
+    | 'history'
+    | 'tech'
+    | 'creative'
+
+export type TemplateTask =
+    | 'reference-image'
+    | 'identity'
+    | 'outfit'
+    | 'background'
+    | 'multi-reference'
+    | 'local-edit'
+    | 'exact-text'
+    | 'layout'
+
+export interface TemplateTaxonomy {
+    output: TemplateOutputType
+    styles: TemplateVisualStyle[]
+    scenes: TemplateScene[]
+    tasks: TemplateTask[]
 }
 
 export interface PromptPoolItem {
