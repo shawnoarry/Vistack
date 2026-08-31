@@ -35,4 +35,14 @@ describe('prompt phrase library', () => {
         const labels = allPhrases.map(phrase => phrase.label)
         expect(labels).not.toEqual(expect.arrayContaining(['九头身', '小头小脸', '沙漏轮廓', '蜂腰', '宽髋曲线']))
     })
+
+    it('provides a reusable calendar lower-layout constraint', () => {
+        const phrase = getPhrase('日历底部弱细节')
+        const prompt = composePromptWithPhrase('一束逆光中的白色花朵', phrase, allPhrases)
+
+        expect(phrase.value).toContain('底部约20%~25%')
+        expect(phrase.value).toContain('较低视觉密度')
+        expect(phrase.value).toContain('不要求纯空白')
+        expect(prompt).toContain(phrase.value)
+    })
 })

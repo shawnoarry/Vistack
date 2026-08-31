@@ -37,9 +37,11 @@ const MAX_CREATIVE_PROMPT_LENGTH = 120
 const PERSON_TERMS = /人物|人脸|人形|人体|情侣|伴侣|男人|女人|男孩|女孩|男性|女性|老人|孩子|儿童|夫妇|夫妻|肖像|人像|背影|侧后方|侧影|剪影|身影|手部|手指|手掌|半身|局部身体|\bperson\b|\bpeople\b|\bportrait\b|\bcouple\b|\bman\b|\bwoman\b|\bhuman\b|\bfigure\b|\bsilhouette\b|\bback view\b|\brear view\b|\bside profile\b|\bpartial body\b|\bhand(?:s)?\b/i
 const EXPLICIT_PEOPLE_CONTEXT = /孩子|儿童|少年|少女|男孩|女孩|老人|母亲|妈妈|父亲|爸爸|老师|同学|朋友|人群|人物|人脸|人体|青年|背影|侧后方|侧影|剪影|身影|手部|手指|半身|局部身体|跳跃|奔跑|拥抱|牵手|合影|儿童节|母亲节|父亲节|教师节|\bperson\b|\bpeople\b|\bportrait\b|\bcouple\b|\bman\b|\bwoman\b|\bhuman\b|\bsilhouette\b|\bback view\b|\bside profile\b/i
 
+export const CALENDAR_BOTTOM_DETAIL_CONSTRAINT = '画面底部约20%~25%保持较低视觉密度，以连续大形、柔和纹理和少量环境层次为主，避免密集小物件、复杂纹理和高对比焦点，方便后期叠加日历板但不要求纯空白'
+
 export const CALENDAR_LAYOUT_CONSTRAINTS: Record<CalendarAspectRatio, string> = {
-    '9:16': '9:16竖幅满版底图，主体位置、景别和尺度可灵活变化，可偏置、出界或局部特写；保留一处相对安静的区域供后期排版，底部约20%~25%避免密集小细节、便于叠加日历板但不要求纯空白；画面内不出现文字、数字、日期、日历网格、Logo、水印或二维码。',
-    '4:5': '4:5竖幅满版底图，主体位置、景别和尺度可灵活变化，可偏置、出界或局部特写；保留一处相对安静的区域供后期排版，底部约20%~25%避免密集小细节、便于叠加日历板但不要求纯空白；画面内不出现文字、数字、日期、日历网格、Logo、水印或二维码。'
+    '9:16': '9:16竖幅满版底图，主体位置、景别和尺度可灵活变化，可偏置、出界或局部特写；保留一处相对安静的区域供后期排版，' + CALENDAR_BOTTOM_DETAIL_CONSTRAINT + '；画面内不出现文字、数字、日期、日历网格、Logo、水印或二维码。',
+    '4:5': '4:5竖幅满版底图，主体位置、景别和尺度可灵活变化，可偏置、出界或局部特写；保留一处相对安静的区域供后期排版，' + CALENDAR_BOTTOM_DETAIL_CONSTRAINT + '；画面内不出现文字、数字、日期、日历网格、Logo、水印或二维码。'
 }
 export const CALENDAR_LAYOUT_CONSTRAINT = CALENDAR_LAYOUT_CONSTRAINTS['9:16']
 export const CALENDAR_NO_PEOPLE_CONSTRAINT = '不出现人物、人物局部、手部、人脸或可辨认的人形/人体轮廓。'

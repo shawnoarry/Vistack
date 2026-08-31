@@ -1,3 +1,5 @@
+import { CALENDAR_BOTTOM_DETAIL_CONSTRAINT } from '../utils/calendarPrompt'
+
 export interface PromptPhrase {
     id?: string
     label: string
@@ -247,6 +249,7 @@ export const promptPhraseGroups: PromptPhraseGroup[] = [
             { label: '留出环境', value: '保留周围环境信息，画面有生活感' },
             { label: '前景遮挡', value: '前景有轻微遮挡，增加抓拍真实感' },
             { label: '背景虚化', value: '使用中等浅景深让背景逐渐柔化，主体眼睛、产品标识或关键边缘清晰，地点线索仍可辨认，不要把背景化成纯色色块' },
+            { label: '日历底部弱细节', value: CALENDAR_BOTTOM_DETAIL_CONSTRAINT },
             { label: '不加文字', value: '画面中不要添加文字、水印或随机标志' }
         ]
     },
