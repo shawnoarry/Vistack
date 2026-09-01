@@ -1,5 +1,6 @@
 import type { StyleTemplate } from '../types'
 import { awesomeGptImage2Templates } from './awesomeGptImage2Templates'
+import { gameAssetTemplates } from './gameAssetTemplates'
 import { gptImage2GalleryTemplates } from './gptImage2GalleryTemplates'
 import { withTemplateTaxonomy } from './templateTaxonomy'
 
@@ -578,6 +579,7 @@ const styleTemplateRecords: StyleTemplate[] = [
         image: '/template-previews/gpt-image2-edit-exact-text.webp',
         description: '插入后逐字填写【】内容；适合海报标题、日期和其他指定文字。'
     },
+    ...gameAssetTemplates,
     ...awesomeGptImage2Templates,
     ...gptImage2GalleryTemplates
 ]

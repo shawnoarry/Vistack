@@ -13,12 +13,13 @@ describe('template category groups', () => {
 
         expect(assignments.filter(item => item.groups.length === 0)).toEqual([])
         expect(assignments.filter(item => item.groups.length > 1)).toEqual([])
-        expect(categories).toHaveLength(23)
+        expect(categories).toHaveLength(24)
     })
 
     it('keeps main group ids and labels unique', () => {
         expect(new Set(TEMPLATE_CATEGORY_GROUPS.map(group => group.id)).size).toBe(TEMPLATE_CATEGORY_GROUPS.length)
         expect(new Set(TEMPLATE_CATEGORY_GROUPS.map(group => group.label)).size).toBe(TEMPLATE_CATEGORY_GROUPS.length)
         expect(findTemplateCategoryGroup('精准改图配方')?.label).toBe('精准改图')
+        expect(findTemplateCategoryGroup('人物设定图')?.label).toBe('游戏素材')
     })
 })

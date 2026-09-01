@@ -44,6 +44,11 @@ export const TEMPLATE_CATEGORY_GROUPS = [
         id: 'gaming',
         label: '游戏视觉',
         categories: ['游戏视觉']
+    },
+    {
+        id: 'game-assets',
+        label: '游戏素材',
+        categories: ['人物设定图']
     }
 ] as const satisfies readonly TemplateCategoryGroup[]
 

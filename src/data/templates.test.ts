@@ -5,6 +5,26 @@ import { describe, expect, it } from 'vitest'
 
 import { styleTemplates } from './templates'
 
+const gameCharacterBustPrompt = 'Refined Chinese romantic wuxia game portrait illustration. Polished matte digital opaque-gouache with restrained oil-paint rendering, broad controlled brush shapes, simplified clean color planes, a softly modeled face, subtle visible brush texture, selective colored contours, grouped hair locks, and a clean production-friendly silhouette. Fine detail is concentrated around the eyes and expression; hair and clothing remain simplified and readable. Clear soft daylight with warm light on the face. Muted blue-gray and quiet lavender abstract painterly background with broad visible brushstrokes and restrained cool-warm variation. Vertical front-facing portrait with the head and shoulders fully visible and balanced breathing room around the hair. One person only. No concrete scenery, text, logo, watermark, photorealism, glossy skin, plastic 3D rendering, or dense micro-detail.'
+
+describe('game asset templates', () => {
+    it('keeps the character bust base prompt intact in its dedicated category', () => {
+        const template = styleTemplates.find(candidate => candidate.id === 'game-character-bust-portrait')
+
+        expect(template).toMatchObject({
+            title: '人物设定图-胸像',
+            category: '人物设定图',
+            mode: 'text',
+            prompt: gameCharacterBustPrompt,
+            image: ''
+        })
+        expect(template?.taxonomy?.output).toBe('character')
+        expect(template?.tags).toContain('游戏素材')
+        expect(template?.usageGuide).toBe('[人物可见语义：年龄、性别、面部、发型、衣装与配件] + [上述固定段]')
+        expect(template?.prompt).not.toContain('人物可见语义')
+    })
+})
+
 const preciseEditTemplateIds = [
     'gpt-image2-edit-identity-scene',
     'gpt-image2-edit-outfit-only',

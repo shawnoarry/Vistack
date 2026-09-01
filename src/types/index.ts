@@ -129,6 +129,7 @@ export interface StyleTemplate {
     title: string
     prompt: string
     promptEn?: string
+    usageGuide?: string
     image: string
     description: string
     category?: string

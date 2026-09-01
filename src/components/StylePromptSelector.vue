@@ -197,6 +197,14 @@
                             </div>
                             <p class="mt-1 line-clamp-2 text-xs leading-5 text-brand-muted">{{ template.description }}</p>
 
+                            <div v-if="template.usageGuide" class="mt-2 flex items-start gap-2 border-l-2 border-brand-accent/45 pl-2.5">
+                                <Info class="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-accent" aria-hidden="true" />
+                                <div class="min-w-0">
+                                    <p class="text-[11px] font-semibold text-brand-ink">使用方法</p>
+                                    <p class="mt-0.5 break-words text-xs leading-5 text-brand-muted">{{ template.usageGuide }}</p>
+                                </div>
+                            </div>
+
                             <div class="mt-2 flex flex-wrap gap-1.5">
                                 <span v-for="label in templateFacetLabels(template)" :key="label" class="rounded border border-brand-line bg-brand-surface px-1.5 py-0.5 text-[11px] font-medium text-brand-ink/75 dark:bg-night-muted/12 dark:text-brand-surface/80">{{ label }}</span>
                                 <span v-for="tag in (template.tags || []).slice(0, 2)" :key="tag" class="rounded bg-brand-ink/6 px-1.5 py-0.5 text-[11px] text-brand-ink/70 dark:bg-night-muted/12 dark:text-brand-surface/75">{{ tag }}</span>
@@ -369,7 +377,7 @@
 </template>
 
 <script setup lang="ts">
-import { Maximize2, RotateCcw, SlidersHorizontal, X } from '@lucide/vue'
+import { Info, Maximize2, RotateCcw, SlidersHorizontal, X } from '@lucide/vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { PromptPoolGroup, StyleTemplate, TemplateOutputType, TemplateScene, TemplateTask, TemplateVisualStyle } from '../types'
 import PromptPhraseBuilder from './PromptPhraseBuilder.vue'
