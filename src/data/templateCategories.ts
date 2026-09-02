@@ -6,6 +6,11 @@ export interface TemplateCategoryGroup {
 
 export const TEMPLATE_CATEGORY_GROUPS = [
     {
+        id: 'game-assets',
+        label: '游戏素材',
+        categories: ['人物设定图']
+    },
+    {
         id: 'portrait',
         label: '人像摄影',
         categories: ['真实摄影', '人像时尚', '手机人像', '生活方式', '时尚编辑', '美妆生活']
@@ -44,11 +49,6 @@ export const TEMPLATE_CATEGORY_GROUPS = [
         id: 'gaming',
         label: '游戏视觉',
         categories: ['游戏视觉']
-    },
-    {
-        id: 'game-assets',
-        label: '游戏素材',
-        categories: ['人物设定图']
     }
 ] as const satisfies readonly TemplateCategoryGroup[]
 

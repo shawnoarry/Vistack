@@ -5,23 +5,45 @@ import { describe, expect, it } from 'vitest'
 
 import { styleTemplates } from './templates'
 
-const gameCharacterBustPrompt = 'Refined Chinese romantic wuxia game portrait illustration. Polished matte digital opaque-gouache with restrained oil-paint rendering, broad controlled brush shapes, simplified clean color planes, a softly modeled face, subtle visible brush texture, selective colored contours, grouped hair locks, and a clean production-friendly silhouette. Fine detail is concentrated around the eyes and expression; hair and clothing remain simplified and readable. Clear soft daylight with warm light on the face. Muted blue-gray and quiet lavender abstract painterly background with broad visible brushstrokes and restrained cool-warm variation. Vertical front-facing portrait with the head and shoulders fully visible and balanced breathing room around the hair. One person only. No concrete scenery, text, logo, watermark, photorealism, glossy skin, plastic 3D rendering, or dense micro-detail.'
+const gameCharacterBustVariableLabels = [
+    '人物设定：',
+    '气质神态：',
+    '面部特征：',
+    '发型特征：',
+    '身份锚点：',
+    '服装设定：',
+    '画面氛围：',
+    '角色专属排除：'
+]
 
 describe('game asset templates', () => {
-    it('keeps the character bust base prompt intact in its dedicated category', () => {
+    it('keeps editable character variables ahead of the fixed bust base prompt', () => {
         const template = styleTemplates.find(candidate => candidate.id === 'game-character-bust-portrait')
 
         expect(template).toMatchObject({
             title: '人物设定图-胸像',
             category: '人物设定图',
             mode: 'text',
-            prompt: gameCharacterBustPrompt,
             image: ''
         })
         expect(template?.taxonomy?.output).toBe('character')
         expect(template?.tags).toContain('游戏素材')
-        expect(template?.usageGuide).toBe('[人物可见语义：年龄、性别、面部、发型、衣装与配件] + [上述固定段]')
-        expect(template?.prompt).not.toContain('人物可见语义')
+        expect(template?.usageGuide).toBe('只修改开头【可编辑变量区】；【固定绘画基座】通常不要修改。')
+
+        const prompt = template?.prompt ?? ''
+        const fixedBaseIndex = prompt.indexOf('【固定绘画基座｜通常不要修改】')
+
+        expect(prompt.startsWith('【可编辑变量区｜每次只修改本区】')).toBe(true)
+        expect(fixedBaseIndex).toBeGreaterThan(0)
+        for (const label of gameCharacterBustVariableLabels) {
+            expect(prompt.indexOf(label), `${label} should stay in the editable block`).toBeGreaterThan(0)
+            expect(prompt.indexOf(label)).toBeLessThan(fixedBaseIndex)
+        }
+
+        expect(prompt.slice(fixedBaseIndex)).not.toMatch(/\[[^\]\n]+\]/)
+        expect(prompt).toContain('竖幅2:3，单人正面上半身肖像')
+        expect(prompt).toContain('半写实数字厚涂和写实游戏角色概念艺术风格')
+        expect(prompt).toContain('面部精细、衣物概括、背景松动')
     })
 })
 

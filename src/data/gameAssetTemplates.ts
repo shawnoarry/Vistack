@@ -1,5 +1,36 @@
 import type { StyleTemplate } from '../types'
 
+const gameCharacterBustPrompt = `【可编辑变量区｜每次只修改本区】
+
+人物设定：[性别、年龄、身份或职业]
+气质神态：[3—5个气质词，以及是否微笑、目光状态]
+面部特征：[脸型、眉眼、鼻唇、下颌及性别表现]
+发型特征：[发色、长度、梳法、束发方式、碎发状态]
+身份锚点：[选择一个易识别但不过分抢眼的特征]
+服装设定：[服装体系、层次、形制、面料、主色、辅色、点缀色]
+画面氛围：[光线类型、背景颜色、整体情绪]
+角色专属排除：[不符合该角色身份的服饰、配件、妆容或奇幻特征]
+
+【固定绘画基座｜通常不要修改】
+
+创作一幅原创的新国风古装单人肖像。严格按照以上变量区塑造人物，不自行改变人物的年龄、身份、气质、面部、发型、身份锚点、服装层次和色彩关系。人物具有可信而适度理想化的东亚面部结构，五官清晰、比例协调，性别与年龄特征符合设定；避免模板化网红脸，同时保持高品质角色立绘所需的审美完成度。
+
+竖幅2:3，单人正面上半身肖像，裁切至胸口下方。人物头部、鼻梁和躯干位于画面垂直中轴，身体正对画面，视线直视观者，采用近似左右对称的稳定构图。肩部自然延伸至画面两侧，头顶保留约画面高度8%的留白，双眼位于画面上半部视觉中心。不出现手部，不使用夸张透视，不加入未指定的场景道具。
+
+采用新国风古装题材、半写实数字厚涂和写实游戏角色概念艺术风格，结合数字油画与柔和罩染质感。面部是画面最高精度区域，皮肤细腻，但保留轻微笔触、自然色差和可信质感，不呈现照片般锐利的毛孔。重点刻画眼睛、眉毛、鼻梁、嘴唇、发际线和少量发丝。
+
+头发以清楚的成组形体为主，结合少量精细发丝，避免每根头发都同等锐利。衣物完成度略低于面部，保留宽松笔触、干刷痕迹、自然褶皱和符合变量设定的织物纹理。轮廓边缘具有自然的软硬变化，局部轻微融入背景，形成“面部精细、衣物概括、背景松动”的明确绘画层级。
+
+使用变量区指定的光线和氛围。光线必须柔和、自然、方向统一，清楚保留眉骨、鼻梁、眼窝、颧骨和下颌的立体结构。眼睛带有细小自然高光，额头、鼻梁和唇峰只有克制亮部，避免过曝、油亮皮肤和被柔光照平的面部。
+
+严格使用变量区指定的服装配色。主色占据最大面积，辅色用于内层衣襟和结构层次，点缀色仅占少量并用于身份锚点、窄幅衣缘或局部细节。整体保持低饱和，肤色自然偏暖，人物与背景之间形成安静、含蓄的冷暖或明暗对比。不要自行增加高饱和颜色。
+
+背景为变量区指定颜色的低饱和旧画布，不出现建筑、山水、烟雾、花瓣或具体场景。背景具有不规则数字油画叠色、交叉干刷、轻微磨损和粗糙画布纹理；人物头部附近可以略亮，四周轻微压暗，但不形成明显光环或摄影棚渐变。
+
+画面是一张完成的单幅人物肖像，具有古典、克制、安静的东方人物画气质，像高品质武侠或仙侠作品中的角色档案肖像，而不是照片、海报、拼贴、设定表或影视剧照。
+
+画面无文字、题字、印章、边框、标志、签名和水印。避免摄影感、影楼古装写真、3D渲染、赛璐璐平涂、夸张大眼、瞳孔错位、网红脸、过度尖削的下巴、塑料皮肤、过度磨皮、浓重妆容、强烈霓虹色、无关华丽装饰、错误交领、服装结构混乱、多人物、多张脸以及变量区列出的角色专属排除内容。`
+
 export const gameAssetTemplates: StyleTemplate[] = [
     {
         id: 'game-character-bust-portrait',
@@ -7,10 +38,10 @@ export const gameAssetTemplates: StyleTemplate[] = [
         category: '人物设定图',
         mode: 'text',
         tags: ['游戏素材', '人物设定', '胸像', '武侠', '古风插画'],
-        prompt: 'Refined Chinese romantic wuxia game portrait illustration. Polished matte digital opaque-gouache with restrained oil-paint rendering, broad controlled brush shapes, simplified clean color planes, a softly modeled face, subtle visible brush texture, selective colored contours, grouped hair locks, and a clean production-friendly silhouette. Fine detail is concentrated around the eyes and expression; hair and clothing remain simplified and readable. Clear soft daylight with warm light on the face. Muted blue-gray and quiet lavender abstract painterly background with broad visible brushstrokes and restrained cool-warm variation. Vertical front-facing portrait with the head and shoulders fully visible and balanced breathing room around the hair. One person only. No concrete scenery, text, logo, watermark, photorealism, glossy skin, plastic 3D rendering, or dense micro-detail.',
-        usageGuide: '[人物可见语义：年龄、性别、面部、发型、衣装与配件] + [上述固定段]',
+        prompt: gameCharacterBustPrompt,
+        usageGuide: '只修改开头【可编辑变量区】；【固定绘画基座】通常不要修改。',
         image: '',
-        description: '中国浪漫武侠角色胸像基底，适合在发型、服装、气质与表情方向上继续微调或发散。',
+        description: '前置人物变量、固定构图与画风的新国风角色胸像基底，适合批量替换人物形象。',
         taxonomy: {
             output: 'character',
             styles: ['illustration', 'character', 'classical'],
