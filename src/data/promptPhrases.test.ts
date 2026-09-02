@@ -41,8 +41,10 @@ describe('prompt phrase library', () => {
         const prompt = composePromptWithPhrase('一束逆光中的白色花朵', phrase, allPhrases)
 
         expect(phrase.value).toContain('底部约20%~25%')
-        expect(phrase.value).toContain('较低视觉密度')
-        expect(phrase.value).toContain('不要求纯空白')
+        expect(phrase.value).toContain('必须自然延续上方场景')
+        expect(phrase.value).toContain('仅降低细碎元素密度和局部对比')
+        expect(phrase.value).toContain('不留空白、不做纯色块或明显分区')
+        expect(phrase.value).not.toContain('不要求纯空白')
         expect(prompt).toContain(phrase.value)
     })
 })

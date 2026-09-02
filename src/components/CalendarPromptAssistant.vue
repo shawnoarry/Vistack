@@ -222,8 +222,8 @@ const styleStrategies: Array<{ value: CalendarStyleStrategy; label: string }> = 
 ]
 const canDraw = computed(() => props.assistantReady && props.sourceCopy.trim().length > 0 && !props.loading)
 const sharedConstraintSummary = computed(() => props.aspectRatio === '4:5'
-    ? '4:5 竖幅满版底图，主体可偏置、出界或局部特写，并保留一处相对安静的排版区域；底部约 20%~25% 避免密集小细节但不要求纯空白，写入时自动禁止文字、数字、日期、日历网格、Logo、二维码和水印。'
-    : '9:16 竖幅满版底图，主体可偏置、出界或局部特写，并保留一处相对安静的排版区域；底部约 20%~25% 避免密集小细节但不要求纯空白，写入时自动禁止文字、数字、日期、日历网格、Logo、二维码和水印。')
+    ? '4:5 竖幅满版底图，主体可偏置、出界或局部特写；底部约 20%~25% 自然延续完整场景，仅降低细碎元素密度和局部对比，不留空白或纯色块，写入时自动禁止文字、数字、日期、日历网格、Logo、二维码和水印。'
+    : '9:16 竖幅满版底图，主体可偏置、出界或局部特写；底部约 20%~25% 自然延续完整场景，仅降低细碎元素密度和局部对比，不留空白或纯色块，写入时自动禁止文字、数字、日期、日历网格、Logo、二维码和水印。')
 
 const emitClose = () => emit('close')
 
