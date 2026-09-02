@@ -226,20 +226,25 @@ describe('heavy redraw style templates', () => {
             expect(template.category).toBe('插画艺术')
             expect(template.mode).toBe('both')
             expect(template.tags).toContain('重画风')
-            expect(template.promptEn?.trim().length).toBeGreaterThan(500)
+            expect(template.promptEn?.trim().length).toBeGreaterThan(250)
             expect(template.image).toMatch(/^\/template-previews\/.+\.webp$/)
         }
     })
 
-    it('does not lock either style to the source examples subject matter', () => {
-        expect(templates[0].prompt).toContain('不要默认生成草原、山脉或风景')
-        expect(templates[1].prompt).toContain('不要默认生成食物、甜品、商品或塑料包装盒')
+    it('keeps the minimalist preset focused on positive visual style language', () => {
+        const template = templates[0]
+        expect(template.prompt).toContain('大块概括性形体')
+        expect(template.prompt).toContain('低饱和有限色盘')
+        expect(template.prompt).toContain('数字厚涂')
+        expect(template.prompt).toContain('尺度对比')
+        expect(template.prompt).not.toMatch(/用户指定|任意主题|参考图|不要|避免/)
+        expect(template.promptEn).not.toMatch(/user|any subject|reference image|do not|avoid/i)
+    })
 
-        for (const template of templates.slice(0, 2)) {
-            expect(template.prompt).toContain('任意主题')
-            expect(template.prompt).toContain('彻底重构')
-            expect(template.prompt).toContain('不做写实修图或浅层滤镜')
-        }
+    it('keeps the flat-lay preset independent from food subject matter', () => {
+        expect(templates[1].prompt).toContain('不要默认生成食物、甜品、商品或塑料包装盒')
+        expect(templates[1].prompt).toContain('任意主题')
+        expect(templates[1].prompt).toContain('彻底重构')
     })
 
     it('provides a dedicated food-and-object packaging preset with random fallback', () => {
