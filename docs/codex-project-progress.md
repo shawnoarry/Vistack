@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-08-16 11:47:48 (Asia/Shanghai)
+Last updated: 2026-09-03 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -26,6 +26,7 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Generation images, prompts, and saved API connection presets are protected user data. No storage migration may delete or silently overwrite them.
 - The application is for personal and limited internal-team use with shared endpoint accounts, not broad public distribution. Compatibility and data reliability take priority over public multi-tenant hardening.
 - The toolbox and canvas workspace have not yet delivered practical value. Freeze incremental feature expansion until their information architecture and use cases are redesigned as a separate product phase.
+- The existing image-to-prompt flow received a bounded quality and reliability upgrade without expanding the toolbox: independently authored analysis rules, explicit four-mode requests, existing-image compression reuse, and request tests. Moving the entry or running paid API comparisons remains unapproved.
 
 ## Execution Policy
 
@@ -80,6 +81,15 @@ Proposed plan:
 The full draft is `docs/product-ui-ux-plan.md`. Phase 1 is implemented and recorded at `docs/phase-1-asset-library-brief.md`.
 
 The original broad Phase 2 studio restructure was not approved and has been withdrawn. Phase 2A and 2B are complete as separately approved small changes. Phase 3 was later approved, implemented, and corrected from an interim single-main-image design to the final persistent-waterfall design in `docs/phase-3-result-history-brief.md`. Phrase/template icons, three-column layout, canvas entry, request behavior, API presets, and protected local data remain unchanged.
+
+## Active Product Brief: Image-to-Prompt Quality Upgrade
+
+- Reviewed `LunarXuan/image-prompt-reverse` as a prompt-design reference. It is a GPL-3.0 Codex Skill, not an embeddable model, package, or inference engine.
+- Implemented independently authored rules for media boundaries, 3 to 5 visual anchors, subject-specific evidence, image-text prompt-injection handling, observable style language, uncertainty control, and multi-image separation.
+- Preserved all four existing output choices while passing the selected mode explicitly from the toolbox to the prompt-assistant request.
+- Reused the existing reference-image compression path for image-to-prompt requests without changing image order or count.
+- Added focused unit and transport tests. The existing entry, layout, provider routing, API protocol, storage, and user data remain unchanged.
+- Moving the entry beside the studio prompt and running paid API A/B tests remain separate unapproved decisions.
 
 ## Completed Work
 
@@ -180,6 +190,15 @@ The original broad Phase 2 studio restructure was not approved and has been with
 - Added focused tests for exact count, unique IDs/source numbers, category distribution, bilingual prompt completeness, provenance, WebP signatures, dimensions, and file-size bounds.
 - Prevented the existing template-panel close button from wrapping vertically on narrow mobile screens.
 
+### 12. Image-to-prompt quality and reliability
+
+- Added `src/services/imagePromptReverse.ts` as a testable, independently authored request-rule module instead of copying the evaluated GPL-3.0 Skill text.
+- Added explicit `structured`, `direct`, `tags`, and `template` request modes while preserving the existing toolbox controls and editable text result.
+- Added media and subject classification, visual-anchor prioritization, image-text prompt-injection resistance, evidence and uncertainty limits, observable style descriptions, and multi-image non-merging guidance.
+- Reused the existing 1600-pixel / 0.88-quality large-reference compression behavior for image-to-prompt requests; image count and order are preserved.
+- Added tests for each mode, shared safety/quality rules, multi-image instructions, request image ordering, and large Data URL compression.
+- Did not change providers, endpoint resolution, proxy behavior, generation requests, storage, history, or local user data.
+
 ## Verification Baseline
 
 Latest successful command:
@@ -191,8 +210,8 @@ npm run check
 Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
-- Test files: 14 passed.
-- Tests: 78 passed.
+- Test files: 22 passed.
+- Tests: 119 passed.
 - Production build: passed.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 - UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
@@ -203,6 +222,7 @@ Latest result:
 - Calendar assistant browser verification: the 1440×900 popover stayed above the fixed prompt dock; the 390×844 bottom sheet and its 9:16 / 4:5 segmented control fit without horizontal overflow; `Esc` closed the panel and returned focus to its toolbar trigger. A real assistant request was not sent because no assistant key is configured and external API cost was intentionally avoided.
 - Template gallery browser verification: all eight new categories appeared; all 28 local previews decoded at `512×640`; representative desktop/mobile searches, Chinese/English prompt insertion, and the 1440×900 plus 390×844 layouts passed with no horizontal overflow or application errors. The restricted browser environment blocked Google Fonts and Clarity, and the desktop request for the pre-existing missing favicon returned 404; these were isolated external/static-resource messages rather than application failures.
 - Template preview pilot browser verification: all four approved templates were found through the existing search and rendered their assigned 80×100 4:5 previews on desktop. At a 390×844 viewport, the document client width and scroll width were both 375 px, so there was no horizontal overflow; all four resources reported complete 1024×1280 loads and no application console errors were present.
+- Image-to-prompt browser verification: the desktop toolbox retained the reverse-prompt heading and all four output choices; with no assistant key configured, the submit action remained disabled. At 390×844, document client width and scroll width were both 375 px, with no console warnings or errors. No real assistant request was sent, so output-quality A/B testing remains deferred.
 
 The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
 

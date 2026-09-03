@@ -14,6 +14,7 @@ import {
 } from '../utils/apiEndpoint'
 import { sanitizeDiagnosticUrl } from '../utils/diagnostics'
 import { aspectRatioToDoraverseGptImageSize, aspectRatioToGeminiSize, aspectRatioToGrsaiGptImageSize, aspectRatioToOpenAiImageSize } from '../utils/imageSizing'
+import { buildImagePromptReverseMessages } from './imagePromptReverse'
 
 type ApiProvider = 'openai-chat' | 'openai-image' | 'openai-image-edit' | 'grsai' | 'grsai-draw'
 
@@ -242,24 +243,24 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
     const isImageToPrompt = request.task === 'image-to-prompt'
     const isCalendarIllustration = request.task === 'calendar-illustration'
     const targetLanguage = request.targetLanguage === 'en' ? 'English' : 'Chinese'
+    const imagePromptMessages = isImageToPrompt
+        ? buildImagePromptReverseMessages({
+            mode: request.imageToPromptMode,
+            imageCount: request.images?.length || 0,
+            context: request.context,
+            instruction: request.prompt
+        })
+        : null
+    const assistantImages = isImageToPrompt
+        ? await prepareReferenceImages(request.images || [])
+        : []
     const userContent = isImageToPrompt
         ? [
             {
                 type: 'text',
-                text: [
-                    '请根据上传图片逆推出适合图像生成模型复刻该画面的提示词。',
-                    '输出中文为主，可以保留必要英文摄影/设计术语。',
-                    '请按以下结构输出：',
-                    '1. 核心提示词：一段可直接用于生图的完整提示词。',
-                    '2. 画面要素：主体、动作/姿态、服装/造型、场景、光线、镜头/构图、风格质感。',
-                    '3. 负面约束：避免错误、不要生成的内容。',
-                    '4. 可复用短词组：用逗号分隔。',
-                    '不要识别或猜测真实人物姓名；不要添加水印、随机文字或不存在的品牌。',
-                    request.context ? `当前工具上下文：\n${request.context}` : '',
-                    request.prompt ? `用户补充要求：\n${request.prompt}` : ''
-                ].filter(Boolean).join('\n\n')
+                text: imagePromptMessages?.user || ''
             },
-            ...(request.images || []).map(image => ({
+            ...assistantImages.map(image => ({
                 type: 'image_url',
                 image_url: { url: image }
             }))
@@ -308,12 +309,7 @@ export async function improvePrompt(request: PromptAssistantRequest): Promise<Pr
             {
                 role: 'system',
                 content: isImageToPrompt
-                    ? [
-                        '你是 Vistack 的图像反推提示词助手。',
-                        '你的任务是观察用户上传的参考图，整理出可复刻画面的图像生成提示词。',
-                        '描述画面视觉信息，不要猜测真实身份、隐私信息或未出现的事实。',
-                        '输出要能直接被生图模型使用，语言清晰，结构稳定。'
-                    ].join('\n')
+                    ? imagePromptMessages?.system || ''
                     : isCalendarIllustration
                     ? [
                         '你是 Vistack 的日历配图创意助手。',

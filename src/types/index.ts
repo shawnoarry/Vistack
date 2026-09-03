@@ -75,7 +75,10 @@ export interface PromptAssistantRequest {
     useProxy?: boolean
     proxyToken?: string
     images?: string[]
+    imageToPromptMode?: ImageToPromptMode
 }
+
+export type ImageToPromptMode = 'direct' | 'structured' | 'tags' | 'template'
 
 export interface PromptAssistantResponse {
     prompt: string

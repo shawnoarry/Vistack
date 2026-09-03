@@ -669,7 +669,7 @@
 <script setup lang="ts">
 import { computed, defineComponent, h, nextTick, onMounted, ref, watch } from 'vue'
 import type { PropType } from 'vue'
-import type { GenerationTask, PromptAssistantRequest, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload } from '../types'
+import type { GenerationTask, ImageToPromptMode, PromptAssistantRequest, ToolboxGeneratePayload, ToolboxReference, ToolboxRolePushPayload } from '../types'
 import ResultDisplay from './ResultDisplay.vue'
 import {
     deleteToolboxModelAsset,
@@ -684,7 +684,6 @@ type ModelAssetFraming = 'auto' | 'bust' | 'half-body' | 'full-body'
 type ModelAssetStyle = 'realistic' | 'phone' | 'catalog'
 type ModelAssetUsage = 'general' | 'outfit' | 'portrait' | 'commercial' | 'couple' | 'story'
 type ModelAssetFidelity = 'balanced' | 'high' | 'strict'
-type ReversePromptMode = 'direct' | 'structured' | 'tags' | 'template'
 type OutfitClothingStrategy = 'auto' | 'reference-first' | 'description-first' | 'merge'
 type MaskEditIntent = 'outfit' | 'background' | 'remove' | 'detail' | 'freeform'
 type OutfitPreserveKey = 'identity' | 'hair' | 'pose' | 'body' | 'background' | 'lighting'
@@ -746,7 +745,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-    analyze: [request: Pick<PromptAssistantRequest, 'prompt' | 'context' | 'images' | 'task'>]
+    analyze: [request: Pick<PromptAssistantRequest, 'prompt' | 'context' | 'images' | 'task' | 'imageToPromptMode'>]
     'send-to-studio': [prompt: string]
     'save-template': [prompt: string]
     'apply-references': [payload: { prompt: string; references: ToolboxReference[] }]
@@ -774,7 +773,7 @@ const activeTool = ref<ToolId>('image-to-prompt')
 const activeToolTitle = computed(() => tools.find(tool => tool.id === activeTool.value)?.title || '工具箱')
 const uploadedImages = ref<string[]>([])
 const imagePromptInstruction = ref('')
-const reversePromptMode = ref<ReversePromptMode>('structured')
+const reversePromptMode = ref<ImageToPromptMode>('structured')
 const reversePrompt = ref('')
 const draftPrompt = ref(props.currentPrompt || '')
 const draftSource = ref('')
@@ -835,13 +834,6 @@ const outfitPreserveOptions: Array<{ value: OutfitPreserveKey; label: string; de
     { value: 'background', label: '背景环境', description: '保留原场景空间' },
     { value: 'lighting', label: '光线质感', description: '保持原图曝光和阴影' }
 ]
-
-const reversePromptModePrompts: Record<ReversePromptMode, string> = {
-    structured: '输出结构化结果：核心提示词、画面要素、负面约束、可复用短词组。',
-    direct: '输出一段可以直接复制到生图框的完整长提示词，不要额外解释。',
-    tags: '输出短词组和标签，按主体、场景、镜头、光线、风格、负面约束分组。',
-    template: '输出可复用模板，保留可替换变量，例如【主体】、【场景】、【服装】、【镜头】。'
-}
 
 const outfitClothingStrategyPrompts: Record<OutfitClothingStrategy, string> = {
     auto: '服装采用策略：服装参考图优先，文字描述作为补充修正。',
@@ -1153,9 +1145,10 @@ const analyzeImages = () => {
     setToolboxNotice('info', '正在反推图片提示词。')
     emit('analyze', {
         prompt: imagePromptInstruction.value.trim(),
-        context: [`图片数量：${uploadedImages.value.length}`, reversePromptModePrompts[reversePromptMode.value]].join('\n'),
+        context: '',
         images: uploadedImages.value,
-        task: 'image-to-prompt'
+        task: 'image-to-prompt',
+        imageToPromptMode: reversePromptMode.value
     })
 }
 

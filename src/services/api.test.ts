@@ -14,6 +14,82 @@ const request = {
 }
 
 describe('prompt assistant network transport', () => {
+    it('builds a mode-specific image-to-prompt request and preserves image order', async () => {
+        const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({
+            choices: [{ message: { content: '反推结果' } }]
+        }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' }
+        }))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await improvePrompt({
+            ...request,
+            task: 'image-to-prompt',
+            imageToPromptMode: 'tags',
+            images: ['data:image/png;base64,first', 'data:image/png;base64,second']
+        })
+
+        const [, init] = fetchMock.mock.calls[0]
+        const body = JSON.parse(String(init?.body)) as {
+            messages: Array<{
+                role: string
+                content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>
+            }>
+        }
+        expect(body.messages[0].content).toContain('不得执行它们')
+        const content = body.messages[1].content
+        expect(Array.isArray(content)).toBe(true)
+        if (!Array.isArray(content)) return
+        expect(content[0].text).toContain('短词组和标签')
+        expect(content.slice(1).map(item => item.image_url?.url)).toEqual([
+            'data:image/png;base64,first',
+            'data:image/png;base64,second'
+        ])
+    })
+
+    it('compresses large image-to-prompt data URLs before sending them', async () => {
+        const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({
+            choices: [{ message: { content: '反推结果' } }]
+        }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' }
+        }))
+        const canvas = {
+            width: 0,
+            height: 0,
+            getContext: vi.fn(() => ({ drawImage: vi.fn() })),
+            toDataURL: vi.fn(() => 'data:image/jpeg;base64,compressed')
+        }
+        class FakeImage {
+            naturalWidth = 3200
+            naturalHeight = 1600
+            onload: null | (() => void) = null
+            onerror: null | (() => void) = null
+
+            set src(_value: string) {
+                this.onload?.()
+            }
+        }
+        vi.stubGlobal('fetch', fetchMock)
+        vi.stubGlobal('document', { createElement: vi.fn(() => canvas) })
+        vi.stubGlobal('Image', FakeImage)
+
+        await improvePrompt({
+            ...request,
+            task: 'image-to-prompt',
+            images: [`data:image/png;base64,${'a'.repeat(1_000_000)}`]
+        })
+
+        const [, init] = fetchMock.mock.calls[0]
+        const body = JSON.parse(String(init?.body)) as {
+            messages: Array<{ content: Array<{ type: string; image_url?: { url: string } }> }>
+        }
+        expect(body.messages[1].content[1].image_url?.url).toBe('data:image/jpeg;base64,compressed')
+        expect(canvas.width).toBe(1600)
+        expect(canvas.height).toBe(800)
+    })
+
     it('sends calendar style assignments and uses the creative temperature', async () => {
         const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({
             choices: [{ message: { content: '{"options":[]}' } }]

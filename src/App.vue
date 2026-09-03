@@ -3879,7 +3879,7 @@ const handleTranslatePrompt = async () => {
     }
 }
 
-const handleToolboxImageToPrompt = async (toolRequest: Pick<PromptAssistantRequest, 'prompt' | 'context' | 'images' | 'task'>) => {
+const handleToolboxImageToPrompt = async (toolRequest: Pick<PromptAssistantRequest, 'prompt' | 'context' | 'images' | 'task' | 'imageToPromptMode'>) => {
     if (!promptAssistantReady.value) {
         toolboxPanelRef.value?.setAnalysisError('请先配置提示词助手 API，并确认模型支持读取图片。')
         return
@@ -3893,6 +3893,7 @@ const handleToolboxImageToPrompt = async (toolRequest: Pick<PromptAssistantReque
             context: toolRequest.context || '',
             images: toolRequest.images || [],
             task: 'image-to-prompt',
+            imageToPromptMode: toolRequest.imageToPromptMode,
             apikey: promptAssistantApiKey.value.trim(),
             endpoint: resolveChatCompletionsEndpoint(effectivePromptAssistantEndpoint.value, DEFAULT_PROMPT_ASSISTANT_ENDPOINT),
             model: effectivePromptAssistantModel.value,
