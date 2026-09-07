@@ -237,7 +237,8 @@ watch(
     () => props.open,
     open => {
         if (open) nextTick(() => closeButtonRef.value?.focus())
-    }
+    },
+    { immediate: true }
 )
 
 onMounted(() => document.addEventListener('keydown', handleKeydown))

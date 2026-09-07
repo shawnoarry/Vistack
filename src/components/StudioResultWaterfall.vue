@@ -129,12 +129,15 @@
                     @click="$emit('open', asset)"
                 >
                     <img
+                        v-if="asset.image"
                         :src="asset.image"
                         :alt="`${asset.item.source === 'image' ? '图生图' : '文生图'}结果 ${asset.index + 1}`"
                         class="h-auto w-full object-cover"
                         loading="lazy"
-                        @load="event => onImageLoad(event, asset.image)"
+                        decoding="async"
+                        @load="event => onImageLoad(event, asset.id)"
                     />
+                    <span v-else class="flex min-h-32 w-full items-center justify-center text-xs text-brand-muted" :style="{ aspectRatio: asset.item.aspectRatio.replace(':', ' / ') }" role="status">{{ historyLoading ? '正在读取图片...' : '图片暂不可用' }}</span>
                 </button>
 
                 <div class="p-3">
@@ -146,7 +149,7 @@
                         <span class="shrink-0 text-[10px] text-brand-muted">{{ asset.index + 1 }}/{{ asset.item.images.length }}</span>
                     </div>
                     <div class="mt-2 flex items-center justify-between gap-2 border-t border-brand-line pt-2 dark:border-night-muted/35">
-                        <span class="min-w-0 truncate text-[10px] text-brand-muted">{{ imageSizes[asset.image] || asset.item.aspectRatio }}</span>
+                        <span class="min-w-0 truncate text-[10px] text-brand-muted">{{ asset.originalWidth ? `${asset.originalWidth} × ${asset.originalHeight}` : imageSizes[asset.id] || asset.item.aspectRatio }}</span>
                         <div class="flex gap-1.5">
                             <button type="button" class="wb-icon-button h-9 w-9" title="下载当前图片" aria-label="下载当前图片" @click="$emit('download', asset)">
                                 <Download :size="15" :stroke-width="1.8" aria-hidden="true" />
@@ -173,7 +176,7 @@
         </div>
 
         <div v-if="hasMoreHistory" class="mt-4 flex justify-center">
-            <button type="button" class="wb-secondary min-h-10 px-4 text-xs" @click="$emit('load-more')">加载更早结果</button>
+            <button type="button" class="wb-secondary min-h-10 px-4 text-xs" :disabled="historyLoading" @click="$emit('load-more')">{{ historyLoading ? '正在读取...' : '加载更早结果' }}</button>
         </div>
     </div>
 </template>

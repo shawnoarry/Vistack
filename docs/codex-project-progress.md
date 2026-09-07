@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-09-03 (Asia/Shanghai)
+Last updated: 2026-09-07 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -11,7 +11,7 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Make small, reversible changes with automated checks and migration fallbacks.
 - Explain work in plain Chinese because the user is a beginner.
 - Keep progress and next TODO items in this file so a truncated or new conversation can resume safely.
-- Before implementing each roadmap item, explain the current experience, the problem, the proposed experience, alternatives, impact, and data risk in plain product language, then wait for explicit user confirmation.
+- The user approved grouped optimization work and explicitly does not want to verify each step. Carry approved batches through implementation and automated/browser verification, then report once; routine internal decisions do not need repeated approval.
 - After the product direction is confirmed, complete routine implementation details, tests, checks, documentation, and the agreed checkpoint without asking for approval on every technical decision.
 
 ## Validated Product Direction
@@ -33,10 +33,10 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Before each implementation item, inspect the current code and behavior but do not change runtime source.
 - Present a short product brief covering: what users see today, why it is a problem, what it could become, available alternatives, what remains unchanged, data/migration risk, and acceptance criteria.
 - Use plain Chinese and distinguish confirmed facts from proposals. Include a simple layout sketch or interaction sequence when the change is visual or hard to explain in prose.
-- Wait for explicit user confirmation of the product direction before implementation. Silence or agreement with the overall roadmap is not approval for an individual item.
+- Product direction should be agreed before implementation. The latest approved batch covers bounded App.vue extraction, bundle splitting, existing provider/model capability consolidation, and complete regression checks; all are authorized together.
 - Once confirmed: add or update tests, make the smallest compatible change, run `npm run check`, verify the user-visible flow, update this file, and create the agreed focused Git checkpoint.
 - If implementation reveals a materially different user experience, destructive migration, privacy exposure, or ambiguous product choice, pause and return to confirmation instead of deciding silently.
-- Completing one item does not authorize starting the next item; prepare and confirm the next product brief separately.
+- Continue across the approved batch without per-item approval. Ask only for materially new scope, destructive data changes, paid calls, or significant workflow changes. Do not infer authorization to commit, push, or deploy.
 
 ## Current State
 
@@ -49,10 +49,13 @@ This file is the durable handoff record for future Codex conversations. Read it 
 - Studio Phase 3 is implemented: successful history is the persistent waterfall, each image can be hidden without deletion and restored from the asset library, and failed generations use a separate bounded diagnostic log.
 - GPT Image2 G3-lite is implemented as six bilingual `精准改图配方` templates. The library also contains 28 approved upstream `Curated` generation templates with local previews, bringing the built-in total to 58. All 58 now have visible previews and enlarged viewing. The flat 18-category rail is organized under eight tested main groups while retaining all fine categories. G1/G2, the earlier 42-image batch, and 12 new precise-edit recipes remain deferred or unapproved.
 - Eleven previously weak built-in templates now use matching Chinese/English seven-section prompts with complete `【editable phrases】`, explicit reference roles, concrete scene/camera/lighting/material direction, and failure boundaries. Portrait-oriented templates preserve identity while explicitly rebuilding hairstyle, expression, angle, head/neck/body integration, and pose instead of pasting the source head.
-- The playground integration P0 gate remains satisfied at runtime checkpoint `4d2bb94`; the next product-planning task is a bounded provider/model parameter-capability brief.
-- The IndexedDB version, generation requests, provider routing, existing history/images/prompts, and API preset storage are unchanged. Phase 3 adds only backward-compatible optional visibility/diagnostic fields and a separate local failure-record key.
-- Production build succeeds with Vite 5.4.19.
-- Current production bundle is approximately 528.35 kB JS / 199.27 kB gzip and 56.23 kB CSS / 9.14 kB gzip.
+- The playground integration P0 gate remains satisfied at runtime checkpoint `4d2bb94`. Existing model/provider parameter rules are now centralized and tested in modelCapabilities.ts; unknown models retain generic behavior and explicit metadata handling.
+- History reliability fixes are implemented: IndexedDB version 4 adds only a deletion-marker store; existing history, image, and pending-task stores are preserved. Legacy records remain in their original database. Shared-image deletion checks, transaction completion handling, visible save failures/retries, and image-detail reindexing are covered by tests. Generation requests, provider routing, prompts, and API presets are unchanged.
+- Production build succeeds with Vite 6.4.3. Dependency security remediation is complete; both full and production-only npm audits report zero known vulnerabilities.
+- History lists now load separate 640px thumbnails for stored-image IDs. The studio starts with 12 groups; the asset library displays 36 images per batch. Search, filters, and counts use all records. Original actions resolve full images on demand and release history-held originals afterward, preserving active previews and in-flight reads. IndexedDB v5 adds only the disposable image-thumbnails store.
+- Seven secondary panels now load asynchronously, with loading/error states. The calendar assistant mounts on demand and retains its parent-owned draft and focus behavior.
+- ZIP backup and merge restore are implemented under the asset library. Scope: generation history/prompts/parameters, generated originals, historical reference images, saved image/assistant API presets, and collections. Credentials are independently opt-in for export and restore. Canvas layouts, standalone toolbox assets, custom templates/phrases, and unfinished tasks remain outside this backup scope.
+- After the grouped optimization, the production entry is 477.28 kB / 165.32 kB gzip; Vue runtime is independently cached at 69.09 kB / 27.48 kB gzip. Backup remains lazy at 129.45 kB / 41.39 kB gzip; CSS is 56.80 kB / 9.24 kB gzip. No 500 kB chunk warning. Initial compressed JS transfer is roughly unchanged because both entry and Vue runtime are needed. Two harmless Zod annotation warnings remain.
 
 ## Active Product Brief: Full UI/UX Plan
 
@@ -210,9 +213,12 @@ npm run check
 Latest result:
 
 - Type checks: passed (`vue-tsc` and Node `tsc`).
-- Test files: 22 passed.
-- Tests: 119 passed.
+- Test files: 30 passed.
+- Tests: 182 passed.
 - Production build: passed.
+- Backup browser verification: at 1440x1000 and 390x844, downloaded a real ZIP from isolated fixture data, verified original-image deduplication and credential exclusion, previewed/imported it into a fresh browser context, repeated import without duplicates, opened restored originals, verified historical references, and reloaded successfully. No application errors or horizontal overflow. No real user data or external image API was used.
+- History reliability browser verification: isolated Edge contexts at 1440x1000 and 390x844 passed injected transaction failure, visible unsaved notice, retry persistence, legacy deletion followed by reload, and shared-image rendering checks. No horizontal overflow or application errors. No real user database or paid API was used.
+- History performance browser verification: with 100 one-image groups, initial reads were 12, extending studio history read 24 total, and asset-library batches read 36 then 72 total. Searching the oldest unloaded record performed one additional image read. Original preview/download, reference reuse, and opening toolbox, canvas, templates, phrases, and calendar passed at 1440x1000 and 390x844. Calendar focus and retained draft passed. No initial requests for the six inspected secondary panel modules, horizontal overflow, or application errors.
 - Diagnostic utility tests: passed, including credential redaction and invalid timestamp handling.
 - UI layout fixture at 1440x900 and 768x900: no vertical button text, no horizontal overflow, and header height remained approximately 130 px.
 - Browser console errors during the UI fixture check: none.
@@ -224,7 +230,40 @@ Latest result:
 - Template preview pilot browser verification: all four approved templates were found through the existing search and rendered their assigned 80×100 4:5 previews on desktop. At a 390×844 viewport, the document client width and scroll width were both 375 px, so there was no horizontal overflow; all four resources reported complete 1024×1280 loads and no application console errors were present.
 - Image-to-prompt browser verification: the desktop toolbox retained the reverse-prompt heading and all four output choices; with no assistant key configured, the submit action remained disabled. At 390×844, document client width and scroll width were both 375 px, with no console warnings or errors. No real assistant request was sent, so output-quality A/B testing remains deferred.
 
-The official npm audit still reports the 9 pre-existing toolchain advisories: 5 high and 4 moderate. The initially considered Vitest 2 release was not retained; Vitest 3.2.6 removed the additional Vitest critical advisory.
+The initial 2026-09-07 dependency installation reported 12 vulnerable packages: 9 high, 2 moderate, and 1 low. The subsequently approved dependency remediation reduced both `npm audit` and `npm audit --omit=dev` to zero known vulnerabilities. Vite is now 6.4.3, PostCSS 8.5.28, Rollup 4.63.1, esbuild 0.25.12, and nanoid 3.3.18. Existing Vue, plugin-vue, and Vitest versions are preserved. The production-only audit initially included PostCSS/nanoid through Vue's compiler dependency; the audit classification alone does not establish browser exploitability.
+
+### 2026-09-07 Grouped Maintenance and Capability Consolidation
+
+- User requested no per-step acceptance checks, approved the three-batch plan, and explicitly instructed implementation. The approved scope is complete; no new user action is required for verification.
+- Extracted asset filtering/counts/pagination/thumbnail loading into useHistoryAssets and history loading/backup-refresh handling into useHistoryRestoration. App.vue keeps task orchestration and UI bindings; a complete rewrite was deliberately outside this bounded extraction.
+- Centralized existing provider/model metadata, quality choices, Gemini chat capability flags, and OpenAI-compatible size routing in modelCapabilities.ts. Existing provider exceptions and unknown-model fallback remain intact. This consolidates tested compatibility rules; it does not claim live capability discovery or new upstream model support.
+- Added profile tests for GPT Image provider-specific sizes, Banana variants, Gemini, Grok, Seedream, Flux, and unknown models. Mock transport tests cover Grsai generate/draw, LJQ, Doraverse generation/edit multipart, OpenAI sizing, Gemini chat/search, and unknown chat passthrough. Restoration tests protect current edits during additive reload and preserve current history on refresh failure.
+- Separated the Vue runtime using Rollup manualChunks; final entry 477.28 kB / 165.32 kB gzip, Vue 69.09 kB / 27.48 kB gzip. The entry-size warning is gone; total first-load transfer is not reduced materially. Secondary panels remain lazy, and the stable runtime can be cached independently.
+- `npm run check` passed with 30 test files / 182 tests, both type checks, and production build. Both desktop 1440x1000 and mobile 390x844 passed progressive 100-record browsing, original preview/download, deferred panels, calendar state, thumbnail caching/release, backup export/import/duplicate merge/reload, save-failure retry, legacy deletion persistence, and shared-image checks.
+- A separate production-preview browser test verified the Vue chunk, on-demand backup chunk, ZIP restore and original preview at both viewports; screenshots inspected with no application errors or horizontal overflow. Production proxy OPTIONS and method rejection passed. Temporary preview server on 4175 was closed.
+- Two existing development servers collided through the shared Vite optimize cache after config reload, causing 504 Outdated Optimize Dep. Restarted only this task's 4174 server with an isolated tmp/vite-cache-4174 via tmp/start-optimized-dev.mjs; original 4173 process remains untouched. All dev browser fixtures passed after isolation. Current URL remains http://127.0.0.1:4174/.
+- No real user data, paid API calls, commits, pushes, or deployment were involved. All earlier changes and user-owned output/tmp files remain preserved. Remaining limitations: App.vue is still large, profiles require maintenance as upstream APIs change, and two Zod build annotation notices remain.
+
+### 2026-09-07 Thumbnail Browsing and Original Release
+
+- User approved thumbnail browsing and idle original-memory release. IndexedDB v5 adds image-thumbnails without changing existing records/images/tasks/deletion markers; upgrades from both v3 and v4 pass preservation tests.
+- Stored images use versioned thumbnail keys, a 640px longest edge, WebP quality 0.8, and original dimensions for list labels. Thumbnail generation is serialized and limited to displayed image IDs. Cached reloads avoid original reads. Cache write failures preserve the generated thumbnail; decode failures fall back to the original. Thumbnails never enter history images or ZIP backups.
+- In-memory thumbnails outside the requested view are discarded. History-held stored originals are cleared after preview close, downloads, reference/canvas actions, or before loading another group; active previews and pending reads are preserved. Current reference/canvas/latest-generation owners retain their necessary originals. Legacy inline/reference images and remote-only images retain existing behavior; this is not a cap on total browser memory or on manually expanded list size.
+- Deleting an unreferenced original also removes its thumbnail; shared originals retain both. A cache write verifies the original still exists, preventing an in-flight thumbnail job from recreating a cache after original deletion.
+- `npm run check` passed: 27 files / 161 tests, type checks, production build. Entry: 545.05 kB / 191.81 kB gzip; backup: 129.41 kB / 41.38 kB gzip; CSS: 56.80 kB / 9.24 kB gzip. Existing chunk-size and Zod annotation warnings remain.
+- Isolated Edge verification at 1440x1000 and 390x844: a 2048x1024 original renders as a 640x320 list thumbnail; reload performs zero stored-original reads; preview renders at 2048x1024 and reopening rereads after release. Screenshots inspected with no overlapping controls or horizontal overflow. The 100-record progressive browsing fixture and ZIP export/restore fixture also passed on both viewports.
+- New focused tests cover original eviction and pinning, inline preservation, rereading after release, thumbnail separation/view eviction, navigation races, cache hits, decode failure, quota failure, original dimensions, v3/v4 upgrades, and shared-image/cache deletion.
+- Development server remains http://127.0.0.1:4174/. Only isolated synthetic data was used; no real user-data modification, external API call, commit, or push occurred. Browser script and screenshots are under the existing untracked tmp directory.
+
+### 2026-09-07 Dependency Security Remediation
+
+- User approved the recommended dependency security work. Changed Vite's declared range from ^5.0.0 to ^6.4.3 and applied compatible audit fixes without `--force` or dependency overrides. Vite 6.4.3 supports the existing Node 22.13.0 runtime and plugin-vue 5.2.4.
+- `npm run check` passed: both type checks, 26 test files / 153 tests, and production build. Full and production-only audits both passed with zero known vulnerabilities; npm reports no invalid dependency peers.
+- Reused isolated browser fixtures on the upgraded Vite server at 1440x1000 and 390x844. ZIP export/import, deduplication, credential exclusion, original/reference restoration, reload, 100-record progressive image loading, search, original preview/download, and deferred panels all passed without application errors.
+- Both development and production preview servers passed page serving and local proxy OPTIONS, method rejection, and unsafe-target rejection checks. No external or paid API requests were sent.
+- New Vite 6 development server is running at http://127.0.0.1:4174/; the existing 4173 process was preserved. The temporary production preview on 4175 was closed after verification.
+- npm could not clean two old native-module temporary directories because the existing server holds Windows file locks; installation and verification succeeded. A transitive glob 10.5.0 deprecation notice remains, with no current npm audit finding.
+- No application source, generation protocol, storage schema, or user data changed. Earlier uncommitted work and user-owned output/tmp files are preserved. No commit or push performed.
 
 ## Safety Baseline Checkpoint
 
@@ -245,6 +284,8 @@ Local collaboration instruction:
 The diagnostic enhancement was saved as a separate checkpoint before starting UI work.
 
 ## Next TODO
+
+The 2026-09-07 history-reliability, progressive-loading/code-splitting, and approved ZIP-backup batches are complete. Possible later optimization: separate thumbnails and image eviction for very large libraries. History records themselves, including legacy inline images and recipe reference images, are still read in full; progressive loading avoids fetching every separate stored original but does not migrate those legacy payloads. Extending backup scope or supporting archives larger than 512 MB requires a separate bounded change. The historical roadmap below remains deferred where marked.
 
 1. Review the newly imported 28-template gallery in the local preview. Do not import any of the remaining 134 upstream prompts, generate the old 42-image batch, or add the proposed 12 precise-edit recipes without separate approval.
 2. Review `docs/gpt-image2-prompt-validation-pack.md`; execute its A/B generations only after separately confirming acceptable API cost and test images, then record scores before considering any product integration.
@@ -279,6 +320,35 @@ Deferred by user decision:
 5. Update this file before the final response.
 
 ## Update Log
+
+### 2026-09-07 11:54 (Asia/Shanghai)
+
+- User approved implementing the discussed ZIP backup containing actual image files plus JSON records. Added an async asset-library dialog with export, optional plaintext credentials, progress/cancel, missing-image report, file validation/preview, and additive restore.
+- Backup preserves raster bytes in their detected format and deduplicates by SHA-256. Generated originals and recipe references are packaged; remote-only images are downloaded without browser credentials, or through the existing proxy. Failed downloads produce explicit missing-image entries and an incomplete-download action, never a silently complete backup.
+- Added `fflate` for ZIP handling and `zod` for versioned manifest validation. Import checks permitted paths, entry counts, expanded sizes, file hashes/types, record references, duplicate IDs, and the missing-image list before writing. Current limits: 512 MB archive/expanded content, 128 MB per image, 16 MB manifest, 10000 image files; checksum operations require localhost/HTTPS.
+- Images and new history records are committed in one transaction. Existing IDs are skipped; deleted records restore under deterministic prefixed IDs without removing deletion markers. Presets/collections are merged separately with rollback on write failure and an explicit partial-success result, allowing a retry without duplicating history. No imported preset is automatically selected.
+- Export/restore both default to excluding API keys and proxy tokens; credential-bearing endpoint parameters and diagnostic fields are cleaned when credentials are excluded. Malformed saved preset data stops export rather than disappearing silently. Unsaved session history can be exported; restoration is blocked while this page has active generation tasks or unsaved history.
+- Added 14 backup regression tests. Full check passed: 26 files / 153 tests and production build. Browser tests passed with actual ZIP downloads and fresh-context restore on desktop/mobile, including original/reference recovery, deduplication, credential exclusion, repeated import, and reload. Screenshots and synthetic archives are in the existing untracked `tmp/` directory.
+- README documents scope, privacy choices, storage limits, and recovery behavior. Dev preview remains `http://127.0.0.1:4173/`. No real user backup was created, no cloud upload or paid generation occurred, and no commit/push was requested or performed. Earlier uncommitted work and user-owned `output/` / `tmp/` contents are preserved.
+
+### 2026-09-07 11:02 (Asia/Shanghai)
+
+- User requested continuing the previously identified history-loading and first-load bundle optimizations. Implemented progressive original-image reads without changing the database version or migrating saved data.
+- Kept global history metadata for complete search/filter/count behavior; studio loads its displayed groups and library exposes 36-image batches. Groups can contain multiple images, so a library batch may read additional originals from its final group. Already read groups remain in memory for reuse during this session.
+- Added shared batch reads and an in-flight loader that merges images into the latest metadata without overwriting concurrent favorite edits or restoring deleted records. Unloaded local image IDs count as available results before their originals are read. Single/bulk download, reference reuse, detail preview, and canvas transfer resolve full images before acting.
+- Deferred seven panels using Vue async components with loading/error feedback and one retry. The calendar panel now mounts when opened; its focus watcher runs immediately and its draft remains owned by the parent.
+- Added five regression tests for targeted/deduplicated reads, repeated requests, concurrent edits/deletions, retry after read failure, and metadata-only selection/search. `npm run check` passed with 25 files / 139 tests and no large-chunk warning. Entry JS is 450.83 kB (189.53 kB gzip), approximately 22% smaller before compression than the preceding 575.74 kB entry.
+- Isolated desktop/mobile browser verification covered 100 fixture records, incremental reads, full-history search, original preview/download, reference reuse, all deferred panels, and calendar draft/focus. Re-ran the first batch's reliability browser checks successfully. Scripts/screenshots remain in the existing untracked `tmp/` directory. No real API request, user-data modification, commit, or push occurred. Dev preview remains `http://127.0.0.1:4173/`.
+
+### 2026-09-07 (Asia/Shanghai)
+
+- User approved the review's recommended first batch: shared-image deletion protection, legacy-history deletion persistence, reliable saves with visible retry, and image-detail alignment after deleting one image.
+- Added version 4 deletion markers without deleting or rewriting existing stores. Migration and marker checks share a transaction; failed migration falls back to reading both databases. Stale writes to deleted IDs are rejected.
+- Storage operations now resolve on transaction completion and reject on abort, close connections, and handle blocked upgrades. Shared-image cleanup checks current history and conservatively retains legacy references; cleanup is skipped while this page has unsaved history. Some unused files may remain after failed writes or legacy deletion, intentionally prioritizing preservation over aggressive cleanup.
+- Added serialized history saves with snapshots, a latest-version retry queue, and a sticky-header failure notice. Group deletions update the UI only after persistence succeeds; bulk deletion stops on failure. Partial-image edits remain visible with the unsaved notice if persistence fails.
+- Reindexed per-image diagnostic details alongside image IDs, original URLs, and visibility indexes. Missing image content no longer shifts the remaining image positions.
+- Added 15 regression tests, including version 3 upgrade preservation, migration rollback/fallback, shared references, transaction aborts, retry ordering, and deletion diagnostics. `npm run check` passed: 24 files / 134 tests and production build. Desktop/mobile browser checks passed using isolated fixture data and blocked external requests.
+- Local preview is running at `http://127.0.0.1:4173/`. Browser verification script/screenshots are in the existing untracked `tmp/` directory. Existing `output/` and other user files were preserved. No commit or push was requested or performed.
 
 ### 2026-08-16 11:47:48 (Asia/Shanghai)
 

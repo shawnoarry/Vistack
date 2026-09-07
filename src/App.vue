@@ -90,6 +90,16 @@
                     </button>
                 </div>
             </div>
+            <div v-if="unsavedHistoryIds.length || historyStorageError" class="wb-shell py-3" role="alert" data-testid="history-storage-notice">
+                <div class="flex flex-wrap items-center gap-3 border-l-4 border-brand-accent bg-white px-4 py-3 text-sm text-brand-ink dark:bg-night-panel">
+                    <p v-if="unsavedHistoryIds.length" class="min-w-0 flex-1">{{ unsavedHistoryIds.length }} 条历史记录尚未保存。关闭或刷新页面可能丢失这些内容。</p>
+                    <p v-else class="min-w-0 flex-1">{{ historyStorageError }}</p>
+                    <button v-if="unsavedHistoryIds.length" type="button" class="wb-secondary min-h-9 px-3" :disabled="retryingHistory" @click="retryHistorySave">
+                        <RefreshCw :size="15" class="mr-1.5" aria-hidden="true" />{{ retryingHistory ? '保存中...' : '重试保存' }}
+                    </button>
+                    <button v-else type="button" class="wb-icon-button h-9 w-9" title="关闭提示" aria-label="关闭提示" @click="historyStorageError = ''"><X :size="16" aria-hidden="true" /></button>
+                </div>
+            </div>
         </header>
 
         <section v-if="showApiSettings" class="border-b border-brand-line bg-white dark:border-night-muted/35 dark:bg-[#232326]">
@@ -267,7 +277,7 @@
                         :assets="studioHistoryAssets"
                         :tasks="studioVisibleGenerationTasks"
                         :failure-records="generationFailureRecords"
-                        :history-loading="historyLoading"
+                        :history-loading="historyLoading || historyImagesLoading"
                         :has-more-history="hasMoreStudioHistory"
                         :hidden-notice="Boolean(hiddenHistoryUndo)"
                         :selected-history-id="selectedGenerationHistoryId"
@@ -280,7 +290,7 @@
                         @open="openStudioHistoryAsset"
                         @hide="hideStudioHistoryAsset"
                         @download="downloadHistoryAsset"
-                        @reference="pushImageToUpload($event.image)"
+                        @reference="useHistoryAssetAsReference"
                         @reuse="reuseHistoryRecipe"
                         @undo-hide="undoHideStudioHistoryAsset"
                         @load-more="studioHistoryGroupLimit += STUDIO_HISTORY_PAGE_SIZE"
@@ -518,6 +528,7 @@
                 </Teleport>
 
                 <CalendarPromptAssistant
+                    v-if="showCalendarPromptPanel"
                     v-model:source-copy="calendarSourceCopy"
                     v-model:time-context="calendarTimeContext"
                     v-model:aspect-ratio="calendarAspectRatio"
@@ -1074,11 +1085,13 @@
 
         <AssetLibraryView
             v-if="currentView === 'assets'"
-            :assets="filteredHistoryAssets"
+            :assets="visibleLibraryAssets"
+            :filtered-count="filteredHistoryAssets.length"
+            :has-more="visibleLibraryAssets.length < filteredHistoryAssets.length"
             :all-history-count="allHistoryAssets.length"
             :favorite-count="favoriteHistoryAssetCount"
             :collections="collectionOptions"
-            :loading="historyLoading"
+            :loading="historyLoading || historyImagesLoading"
             :filter="historyFilter"
             :search="assetSearch"
             :sort="assetSort"
@@ -1093,17 +1106,29 @@
             @toggle-selection-mode="toggleAssetSelectionMode"
             @toggle-selection="toggleAssetSelection"
             @new-collection="showCollectionDialog = true"
-            @open="openHistoryPreview($event.item, $event.image)"
+            @open="openStudioHistoryAsset"
             @download="downloadHistoryAsset"
-            @reference="pushImageToUpload($event.image)"
+            @reference="useHistoryAssetAsReference"
             @reuse="reuseHistoryRecipe"
-            @canvas="addHistoryItemToCanvas($event.item, $event.image)"
+            @canvas="addHistoryAssetToCanvas"
             @toggle-studio-visibility="toggleStudioHistoryAsset"
             @favorite="toggleHistoryFavorite"
             @category="setHistoryCategory"
             @delete-image="requestDeleteHistoryImage"
             @download-selected="downloadSelectedAssets"
             @delete-selected="showBulkDeleteDialog = true"
+            @load-more="assetDisplayLimit += ASSET_PAGE_SIZE"
+            @backup="showBackupDialog = true"
+        />
+
+        <BackupDialog
+            v-if="showBackupDialog"
+            :history="generationHistory"
+            :unsaved-ids="unsavedHistoryIds"
+            :restore-blocked="activeGenerationTasks.length ? '请等待生成任务完成后恢复。' : unsavedHistoryIds.length ? '请先重试保存尚未保存的历史记录，再进行恢复。' : ''"
+            :theme-mode="themeMode"
+            @close="showBackupDialog = false"
+            @restored="refreshAfterBackupRestore"
         />
 
         <div class="wb-shell pb-10">
@@ -1193,18 +1218,12 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
-import { CalendarDays, UsersRound, X } from '@lucide/vue'
+import { CalendarDays, RefreshCw, UsersRound, X } from '@lucide/vue'
 import ApiKeyInput from './components/ApiKeyInput.vue'
 import ImageUpload from './components/ImageUpload.vue'
-import StylePromptSelector from './components/StylePromptSelector.vue'
 import StudioResultWaterfall from './components/StudioResultWaterfall.vue'
-import CanvasWorkbench from './components/CanvasWorkbench.vue'
 import Footer from './components/Footer.vue'
-import PromptPhraseBuilder from './components/PromptPhraseBuilder.vue'
-import CalendarPromptAssistant from './components/CalendarPromptAssistant.vue'
-import ToolboxPanel from './components/ToolboxPanel.vue'
-import AssetLibraryView from './components/AssetLibraryView.vue'
-import AssetDetailWorkspace from './components/AssetDetailWorkspace.vue'
+import { asyncPanel } from './utils/asyncPanel'
 import { fetchModels, generateImage, improvePrompt, pollGeneratedTask } from './services/api'
 import { styleTemplates } from './data/templates'
 import { promptPoolGroups } from './data/promptPool'
@@ -1227,7 +1246,7 @@ import {
 } from './utils/imageSizing'
 import { getCanvasWorkbenchItems, saveCanvasWorkbenchItems } from './utils/canvasStorage'
 import { buildDiagnosticReport, formatDiagnosticTimestamp, sanitizeDiagnosticUrl, summarizeDiagnosticError } from './utils/diagnostics'
-import { buildAssetDownloadFilename, buildHistoryAssets, buildStudioHistoryAssets, type AssetSortOrder, type HistoryAsset } from './utils/assetLibrary'
+import { buildAssetDownloadFilename, type AssetSortOrder, type HistoryAsset } from './utils/assetLibrary'
 import { buildGenerationActionLabel, resolveGenerationMode } from './utils/generationAction'
 import { buildPortraitAssistPrompt, portraitAssistIconTitle, resolvePortraitAssistUiState } from './utils/portraitAssist'
 import {
@@ -1243,8 +1262,9 @@ import {
 import {
     buildGenerationActualParams,
     clampHistoryImageIndex,
+    hasHistoryImage,
     isHistoryImageHidden,
-    reindexHiddenImagesAfterDeletion,
+    removeHistoryImage,
     selectInitialVisibleHistoryImage,
     setHistoryImageHidden
 } from './utils/generationRecords'
@@ -1256,19 +1276,20 @@ import {
     type GenerationFailureRecord
 } from './utils/failureRecords'
 import {
-    deleteGenerationHistoryItem,
     deletePendingGenerationTaskItem,
     deleteStoredImage,
-    getGenerationHistoryItems,
     getPendingGenerationTaskItems,
     persistGeneratedImages,
     putPendingGenerationTaskItem,
-    putGenerationHistoryItem,
-    resolveHistoryItemImages,
     type GenerationHistoryItem,
     type PendingGenerationTaskItem,
     type GenerationHistorySource
 } from './utils/historyDb'
+import { createHistoryPersistence } from './utils/historyPersistence'
+import { createHistoryImageLoader } from './utils/historyImageLoader'
+import { ASSET_PAGE_SIZE, useHistoryAssets } from './composables/useHistoryAssets'
+import { useHistoryRestoration } from './composables/useHistoryRestoration'
+import { imageQualityOptions, inferModelOptionMetadata, isGptImage2ModelId, shouldPreferInferredSizeMetadata } from './utils/modelCapabilities'
 import {
     buildIdentityFidelityPrompt,
     DEFAULT_IDENTITY_FIDELITY,
@@ -1279,6 +1300,15 @@ import type { ApiConnectionPreset, ApiModel, CanvasWorkbenchItem, CanvasWorkbenc
 import { DEFAULT_API_ENDPOINT, DEFAULT_MODEL_ID, DEFAULT_PROMPT_ASSISTANT_ENDPOINT, DEFAULT_PROMPT_ASSISTANT_MODEL_ID } from './config/api'
 import { findMatchingApiPresetId, resolveSelectedApiPresetId } from './utils/apiPreset'
 import { getTemplateTaxonomy, TEMPLATE_OUTPUT_OPTIONS, TEMPLATE_SCENE_OPTIONS, TEMPLATE_STYLE_OPTIONS, TEMPLATE_TASK_OPTIONS } from './data/templateTaxonomy'
+
+const StylePromptSelector = asyncPanel(() => import('./components/StylePromptSelector.vue'))
+const CanvasWorkbench = asyncPanel(() => import('./components/CanvasWorkbench.vue'))
+const PromptPhraseBuilder = asyncPanel(() => import('./components/PromptPhraseBuilder.vue'))
+const CalendarPromptAssistant = asyncPanel(() => import('./components/CalendarPromptAssistant.vue'))
+const ToolboxPanel = asyncPanel(() => import('./components/ToolboxPanel.vue'))
+const AssetLibraryView = asyncPanel(() => import('./components/AssetLibraryView.vue'))
+const AssetDetailWorkspace = asyncPanel(() => import('./components/AssetDetailWorkspace.vue'))
+const BackupDialog = asyncPanel(() => import('./components/BackupDialog.vue'))
 
 type ThemeMode = 'light' | 'dark'
 
@@ -1442,7 +1472,14 @@ const imageAutoPrompt = ref(false)
 const imageTranslate = ref(false)
 
 const generationHistory = ref<GenerationHistoryItem[]>([])
-const historyLoading = ref(false)
+const showBackupDialog = ref(false)
+const historyPersistence = createHistoryPersistence()
+const { unsavedIds: unsavedHistoryIds, retrying: retryingHistory, error: historyStorageError, retry: retryHistorySave } = historyPersistence
+const historyImageLoader = createHistoryImageLoader(generationHistory, () => {
+    historyStorageError.value = '历史图片读取失败，请稍后重试或刷新页面。'
+}, () => historyPreviewItem.value ? [historyPreviewItem.value.id] : [])
+const { loading: historyImagesLoading, load: ensureHistoryImages } = historyImageLoader
+const assetDisplayLimit = ref(ASSET_PAGE_SIZE)
 const historyFilter = ref('all')
 const assetSearch = ref('')
 const assetSort = ref<AssetSortOrder>('newest')
@@ -2325,160 +2362,6 @@ const readPositiveIntegerFromFields = (record: Record<string, unknown>, fields: 
     return undefined
 }
 
-const ratioSizeOptions = ['21:9', '16:9', '3:2', '4:3', '5:4', '1:1', '4:5', '3:4', '2:3', '9:16']
-
-const isGptImage2ModelId = (modelId: string): boolean =>
-    /(^|[/:\s_-])gpt[\s_-]*image[\s_-]*2\b/i.test(modelId.trim())
-
-const isKnownDynamicResolutionImageModelId = (modelId: string): boolean => {
-    const normalized = modelId.toLowerCase()
-    return /gpt[\s_-]*image|gptimage/.test(normalized) ||
-        normalized.includes('nano-banana-2') ||
-        normalized.includes('nano-banana-pro') ||
-        normalized.includes('gemini-3-pro-image') ||
-        normalized.includes('gemini-3-pro') ||
-        normalized.includes('gemini-3.1-pro')
-}
-
-const isLjqclubCodexImageModel = (modelId: string, endpoint: string): boolean =>
-    isLjqclubImageEndpoint(endpoint) && /gpt[\s_-]*image|gptimage/.test(modelId.toLowerCase())
-
-const shouldPreferInferredSizeMetadata = (modelId: string, endpoint: string): boolean =>
-    isKnownDynamicResolutionImageModelId(modelId) ||
-    (isDoraverseImageProxyEndpoint(endpoint) && isGptImage2ModelId(modelId))
-
-const inferModelOptionMetadata = (modelId: string, endpoint = effectiveApiEndpoint.value): Partial<ModelOption> => {
-    const normalized = modelId.toLowerCase()
-
-    if (/gpt[\s_-]*image|gptimage/.test(normalized)) {
-        if (isLjqclubCodexImageModel(modelId, endpoint)) {
-            return {
-                sizeFormat: 'ratio',
-                maxGenerations: 4,
-                maxInputImages: 4,
-                defaultSize: '4:5',
-                hasResolution: false,
-                supportedSizes: ratioSizeOptions
-            }
-        }
-
-        if (isDoraverseImageProxyEndpoint(endpoint) && isGptImage2ModelId(modelId)) {
-            return {
-                sizeFormat: 'absolute',
-                maxGenerations: 4,
-                maxInputImages: 4,
-                defaultSize: '1024x1024',
-                defaultResolution: '720p',
-                supportedSizes: ['1024x1024', '1536x1024', '1024x1536'],
-                supportedResolutions: ['720p'],
-                hasResolution: false
-            }
-        }
-
-        return {
-            sizeFormat: 'ratio',
-            maxGenerations: 4,
-            maxInputImages: 4,
-            defaultSize: '1:1',
-            defaultResolution: '1K',
-            supportedResolutions: ['1K', '2K', '4K'],
-            hasResolution: true
-        }
-    }
-
-    if (normalized.includes('nano-banana-2')) {
-        return {
-            sizeFormat: 'ratio',
-            maxGenerations: 4,
-            maxInputImages: 4,
-            defaultSize: '21:9',
-            defaultResolution: normalized.includes('4k') ? '4K' : '1K',
-            supportedSizes: ratioSizeOptions,
-            supportedResolutions: ['1K', '2K', '4K'],
-            hasResolution: true
-        }
-    }
-
-    if (normalized.includes('nano-banana-pro')) {
-        return {
-            sizeFormat: 'ratio',
-            maxGenerations: 4,
-            maxInputImages: 2,
-            defaultSize: '21:9',
-            defaultResolution: normalized.includes('4k') ? '4K' : '1K',
-            supportedSizes: ratioSizeOptions,
-            supportedResolutions: normalized.includes('4k') ? ['1K', '2K', '4K'] : ['1K', '2K'],
-            hasResolution: true
-        }
-    }
-
-    if (normalized.includes('gemini-3-pro-image') || normalized.includes('gemini-3-pro') || normalized.includes('gemini-3.1-pro')) {
-        return {
-            sizeFormat: 'ratio',
-            maxGenerations: 4,
-            maxInputImages: 4,
-            defaultSize: '1:1',
-            defaultResolution: '1K',
-            supportedSizes: ratioSizeOptions,
-            supportedResolutions: ['1K', '2K', '4K'],
-            hasResolution: true
-        }
-    }
-
-    if (normalized.includes('nano-banana') || normalized.includes('gemini-2.5-flash-image')) {
-        return {
-            sizeFormat: 'ratio',
-            maxGenerations: 4,
-            maxInputImages: 2,
-            defaultSize: '21:9',
-            defaultResolution: '720p',
-            supportedSizes: ratioSizeOptions,
-            supportedResolutions: ['720p'],
-            hasResolution: false
-        }
-    }
-
-    if (normalized.includes('grok-imagine')) {
-        return {
-            sizeFormat: 'ratio',
-            maxGenerations: 4,
-            maxInputImages: 1,
-            defaultSize: '2:1',
-            defaultResolution: '720p',
-            supportedSizes: ['2:1', '20:9', '19.5:9', '16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16', '9:19.5', '9:20', '1:2'],
-            supportedResolutions: ['720p'],
-            hasResolution: false
-        }
-    }
-
-    if (normalized.includes('seedream')) {
-        return {
-            sizeFormat: 'named',
-            maxGenerations: 6,
-            maxInputImages: 6,
-            defaultSize: 'square_hd',
-            defaultResolution: '720p',
-            supportedSizes: ['auto', 'square', 'square_hd', '3:4', '4:3', '9:16', '16:9', 'auto_2K', 'auto_4K'],
-            supportedResolutions: ['720p'],
-            hasResolution: false
-        }
-    }
-
-    if (normalized.includes('flux')) {
-        return {
-            sizeFormat: 'named',
-            maxGenerations: 1,
-            maxInputImages: 1,
-            defaultSize: 'square_hd',
-            defaultResolution: '720p',
-            supportedSizes: ['square_hd', 'square', 'portrait_4:3', 'portrait_16:9', 'landscape_4:3', 'landscape_16:9'],
-            supportedResolutions: ['720p'],
-            hasResolution: false
-        }
-    }
-
-    return {}
-}
 
 const formatResolutionOptionLabel = (value: string): string => {
     const normalized = normalizeImageResolution(value)
@@ -2795,11 +2678,13 @@ const syncImagesToCanvas = (images: string[], source: CanvasWorkbenchItemSource,
     }
 }
 
-const addDisplayResultsToCanvas = () => {
+const addDisplayResultsToCanvas = async () => {
+    if (selectedHistoryItem.value) await ensureHistoryImages([selectedHistoryItem.value])
     const source = selectedHistoryItem.value?.source || latestResultSource.value
     const title = source === 'text' ? '文生图结果' : '参考图结果'
     const prompt = selectedHistoryItem.value?.prompt || latestGenerationRecipe.value?.mainPrompt || textToImagePrompt.value
     addImagesToCanvas(displayResults.value, 'result', title, prompt)
+    historyImageLoader.releaseOriginals()
 }
 
 const addReferencesToCanvas = () => {
@@ -2821,13 +2706,15 @@ const addReferencesToCanvas = () => {
     currentView.value = 'studio'
 }
 
-const addHistoryItemToCanvas = (item: GenerationHistoryItem, image?: string) => {
+const addHistoryItemToCanvas = async (item: GenerationHistoryItem, image?: string) => {
+    if (!image) await ensureHistoryImages([item])
     const prompt = item.recipe?.mainPrompt || item.prompt
-    addImagesToCanvas(image ? [image] : item.images, 'history', item.category || '历史资产', prompt)
+    addImagesToCanvas(image ? [image] : (generationHistory.value.find(record => record.id === item.id)?.images || []), 'history', item.category || '历史资产', prompt)
     if (historyPreviewItem.value?.id === item.id) {
         historyPreviewItem.value = null
         historyPreviewImage.value = ''
     }
+    historyImageLoader.releaseOriginals()
 }
 
 const removeCanvasItem = (id: string) => {
@@ -4316,12 +4203,6 @@ const imageSizeOptions = computed(() => {
     ]
 })
 
-const imageQualityOptions = [
-    { value: 'auto', label: 'auto' },
-    { value: 'low', label: 'low' },
-    { value: 'medium', label: 'medium' },
-    { value: 'high', label: 'high' }
-]
 
 const selectedModelProfileText = computed(() => [
     selectedModel.value,
@@ -4502,30 +4383,17 @@ const supportsGoogleSearch = computed(() => {
     return modelId.includes('gemini-3-pro-image')
 })
 
-const hydrateHistoryImages = async (items: GenerationHistoryItem[]) => {
-    return Promise.all(items.map(async item => ({
-        ...item,
-        images: await resolveHistoryItemImages(item)
-    })))
-}
-
 const selectFirstVisibleHistory = () => {
     const selection = selectInitialVisibleHistoryImage(generationHistory.value)
     selectedGenerationHistoryId.value = selection?.id || ''
     selectedGenerationImageIndex.value = selection?.imageIndex || 0
 }
 
-const loadGenerationHistory = async () => {
-    historyLoading.value = true
-    try {
-        generationHistory.value = await hydrateHistoryImages(await getGenerationHistoryItems())
-        if (!selectedGenerationHistoryId.value) selectFirstVisibleHistory()
-    } catch (historyError) {
-        console.warn('无法读取生成历史:', historyError)
-    } finally {
-        historyLoading.value = false
-    }
-}
+const { historyLoading, loadGenerationHistory, refreshAfterBackupRestore } = useHistoryRestoration({
+    generationHistory, historyStorageError, apiConnectionPresets,
+    promptAssistantConnectionPresets, assetCollections,
+    onLoaded: () => { if (!selectedGenerationHistoryId.value) selectFirstVisibleHistory() }
+})
 
 const addGenerationHistory = async (
     source: GenerationHistorySource,
@@ -4569,11 +4437,7 @@ const addGenerationHistory = async (
     selectedGenerationImageIndex.value = 0
     selectedFailedTaskId.value = ''
 
-    try {
-        await putGenerationHistoryItem(item)
-    } catch (historyError) {
-        console.warn('无法保存生成历史:', historyError)
-    }
+    await historyPersistence.save(item)
 }
 
 const stripApiKeyFromRequest = (request: GenerateRequest): Omit<GenerateRequest, 'apikey' | 'proxyToken'> => {
@@ -4800,53 +4664,14 @@ const resumePendingGenerationTask = async (item: PendingGenerationTaskItem) => {
     }
 }
 
-const historyCategories = computed(() =>
-    Array.from(new Set(generationHistory.value.map(item => item.category).filter(Boolean) as string[]))
-)
-
-const collectionOptions = computed(() =>
-    Array.from(new Set([...assetCollections.value, ...historyCategories.value])).filter(Boolean)
-)
-
-const favoriteHistory = computed(() => generationHistory.value.filter(item => item.favorite))
-const studioVisibleHistoryItems = computed(() => generationHistory.value.filter(item =>
-    item.images.some((image, index) => Boolean(image) && !isHistoryImageHidden(item, index))
-))
-const recentGenerationHistory = computed(() =>
-    studioVisibleHistoryItems.value.slice(0, 6)
-)
-const formatHistoryListTime = (timestamp: number) => new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-}).format(new Date(timestamp))
-
-const allHistoryAssets = computed(() => buildHistoryAssets(generationHistory.value, {
-    filter: 'all',
-    search: '',
-    sort: 'newest'
-}))
-const studioHistoryAssets = computed(() => buildStudioHistoryAssets(
-    generationHistory.value,
-    studioHistoryGroupLimit.value
-))
-const hasMoreStudioHistory = computed(() => studioVisibleHistoryItems.value.length > studioHistoryGroupLimit.value)
-const hiddenHistoryAssetCount = computed(() => generationHistory.value.reduce(
-    (count, item) => count + item.images.filter((_, index) => isHistoryImageHidden(item, index)).length,
-    0
-))
-const favoriteHistoryAssetCount = computed(() => allHistoryAssets.value.filter(asset => asset.item.favorite).length)
-
-const filteredHistoryAssets = computed(() => buildHistoryAssets(generationHistory.value, {
-    filter: historyFilter.value,
-    search: assetSearch.value,
-    sort: assetSort.value
-}))
-
-const selectedHistoryAssets = computed(() =>
-    allHistoryAssets.value.filter(asset => selectedAssetIds.value.includes(asset.id))
-)
+const {
+    collectionOptions, favoriteHistory, studioVisibleHistoryItems, recentGenerationHistory,
+    formatHistoryListTime, allHistoryAssets, studioHistoryAssets, hasMoreStudioHistory,
+    hiddenHistoryAssetCount, favoriteHistoryAssetCount, filteredHistoryAssets,
+    selectedHistoryAssets, visibleLibraryAssets
+} = useHistoryAssets({
+    generationHistory, assetCollections, studioHistoryGroupLimit, historyFilter, assetSearch, assetSort, selectedAssetIds, assetDisplayLimit, currentView, workspaceMode, historyImageLoader
+})
 
 const updateHistoryItem = async (nextItem: GenerationHistoryItem) => {
     generationHistory.value = generationHistory.value.map(item => (item.id === nextItem.id ? nextItem : item))
@@ -4856,11 +4681,7 @@ const updateHistoryItem = async (nextItem: GenerationHistoryItem) => {
     if (selectedGenerationHistoryId.value === nextItem.id) {
         selectedGenerationImageIndex.value = clampHistoryImageIndex(nextItem.images, selectedGenerationImageIndex.value)
     }
-    try {
-        await putGenerationHistoryItem(nextItem)
-    } catch (historyError) {
-        console.warn('无法更新生成历史:', historyError)
-    }
+    return historyPersistence.save(nextItem)
 }
 
 const toggleHistoryFavorite = (item: GenerationHistoryItem) => {
@@ -4939,21 +4760,29 @@ const dismissGenerationTask = (task: GenerationTask) => {
     syncGenerationLoadingState()
 }
 
-const openHistoryPreview = (item: GenerationHistoryItem, image = item.images[0] || '') => {
-    selectHistoryItem(item, Math.max(item.images.indexOf(image), 0))
-    historyPreviewItem.value = item
-    historyPreviewImage.value = image
+let historyPreviewRequest = 0
+const openHistoryPreview = async (item: GenerationHistoryItem, imageIndex = 0) => {
+    const request = ++historyPreviewRequest
+    await ensureHistoryImages([item])
+    const current = generationHistory.value.find(record => record.id === item.id)
+    if (request !== historyPreviewRequest || !current?.images[imageIndex]) return
+    if (item.imageIds?.[imageIndex] !== current.imageIds?.[imageIndex]) return
+    selectHistoryItem(current, imageIndex)
+    historyPreviewItem.value = current
+    historyPreviewImage.value = current.images[imageIndex]
     historyPreviewOriginalMode.value = false
     historyPromptCopyStatus.value = ''
 }
 
 const openStudioHistoryAsset = (asset: HistoryAsset) => {
-    openHistoryPreview(asset.item, asset.image)
+    void openHistoryPreview(asset.item, asset.index)
 }
 
 const closeHistoryPreview = () => {
+    historyPreviewRequest += 1
     historyPreviewItem.value = null
     historyPreviewImage.value = ''
+    historyImageLoader.releaseOriginals()
     historyPreviewOriginalMode.value = false
     historyPromptCopyStatus.value = ''
 }
@@ -4971,9 +4800,8 @@ const copyHistoryPrompt = async (item: GenerationHistoryItem) => {
     }, 1800)
 }
 
-const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string) => {
-    const imageIndex = Math.max(item.images.indexOf(image), 0)
-    const imageDetail = item.imageDetails?.[imageIndex]
+const copyHistoryDiagnostic = async (item: GenerationHistoryItem, image: string, imageIndex = Math.max(item.images.indexOf(image), 0)) => {
+    const imageDetail = item.imageDetails?.find(detail => detail.index === imageIndex)
     const references = item.recipe?.referenceImages?.map((_, index) => {
         const meta = normalizeReferenceRecipeMeta(item.recipe?.referenceImageMetadata?.[index], index)
         return `${index + 1}. ${roleLabel(meta.role)} / ${meta.label}${meta.note ? ` / ${meta.note}` : ''}`
@@ -5127,11 +4955,12 @@ const deleteFailureRecord = (recordId: string) => {
 
 const copySelectedGenerationDiagnostic = () => {
     if (selectedFailedTask.value) return copyTaskDiagnostic(selectedFailedTask.value)
-    if (selectedHistoryItem.value) return copyHistoryDiagnostic(selectedHistoryItem.value, selectedCurrentImage.value)
+    if (selectedHistoryItem.value) return copyHistoryDiagnostic(selectedHistoryItem.value, selectedCurrentImage.value, selectedGenerationImageIndex.value)
     return copyRequestDiagnostic()
 }
 
 const deleteHistoryItem = async (item: GenerationHistoryItem) => {
+    if (!await historyPersistence.remove(item.id)) return false
     generationHistory.value = generationHistory.value.filter(historyItem => historyItem.id !== item.id)
     if (selectedGenerationHistoryId.value === item.id) {
         selectFirstVisibleHistory()
@@ -5148,36 +4977,33 @@ const deleteHistoryItem = async (item: GenerationHistoryItem) => {
     }
 
     try {
-        await deleteGenerationHistoryItem(item.id)
-        await Promise.allSettled((item.imageIds || []).map(imageId => deleteStoredImage(imageId)))
+        if (!unsavedHistoryIds.value.length) {
+            await Promise.allSettled((item.imageIds || []).map(imageId => deleteStoredImage(imageId)))
+        }
     } catch (historyError) {
         console.warn('无法删除生成历史:', historyError)
     }
+    return true
 }
 
-const deleteHistoryImageAt = async (item: GenerationHistoryItem, imageIndex: number) => {
-    if (imageIndex < 0) return
 
-    const nextImages = item.images.filter((_, index) => index !== imageIndex)
-    const nextImageIds = item.imageIds?.filter((_, index) => index !== imageIndex)
-    const nextRawImageUrls = item.rawImageUrls?.filter((_, index) => index !== imageIndex)
-    const deletedImageId = imageIndex >= 0 ? item.imageIds?.[imageIndex] : undefined
+const deleteHistoryImageAt = async (item: GenerationHistoryItem, imageIndex: number) => {
+    const nextItem = removeHistoryImage(item, imageIndex)
+    if (nextItem === item) return false
+    const nextImages = nextItem.images
+    const deletedImageId = item.imageIds?.[imageIndex]
 
     if (!nextImages.length) {
-        await deleteHistoryItem(item)
-        return
+        return deleteHistoryItem(item)
     }
 
-    const nextItem = {
-        ...item,
-        images: nextImages,
-        imageIds: nextImageIds,
-        rawImageUrls: nextRawImageUrls,
-        hiddenImageIndexes: reindexHiddenImagesAfterDeletion(item, imageIndex)
-    }
-    await updateHistoryItem(nextItem)
-    if (deletedImageId) {
-        await deleteStoredImage(deletedImageId)
+    const saved = await updateHistoryItem(nextItem)
+    if (saved && deletedImageId && !unsavedHistoryIds.value.length) {
+        try {
+            await deleteStoredImage(deletedImageId)
+        } catch (error) {
+            console.warn('图片清理未完成，已保留本地文件:', error)
+        }
     }
 
     if (historyPreviewItem.value?.id === item.id) {
@@ -5187,6 +5013,7 @@ const deleteHistoryImageAt = async (item: GenerationHistoryItem, imageIndex: num
             : nextImages[0]
     }
     if (hiddenHistoryUndo.value?.itemId === item.id) hiddenHistoryUndo.value = null
+    return saved
 }
 
 const toggleAssetSelectionMode = () => {
@@ -5238,7 +5065,7 @@ const confirmBulkDeleteAssets = async () => {
     for (const { item, indexes } of assetsByItem.values()) {
         let currentItem = generationHistory.value.find(historyItem => historyItem.id === item.id) || item
         for (const index of [...indexes].sort((a, b) => b - a)) {
-            await deleteHistoryImageAt(currentItem, index)
+            if (!await deleteHistoryImageAt(currentItem, index)) return
             const nextItem = generationHistory.value.find(historyItem => historyItem.id === currentItem.id)
             if (!nextItem) break
             currentItem = nextItem
@@ -5343,13 +5170,13 @@ const downloadImageFile = async (
 }
 
 const firstVisibleHistoryImage = (item: GenerationHistoryItem) =>
-    item.images.find((image, index) => Boolean(image) && !isHistoryImageHidden(item, index)) || ''
+    item.images[item.images.findIndex((_, index) => hasHistoryImage(item, index) && !isHistoryImageHidden(item, index))] || ''
 
 const visibleHistoryImageCount = (item: GenerationHistoryItem) =>
-    item.images.filter((image, index) => Boolean(image) && !isHistoryImageHidden(item, index)).length
+    item.images.filter((_, index) => hasHistoryImage(item, index) && !isHistoryImageHidden(item, index)).length
 
 const focusHistoryItem = (item: GenerationHistoryItem) => {
-    const imageIndex = item.images.findIndex((image, index) => Boolean(image) && !isHistoryImageHidden(item, index))
+    const imageIndex = item.images.findIndex((_, index) => hasHistoryImage(item, index) && !isHistoryImageHidden(item, index))
     if (imageIndex < 0) return
 
     const groupIndex = studioVisibleHistoryItems.value.findIndex(historyItem => historyItem.id === item.id)
@@ -5383,7 +5210,7 @@ const hideStudioHistoryAsset = async (asset: HistoryAsset) => {
     setHiddenHistoryUndo(nextItem.id, asset.index)
 
     if (selectedGenerationHistoryId.value === nextItem.id && selectedGenerationImageIndex.value === asset.index) {
-        const nextIndex = nextItem.images.findIndex((image, index) => Boolean(image) && !isHistoryImageHidden(nextItem, index))
+        const nextIndex = nextItem.images.findIndex((_, index) => hasHistoryImage(nextItem, index) && !isHistoryImageHidden(nextItem, index))
         if (nextIndex >= 0) selectHistoryItem(nextItem, nextIndex)
         else selectFirstVisibleHistory()
     }
@@ -5445,7 +5272,27 @@ const handleDownloadResult = async (image: string) => {
 }
 
 const downloadHistoryAsset = async (asset: HistoryAsset) => {
-    await downloadImageFile(asset.image, asset.item.createdAt, asset.index + 1, asset.item.images.length, true)
+    const image = await resolveHistoryAssetImage(asset)
+    await downloadImageFile(image, asset.item.createdAt, asset.index + 1, asset.item.images.length, true)
+    historyImageLoader.releaseOriginals()
+}
+
+const resolveHistoryAssetImage = async (asset: HistoryAsset) => {
+    await ensureHistoryImages([asset.item])
+    const current = generationHistory.value.find(item => item.id === asset.item.id)
+    if (!current || current.imageIds?.[asset.index] !== asset.item.imageIds?.[asset.index]) return ''
+    return current.images[asset.index] || ''
+}
+
+const useHistoryAssetAsReference = async (asset: HistoryAsset) => {
+    const image = await resolveHistoryAssetImage(asset)
+    if (image) pushImageToUpload(image)
+    historyImageLoader.releaseOriginals()
+}
+
+const addHistoryAssetToCanvas = async (asset: HistoryAsset) => {
+    const image = await resolveHistoryAssetImage(asset)
+    if (image) await addHistoryItemToCanvas(asset.item, image)
 }
 
 const downloadHistoryPreview = async () => {
@@ -5467,7 +5314,9 @@ const downloadSelectedAssets = async () => {
     try {
         for (let index = 0; index < assets.length; index += 1) {
             assetDownloadStatus.value = `正在发起 ${index + 1}/${assets.length}`
-            const succeeded = await downloadImageFile(assets[index].image, timestamp, index + 1, assets.length, false)
+            const image = await resolveHistoryAssetImage(assets[index])
+            const succeeded = await downloadImageFile(image, timestamp, index + 1, assets.length, false)
+            historyImageLoader.releaseOriginals()
             if (succeeded) initiated += 1
         }
 

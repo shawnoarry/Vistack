@@ -1,5 +1,5 @@
 import type { GenerationHistoryItem } from './historyDb'
-import { isHistoryImageHidden } from './generationRecords'
+import { hasHistoryImage, isHistoryImageHidden } from './generationRecords'
 
 export type AssetSortOrder = 'newest' | 'oldest'
 
@@ -8,6 +8,8 @@ export interface HistoryAsset {
     item: GenerationHistoryItem
     image: string
     index: number
+    originalWidth?: number
+    originalHeight?: number
 }
 
 export interface AssetLibraryQuery {
@@ -55,13 +57,13 @@ export const buildStudioHistoryAssets = (
     groupLimit: number
 ): HistoryAsset[] => {
     const visibleGroups = items.filter(item =>
-        item.images.some((image, index) => Boolean(image) && !isHistoryImageHidden(item, index))
+        item.images.some((_, index) => hasHistoryImage(item, index) && !isHistoryImageHidden(item, index))
     )
 
     return visibleGroups
         .slice(0, Math.max(Math.trunc(groupLimit), 0))
         .flatMap(item => item.images.flatMap((image, index) => {
-            if (!image || isHistoryImageHidden(item, index)) return []
+            if (!hasHistoryImage(item, index) || isHistoryImageHidden(item, index)) return []
             return [{
                 id: `${item.id}-${index}`,
                 item,

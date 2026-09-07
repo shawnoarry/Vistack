@@ -183,6 +183,75 @@ export class LocalStorage {
         }
     }
 
+    static mergeBackupSettings(settings: {
+        apiPresets: ApiConnectionPreset[]
+        assistantPresets: ApiConnectionPreset[]
+        collections: string[]
+    }): { importedPresets: number; skippedPresets: number } {
+        const keys = [this.API_CONNECTION_PRESETS, this.PROMPT_ASSISTANT_CONNECTION_PRESETS, this.ASSET_COLLECTIONS]
+        const before = keys.map(key => localStorage.getItem(key))
+        const result = { importedPresets: 0, skippedPresets: 0 }
+        const merge = (raw: string | null, incoming: ApiConnectionPreset[]) => {
+            const existing = this.readBackupPresets(raw)
+            const ids = new Set(existing.map(preset => preset.id))
+            for (const preset of incoming) {
+                if (ids.has(preset.id)) result.skippedPresets += 1
+                else {
+                    existing.push(preset)
+                    ids.add(preset.id)
+                    result.importedPresets += 1
+                }
+            }
+            return JSON.stringify(existing)
+        }
+        const collections: unknown = JSON.parse(before[2] || '[]')
+        if (!Array.isArray(collections) || collections.some(value => typeof value !== 'string')) {
+            throw new Error('现有收藏夹数据无法读取，已停止合并')
+        }
+        const values = [
+            merge(before[0], settings.apiPresets),
+            merge(before[1], settings.assistantPresets),
+            JSON.stringify([...new Set([...collections, ...settings.collections])])
+        ]
+        const changed: number[] = []
+        try {
+            keys.forEach((key, index) => {
+                if (before[index] === values[index]) return
+                localStorage.setItem(key, values[index])
+                changed.push(index)
+            })
+        } catch (error) {
+            for (const index of changed.reverse()) {
+                if (before[index] === null) localStorage.removeItem(keys[index])
+                else localStorage.setItem(keys[index], before[index]!)
+            }
+            throw error
+        }
+        return result
+    }
+
+    static getBackupSettings(): { apiPresets: ApiConnectionPreset[]; assistantPresets: ApiConnectionPreset[]; collections: string[] } {
+        const collections: unknown = JSON.parse(localStorage.getItem(this.ASSET_COLLECTIONS) || '[]')
+        if (!Array.isArray(collections) || collections.some(value => typeof value !== 'string')) throw new Error('收藏夹数据无法读取，备份已停止')
+        return {
+            apiPresets: this.readBackupPresets(localStorage.getItem(this.API_CONNECTION_PRESETS)),
+            assistantPresets: this.readBackupPresets(localStorage.getItem(this.PROMPT_ASSISTANT_CONNECTION_PRESETS)),
+            collections
+        }
+    }
+
+    private static readBackupPresets(raw: string | null): ApiConnectionPreset[] {
+        const value: unknown = JSON.parse(raw || '[]')
+        if (!Array.isArray(value) || value.some(item => !item || typeof item !== 'object'
+            || typeof item.id !== 'string' || !item.id || typeof item.name !== 'string' || !item.name
+            || typeof item.endpoint !== 'string' || !item.endpoint || typeof item.apiKey !== 'string'
+            || typeof item.model !== 'string' || typeof item.useProxy !== 'boolean'
+            || !Number.isFinite(item.createdAt) || !Number.isFinite(item.updatedAt))) {
+            throw new Error('接口预设数据无法读取，操作已停止')
+        }
+        return value as ApiConnectionPreset[]
+    }
+
     // 保存模型ID
     static saveModelId(modelId: string): void {
         try {

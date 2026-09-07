@@ -5,7 +5,6 @@ import {
     getEndpointPath,
     isDoraverseImageProxyEndpoint,
     isGrsaiEndpoint,
-    isLjqclubImageEndpoint,
     isOpenAiImageModelId,
     resolveChatCompletionsEndpoint,
     resolveImageGenerationEndpoint,
@@ -13,8 +12,9 @@ import {
     resolveSiblingEndpoint
 } from '../utils/apiEndpoint'
 import { sanitizeDiagnosticUrl } from '../utils/diagnostics'
-import { aspectRatioToDoraverseGptImageSize, aspectRatioToGeminiSize, aspectRatioToGrsaiGptImageSize, aspectRatioToOpenAiImageSize } from '../utils/imageSizing'
+import { aspectRatioToGeminiSize, aspectRatioToGrsaiGptImageSize } from '../utils/imageSizing'
 import { buildImagePromptReverseMessages } from './imagePromptReverse'
+import { getGeminiChatCapabilities, resolveOpenAiImageSize } from '../utils/modelCapabilities'
 
 type ApiProvider = 'openai-chat' | 'openai-image' | 'openai-image-edit' | 'grsai' | 'grsai-draw'
 
@@ -388,13 +388,7 @@ async function generateWithProfile(profile: ApiProfile, request: GenerateRequest
 
 async function generateWithOpenAiChat(apiEndpoint: string, request: GenerateRequest): Promise<GenerateResponse> {
     const modelId = request.model?.trim() || DEFAULT_MODEL_ID
-    const normalizedModelId = modelId.toLowerCase()
-    const isGemini3ProImage = normalizedModelId.includes('gemini-3-pro-image') ||
-        normalizedModelId.includes('gemini-3-pro') ||
-        normalizedModelId.includes('gemini-3.1-pro')
-    const isGeminiSizeImageModel = isGemini3ProImage ||
-        normalizedModelId.includes('nano-banana') ||
-        normalizedModelId.includes('gemini-2.5-flash-image')
+    const { googleSearch: isGemini3ProImage, mappedSize: isGeminiSizeImageModel } = getGeminiChatCapabilities(modelId)
     const isOpenAiImageModel = isOpenAiImageModelId(modelId)
 
     const messageContent = request.images.length === 0
@@ -1005,25 +999,6 @@ function isDallEModelId(modelId: string): boolean {
     return /dall[\s_-]*e/i.test(modelId)
 }
 
-function resolveOpenAiImageSize(endpoint: string, modelId: string, aspectRatio: string, imageSize?: string): string {
-    if (isLjqclubImageEndpoint(endpoint)) {
-        return aspectRatio || 'auto'
-    }
-
-    if (isDoraverseImageProxyEndpoint(endpoint)) {
-        if (shouldUseDoraverseGptImageSize(endpoint, modelId)) {
-            return aspectRatioToDoraverseGptImageSize(aspectRatio)
-        }
-
-        return aspectRatio || 'auto'
-    }
-
-    return aspectRatioToOpenAiImageSize(aspectRatio, imageSize)
-}
-
-function shouldUseDoraverseGptImageSize(endpoint: string, modelId: string): boolean {
-    return isDoraverseImageProxyEndpoint(endpoint) && /^gpt-image-2\b/i.test(modelId.trim())
-}
 
 function appendDoraverseImageOptions(payload: Record<string, unknown>, endpoint: string, request: GenerateRequest): void {
     if (!isDoraverseImageProxyEndpoint(endpoint)) return

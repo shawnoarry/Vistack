@@ -1,5 +1,6 @@
 import type { GenerateRequest, GenerationActualParams } from '../types'
 import { sanitizeDiagnosticUrl } from './diagnostics'
+import type { GenerationHistoryItem } from './historyDb'
 
 export interface GenerationActualParamsContext {
     provider?: string
@@ -44,7 +45,13 @@ export function clampHistoryImageIndex(images: string[], index: number): number 
 
 export interface HistoryImageVisibilityRecord {
     images: string[]
+    imageIds?: string[]
+    rawImageUrls?: string[]
     hiddenImageIndexes?: number[]
+}
+
+export function hasHistoryImage(item: HistoryImageVisibilityRecord, index: number): boolean {
+    return Boolean(item.images[index] || item.imageIds?.[index] || item.rawImageUrls?.[index])
 }
 
 export function normalizeHiddenImageIndexes(item: HistoryImageVisibilityRecord): number[] {
@@ -86,11 +93,25 @@ export function reindexHiddenImagesAfterDeletion(
     return nextIndexes.length ? nextIndexes : undefined
 }
 
+export function removeHistoryImage(item: GenerationHistoryItem, imageIndex: number): GenerationHistoryItem {
+    if (!Number.isInteger(imageIndex) || imageIndex < 0 || imageIndex >= item.images.length) return item
+    return {
+        ...item,
+        images: item.images.filter((_, index) => index !== imageIndex),
+        imageIds: item.imageIds?.filter((_, index) => index !== imageIndex),
+        rawImageUrls: item.rawImageUrls?.filter((_, index) => index !== imageIndex),
+        imageDetails: item.imageDetails
+            ?.filter(detail => detail.index !== imageIndex)
+            .map(detail => ({ ...detail, index: detail.index > imageIndex ? detail.index - 1 : detail.index })),
+        hiddenImageIndexes: reindexHiddenImagesAfterDeletion(item, imageIndex)
+    }
+}
+
 export function selectInitialVisibleHistoryImage<
     T extends { id: string } & HistoryImageVisibilityRecord
 >(items: T[]): { id: string; imageIndex: number } | null {
     for (const item of items) {
-        const imageIndex = item.images.findIndex((image, index) => Boolean(image) && !isHistoryImageHidden(item, index))
+        const imageIndex = item.images.findIndex((_, index) => hasHistoryImage(item, index) && !isHistoryImageHidden(item, index))
         if (imageIndex >= 0) return { id: item.id, imageIndex }
     }
     return null

@@ -7,6 +7,7 @@
                 <p class="mt-1 text-sm text-brand-muted">查找、下载和复用保存在当前浏览器中的生成结果。</p>
             </div>
             <div class="flex flex-wrap gap-2">
+                <button type="button" class="wb-secondary" @click="$emit('backup')"><Archive :size="16" class="mr-1.5" aria-hidden="true" />备份与恢复</button>
                 <button type="button" class="wb-secondary" @click="$emit('back')">返回创作台</button>
                 <button
                     v-if="allHistoryCount"
@@ -106,7 +107,7 @@
                 </div>
 
                 <div class="mb-3 flex min-h-6 items-center justify-between gap-3 text-xs text-brand-muted">
-                    <span>{{ assets.length }} 张图片</span>
+                    <span>{{ filteredCount }} 张图片<span v-if="hasMore"> · 已显示 {{ assets.length }} 张</span></span>
                     <span v-if="search.trim()">搜索：{{ search.trim() }}</span>
                 </div>
 
@@ -127,7 +128,8 @@
                             :aria-label="selectionMode ? `${selectedIds.includes(asset.id) ? '取消选择' : '选择'}资产 ${asset.index + 1}` : `查看资产 ${asset.index + 1}`"
                             @click="selectionMode ? $emit('toggle-selection', asset.id) : $emit('open', asset)"
                         >
-                            <img :src="asset.image" :alt="`历史资产 ${asset.index + 1}`" class="h-full w-full object-cover" />
+                            <img v-if="asset.image" :src="asset.image" :alt="`历史资产 ${asset.index + 1}`" class="h-full w-full object-cover" loading="lazy" decoding="async" />
+                            <span v-else class="flex h-full w-full items-center justify-center text-xs text-brand-muted" role="status">{{ loading ? '正在读取图片...' : '图片暂不可用' }}</span>
                             <span v-if="selectionMode" class="absolute left-2 top-2 flex min-h-7 items-center gap-1.5 rounded-md border border-white/60 bg-brand-ink/80 px-2 text-xs font-semibold text-brand-surface">
                                 <span class="flex h-4 w-4 items-center justify-center rounded border border-current" aria-hidden="true">{{ selectedIds.includes(asset.id) ? '✓' : '' }}</span>
                                 {{ selectedIds.includes(asset.id) ? '已选' : '选择' }}
@@ -191,6 +193,9 @@
                     <p class="text-sm font-semibold text-brand-ink">{{ allHistoryCount ? '没有符合条件的图片' : '还没有生成资产' }}</p>
                     <p class="mt-1 text-xs text-brand-muted">{{ allHistoryCount ? '请调整搜索或筛选条件。' : '成功生成后，图片会自动保存在这里。' }}</p>
                 </div>
+                <div v-if="hasMore" class="mt-5 flex justify-center">
+                    <button type="button" class="wb-secondary min-h-10 px-4 text-xs" :disabled="loading" @click="$emit('load-more')">{{ loading ? '正在读取...' : '加载更多图片' }}</button>
+                </div>
             </section>
         </div>
 
@@ -215,12 +220,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Archive } from '@lucide/vue'
 import type { GenerationHistoryItem } from '../utils/historyDb'
 import type { AssetSortOrder, HistoryAsset } from '../utils/assetLibrary'
 import { isHistoryImageHidden } from '../utils/generationRecords'
 
 const props = defineProps<{
     assets: HistoryAsset[]
+    filteredCount: number
+    hasMore: boolean
     allHistoryCount: number
     favoriteCount: number
     collections: string[]
@@ -236,6 +244,7 @@ const props = defineProps<{
 
 defineEmits<{
     back: []
+    backup: []
     'update:filter': [value: string]
     'update:search': [value: string]
     'update:sort': [value: AssetSortOrder]
@@ -253,6 +262,7 @@ defineEmits<{
     'delete-image': [asset: HistoryAsset]
     'download-selected': []
     'delete-selected': []
+    'load-more': []
 }>()
 
 const primaryFilters = computed(() => [

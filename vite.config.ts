@@ -172,7 +172,15 @@ export default defineConfig({
     cacheDir: '.vite-cache',
     build: {
         outDir: 'dist',
-        assetsDir: 'assets'
+        assetsDir: 'assets',
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    const path = id.replace(/\\/g, '/')
+                    if (/\/node_modules\/(?:@vue\/|vue\/)/.test(path)) return 'vue-runtime'
+                }
+            }
+        }
     },
     server: {
         port: 3000
