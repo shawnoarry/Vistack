@@ -96,6 +96,14 @@ The original broad Phase 2 studio restructure was not approved and has been with
 
 ## Completed Work
 
+### 2026-09-07 Remote Deployment Verification
+
+- Committed the completed history reliability, progressive loading, ZIP backup, thumbnail caching, dependency remediation, model-capability consolidation, and bundle-splitting work as `fbe4501` (`feat: strengthen history backup and performance`) and pushed `main` to `origin`.
+- GitHub confirms `origin/main` resolves to the complete commit SHA `fbe450124399b6abf0502d2aae14c4fc590fbce4`. The repository has no GitHub Actions workflow or GitHub Pages deployment; the production site is deployed through Vercel's repository integration.
+- Verified `https://vistack.vercel.app/` serves the same three entry asset fingerprints as the local production build: `index-CBJpmt2t.js`, `vue-runtime-DD_6kDxi.js`, and `index-SuyeHXFu.css`. The response is served by Vercel over HTTPS, and the deployed asset library exposes the new backup-and-restore entry.
+- Production smoke checks passed at 1440x1000 and 390x844: application loaded, lazy backup dialog opened, no horizontal overflow, and no application page errors. The production proxy returned 204 for OPTIONS and 401 for an unauthenticated GET, confirming the configured token protection is active.
+- `output/` and `tmp/` remain local, untracked, and excluded from the commit. No real user backup, API key, paid API request, or generated output was uploaded.
+
 ### 1. Project assessment
 
 - Reviewed the Vue 3 + TypeScript + Vite application, API compatibility layer, proxy, local storage, IndexedDB history, and build configuration.
