@@ -3,17 +3,26 @@
     "version": "1.0.0",
     "type": "module",
     "scripts": {
+        "pretext-library": "node tools/text-library/prepareOcr.mjs",
+        "pretext-library:build": "node tools/text-library/prepareOcr.mjs",
+        "text-library:ocr-assets": "node tools/text-library/prepareOcr.mjs",
+        "text-library": "vite --config text-library.vite.config.ts",
+        "text-library:build": "vite build --config text-library.vite.config.ts",
         "dev": "vite --host 0.0.0.0",
         "dev:local": "vite --host 127.0.0.1",
         "build": "vite build",
-        "typecheck": "vue-tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
+        "typecheck": "vue-tsc --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.text-library.json",
         "test": "vitest run",
         "check": "npm run typecheck && npm run test && npm run build",
         "preview": "vite preview --host 0.0.0.0"
     },
     "dependencies": {
         "@lucide/vue": "^1.24.0",
+        "docx": "^9.7.1",
+        "entities": "^4.5.0",
         "fflate": "^0.8.3",
+        "fuse.js": "^7.5.0",
+        "tesseract.js": "^7.0.0",
         "vue": "^3.4.0",
         "zod": "^4.5.4"
     },

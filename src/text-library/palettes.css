@@ -1,0 +1,94 @@
+:root {
+    color-scheme: light;
+    --ink: #363c34; --muted: #6c6b5f; --accent: #4e634e; --accent-hover: #394c3b;
+    --rail: #e5ddca; --canvas: #f0eadc; --surface: #fcf8ee; --line: #d6cdbb;
+    --selected: #dfdfca; --hover: #e9e5d6; --secondary: #976041; --button: #fffaf0;
+    --header: #f8f2e6;
+}
+:root[data-palette="sea"] {
+    --ink: #39413a; --muted: #687065; --accent: #426c60; --accent-hover: #305246;
+    --rail: #e2e6d9; --canvas: #f0f1e8; --surface: #fffdf4; --line: #d1d6c7;
+    --selected: #d6dfc9; --hover: #e5e9da; --secondary: #a96d4f; --button: #fffdf6;
+    --header: #f8f7ee;
+}
+:root[data-palette="rose"] {
+    --ink: #49363a; --muted: #7a6568; --accent: #99485d; --accent-hover: #78364b;
+    --rail: #ead6da; --canvas: #f4e8e6; --surface: #fff8ef; --line: #dec9ca;
+    --selected: #eacdd5; --hover: #f0dfe2; --secondary: #517d70; --button: #fffaf3;
+    --header: #fcf1ed;
+}
+:root { color: var(--ink); background: var(--canvas); }
+button, input, textarea, select { border-color: var(--line); color: var(--ink); background: var(--button); }
+main, .empty-state { background: var(--canvas); }
+.topbar, .search-section, .detail, .selection-toolbar, footer, dialog { background: var(--surface); }
+.topbar, .search-section { background: var(--header); }
+.icon-button, nav button, .storage-button, .quote-row { background: transparent; }
+button:hover { background: var(--hover); }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline-color: var(--accent); }
+.primary { background: var(--accent); border-color: var(--accent); color: white; }
+.primary:hover { background: var(--accent-hover); }
+.sidebar { background: var(--rail); border-color: var(--line); padding-inline: 16px; }
+.brand { color: var(--accent); }
+.brand img { filter: drop-shadow(0 3px 3px #00000012); }
+.brand span, nav b, .section-label, .storage-button, .eyebrow, .topbar h2 span,
+.filter-row, .row-bottom, .row-top, .detail-toolbar, .attribution, dt, dd, .notes p,
+.muted, .state-reason, .selection-toolbar, footer, .confirm-copy, dialog label,
+.storage p, .usage-row, .usage-row span, .provenance summary { color: var(--muted); }
+nav button:hover { background: var(--hover); }
+nav button.active { background: var(--accent); color: #fff; font-weight: 650; }
+nav button.active:hover { background: var(--accent-hover); }
+nav button.active b { color: inherit; font-weight: 600; }
+nav button.active .state-mark { background: currentColor; }
+.topbar { padding-top: 26px; padding-bottom: 20px; }
+.topbar h2 { font-size: 23px; }
+.eyebrow { color: var(--secondary); }
+.search-box, .quote-list, .storage code, .credit-preview, .ocr-preview { background: var(--canvas); border-color: var(--line); }
+.search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--selected); }
+.quote-row { border-bottom-color: var(--line); }
+.quote-row:hover { background: var(--hover); }
+.quote-row.selected { background: var(--selected); border-left-color: var(--accent); }
+.detail blockquote { color: var(--ink); }
+.row-bottom { align-items: flex-start; line-height: 1.7; }
+.row-credit { flex: 1; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.row-category { flex: 0 1 30%; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.empty-state, .empty-state h3, .import-summary, .import-preview, .credit-preview,
+.storage code, .usage-row strong, .provenance small, .origin-meta, .color-swatches { color: var(--muted); }
+.import-summary strong { color: var(--accent); }
+.detail-toolbar { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.detail-actions button:not(.primary) { color: var(--accent); }
+.search-section, .selection-toolbar, footer, .storage-button, .usage-history, dl, .provenance, .modal-footer { border-color: var(--line); }
+.quote-entry .row-select, .checkbox input, .ocr-progress progress, input[type="checkbox"] { accent-color: var(--accent); }
+.toast { background: var(--accent-hover); }
+dialog { color: var(--ink); border-color: var(--line); }
+dialog label input, dialog label textarea, dialog label select { color: var(--ink); }
+.file-picker { background: var(--canvas); border-color: var(--accent); }
+.section-label { align-items: center; padding: 12px 10px 6px; }
+.category-tools { display: flex; align-items: center; gap: 2px; }
+.section-label .icon-button { width: 28px; height: 28px; min-height: 28px; }
+.category-nav { min-height: 70px; }
+.category-nav button { gap: 4px; }
+.category-nav .mobile-manage { display: none; }
+.palette-picker { display: flex; align-items: center; gap: 10px; padding: 16px 10px 4px; }
+.palette-picker span { font-size: 11px; color: var(--muted); margin-left: auto; }
+.palette-swatch { padding: 0; width: 25px; height: 25px; min-height: 25px; border-radius: 50%; color: white; border: 3px solid var(--rail); outline: 1px solid transparent; }
+.palette-swatch[aria-pressed="true"] { outline-color: var(--accent); }
+.palette-swatch.bamboo, .palette-swatch.bamboo:hover { background: #4e634e; }
+.palette-swatch.sea, .palette-swatch.sea:hover { background: #426c60; }
+.palette-swatch.rose, .palette-swatch.rose:hover { background: #99485d; }
+.category-editor { display: grid; gap: 10px; max-height: 50dvh; overflow: auto; padding: 3px; }
+.category-edit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 34px; gap: 10px; align-items: center; }
+.category-edit-row > span { font-size: 12px; color: var(--muted); }
+.category-confirm { grid-column: 1/-1; background: var(--canvas); padding: 12px; font-size: 12px; line-height: 1.8; }
+.category-confirm p { margin-bottom: 10px; overflow-wrap: anywhere; }
+.category-confirm button { margin-right: 6px; font-size: 12px; }
+.category-add { display: flex; gap: 10px; margin-top: 18px; }
+.category-add input { flex: 1; }
+@media(max-width:720px) {
+    .section-label { display: none; }
+    .category-nav { min-height: 30px; }
+    .category-nav .mobile-manage { display: inline-flex; }
+    .palette-picker { grid-column: 1/-1; padding: 4px 0 0; }
+    .palette-picker span { margin-left: 2px; }
+    .sidebar { padding-bottom: 15px; }
+    .storage-button { bottom: 14px; }
+}

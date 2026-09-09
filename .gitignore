@@ -9,6 +9,8 @@ preview.*.log
 
 # Build outputs
 dist/
+dist-text-library/
+text-library-public/ocr/
 build/
 .vite-build-check/
 
