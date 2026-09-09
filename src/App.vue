@@ -389,7 +389,7 @@
                             @click="focusHistoryItem(item)"
                         >
                             <span class="relative h-16 w-16 overflow-hidden rounded-md border border-brand-line bg-brand-surface dark:border-night-muted/35">
-                                <img v-if="firstVisibleHistoryImage(item)" :src="firstVisibleHistoryImage(item)" :alt="`${item.source === 'image' ? '图生图' : '文生图'}历史缩略图`" class="h-full w-full object-cover" loading="lazy" />
+                                <HistoryThumbnail :src="firstVisibleHistoryImage(item)" :alt="`${item.source === 'image' ? '图生图' : '文生图'}历史缩略图`" :loading="historyImagesLoading" />
                                 <span v-if="item.images.length > 1" class="absolute bottom-0 right-0 bg-brand-ink/80 px-1.5 py-0.5 text-[10px] text-brand-surface">{{ visibleHistoryImageCount(item) }}/{{ item.images.length }}</span>
                             </span>
                             <span class="min-w-0 py-0.5">
@@ -1222,6 +1222,7 @@ import { CalendarDays, RefreshCw, UsersRound, X } from '@lucide/vue'
 import ApiKeyInput from './components/ApiKeyInput.vue'
 import ImageUpload from './components/ImageUpload.vue'
 import StudioResultWaterfall from './components/StudioResultWaterfall.vue'
+import HistoryThumbnail from './components/HistoryThumbnail.vue'
 import Footer from './components/Footer.vue'
 import { asyncPanel } from './utils/asyncPanel'
 import { fetchModels, generateImage, improvePrompt, pollGeneratedTask } from './services/api'
@@ -4668,7 +4669,7 @@ const {
     collectionOptions, favoriteHistory, studioVisibleHistoryItems, recentGenerationHistory,
     formatHistoryListTime, allHistoryAssets, studioHistoryAssets, hasMoreStudioHistory,
     hiddenHistoryAssetCount, favoriteHistoryAssetCount, filteredHistoryAssets,
-    selectedHistoryAssets, visibleLibraryAssets
+    selectedHistoryAssets, visibleLibraryAssets, firstVisibleHistoryImage
 } = useHistoryAssets({
     generationHistory, assetCollections, studioHistoryGroupLimit, historyFilter, assetSearch, assetSort, selectedAssetIds, assetDisplayLimit, currentView, workspaceMode, historyImageLoader
 })
@@ -5168,9 +5169,6 @@ const downloadImageFile = async (
         if (revokeUrl) URL.revokeObjectURL(revokeUrl)
     }
 }
-
-const firstVisibleHistoryImage = (item: GenerationHistoryItem) =>
-    item.images[item.images.findIndex((_, index) => hasHistoryImage(item, index) && !isHistoryImageHidden(item, index))] || ''
 
 const visibleHistoryImageCount = (item: GenerationHistoryItem) =>
     item.images.filter((_, index) => hasHistoryImage(item, index) && !isHistoryImageHidden(item, index)).length

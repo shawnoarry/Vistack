@@ -41,6 +41,13 @@ export function useHistoryAssets({
     const recentGenerationHistory = computed(() =>
         studioVisibleHistoryItems.value.slice(0, 6)
     )
+    const firstVisibleHistoryImage = (item: GenerationHistoryItem) => {
+        const index = item.images.findIndex((_, index) => hasHistoryImage(item, index) && !isHistoryImageHidden(item, index))
+        if (index < 0) return ''
+        return historyImageLoader.withThumbnail({
+            id: `${item.id}-${index}`, item, index, image: item.images[index] || ''
+        }).image
+    }
     const formatHistoryListTime = (timestamp: number) => new Intl.DateTimeFormat('zh-CN', {
         month: '2-digit',
         day: '2-digit',
@@ -79,8 +86,10 @@ export function useHistoryAssets({
     watch(
         () => currentView.value === 'assets'
             ? filteredHistoryAssets.value.slice(0, assetDisplayLimit.value).map(asset => asset.item)
-            : currentView.value === 'studio' && workspaceMode.value !== 'canvas'
-                ? studioVisibleHistoryItems.value.slice(0, studioHistoryGroupLimit.value)
+            : currentView.value === 'studio'
+                ? workspaceMode.value === 'canvas'
+                    ? recentGenerationHistory.value
+                    : studioVisibleHistoryItems.value.slice(0, Math.max(6, studioHistoryGroupLimit.value))
                 : [],
         items => { void historyImageLoader.loadThumbnails(items) },
         { immediate: true }
@@ -90,6 +99,6 @@ export function useHistoryAssets({
         collectionOptions, favoriteHistory, studioVisibleHistoryItems, recentGenerationHistory,
         formatHistoryListTime, allHistoryAssets, studioHistoryAssets, hasMoreStudioHistory,
         hiddenHistoryAssetCount, favoriteHistoryAssetCount, filteredHistoryAssets,
-        selectedHistoryAssets, visibleLibraryAssets
+        selectedHistoryAssets, visibleLibraryAssets, firstVisibleHistoryImage
     }
 }

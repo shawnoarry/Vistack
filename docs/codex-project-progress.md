@@ -1,6 +1,6 @@
 # Vistack Project Progress
 
-Last updated: 2026-09-07 (Asia/Shanghai)
+Last updated: 2026-09-09 (Asia/Shanghai)
 
 This file is the durable handoff record for future Codex conversations. Read it before working on the project and update it before every final response.
 
@@ -95,6 +95,15 @@ The original broad Phase 2 studio restructure was not approved and has been with
 - Moving the entry beside the studio prompt and running paid API A/B tests remain separate unapproved decisions.
 
 ## Completed Work
+
+### 2026-09-09 Recent History Sidebar Thumbnail Fix
+
+- Fixed the sidebar's first-visible-image lookup to use the existing thumbnail loader instead of history.images, which can contain expired remote URLs after original-memory release.
+- Retained the six recent groups' thumbnail requests in canvas mode. Hidden images remain excluded when choosing the sidebar thumbnail.
+- Added HistoryThumbnail with bounded loading/unavailable states and image-error handling; a changed source resets the failure state. UX copy follows the existing short loading/unavailable wording.
+- Added a regression test covering expired remote links, released originals, hidden image selection, and canvas mode. `npm run check` passed including the unrelated text-library checks already present in the working tree.
+- Isolated desktop/mobile browser fixtures verified cached sidebar sources and reload; desktop additionally verified decoded 640px images, canvas switching, and the failed-image placeholder. No real user history was accessed or changed.
+- User authorized pushing and deploying this fix. The release includes only the sidebar component, asset composable, App.vue integration, regression test, and this record. Existing text-library work and package/config changes remain local and excluded. Local preview: http://127.0.0.1:4174/. Remote deployment verification follows the push.
 
 ### 2026-09-07 Remote Deployment Verification
 
